@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.production
+.env.development
+
+# Tauri build outputs
+src-tauri/target/
+
+# Vite build output
+dist/
+
+# Convex generated files (auto-regenerated, no need to commit)
+convex/_generated/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Type checking cache
+*.tsbuildinfo

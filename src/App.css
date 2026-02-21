@@ -1,0 +1,108 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* LIGHT MODE — white background, light blue accents */
+:root {
+    --radius: 0.625rem;
+    --background: oklch(1 0 0);               /* pure white */
+    --foreground: oklch(0.2 0.04 264);         /* near black text */
+    --card: oklch(0.97 0.01 240);              /* very light blue-white card */
+    --card-foreground: oklch(0.2 0.04 264);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.2 0.04 264);
+    --primary: oklch(0.55 0.18 240);           /* medium blue — buttons, links */
+    --primary-foreground: oklch(1 0 0);        /* white text on blue buttons */
+    --secondary: oklch(0.92 0.04 240);         /* soft light blue */
+    --secondary-foreground: oklch(0.2 0.04 264);
+    --muted: oklch(0.94 0.02 240);             /* very light muted blue-grey */
+    --muted-foreground: oklch(0.5 0.04 257);   /* medium grey text */
+    --accent: oklch(0.88 0.06 240);            /* light blue accent */
+    --accent-foreground: oklch(0.2 0.04 264);
+    --destructive: oklch(0.577 0.245 27.325);  /* red for delete/danger */
+    --border: oklch(0.88 0.03 240);            /* light blue-grey border */
+    --input: oklch(0.88 0.03 240);
+    --ring: oklch(0.55 0.18 240);
+    --sidebar: oklch(0.95 0.03 240);           /* sidebar slightly blue-white */
+    --sidebar-foreground: oklch(0.2 0.04 264);
+    --sidebar-primary: oklch(0.55 0.18 240);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.88 0.06 240);
+    --sidebar-accent-foreground: oklch(0.2 0.04 264);
+    --sidebar-border: oklch(0.88 0.03 240);
+    --sidebar-ring: oklch(0.55 0.18 240);
+}
+
+/* DARK MODE — deep blue like Signal/Telegram */
+.dark {
+    --background: oklch(0.18 0.04 264);        /* deep dark blue — main background */
+    --foreground: oklch(0.95 0.01 240);        /* near white text */
+    --card: oklch(0.23 0.045 264);             /* slightly lighter dark blue for cards */
+    --card-foreground: oklch(0.95 0.01 240);
+    --popover: oklch(0.23 0.045 264);
+    --popover-foreground: oklch(0.95 0.01 240);
+    --primary: oklch(0.6 0.2 240);             /* bright blue — buttons, links */
+    --primary-foreground: oklch(1 0 0);        /* white text on blue buttons */
+    --secondary: oklch(0.28 0.05 264);         /* dark blue secondary */
+    --secondary-foreground: oklch(0.95 0.01 240);
+    --muted: oklch(0.28 0.05 264);             /* muted dark blue */
+    --muted-foreground: oklch(0.65 0.03 257);  /* medium light grey text */
+    --accent: oklch(0.32 0.06 264);            /* slightly lighter accent */
+    --accent-foreground: oklch(0.95 0.01 240);
+    --destructive: oklch(0.65 0.22 22);        /* red for delete/danger */
+    --border: oklch(1 0 0 / 10%);              /* subtle white border */
+    --input: oklch(1 0 0 / 12%);
+    --ring: oklch(0.55 0.18 240);
+    --sidebar: oklch(0.21 0.045 264);          /* sidebar slightly different dark blue */
+    --sidebar-foreground: oklch(0.95 0.01 240);
+    --sidebar-primary: oklch(0.6 0.2 240);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.28 0.05 264);
+    --sidebar-accent-foreground: oklch(0.95 0.01 240);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.55 0.18 240);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
