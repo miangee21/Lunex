@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import SignupPage from "@/pages/SignupPage";
@@ -10,12 +10,11 @@ export default function AppRouter() {
   const [showSplash, setShowSplash] = useState(true);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
-    return () => clearTimeout(timer);
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
   }, []);
 
-  if (showSplash) return <SplashPage />;
+  if (showSplash) return <SplashPage onComplete={handleSplashComplete} />;
 
   return (
     <BrowserRouter>
