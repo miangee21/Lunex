@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+
 // Check if a username is available (returns true if available)
 export const isUsernameAvailable = query({
   args: { username: v.string() },
@@ -70,5 +71,18 @@ export const updateUserProfile = mutation({
     if (args.profilePicStorageId !== undefined) patch.profilePicStorageId = args.profilePicStorageId;
     if (args.bio !== undefined) patch.bio = args.bio;
     await ctx.db.patch(args.userId, patch);
+  },
+});
+
+export const setOnlineStatus = mutation({
+  args: {
+    userId: v.id("users"),
+    isOnline: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      isOnline: args.isOnline,
+      lastSeen: Date.now(),
+    });
   },
 });

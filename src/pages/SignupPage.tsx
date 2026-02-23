@@ -6,6 +6,7 @@ import { generateMnemonic, deriveKeyPairFromMnemonic, keyToBase64 } from "@/cryp
 import { validateUsernameFormat } from "@/lib/usernameValidation";
 import { useAuthStore } from "@/store/authStore";
 import { CheckCircle, XCircle, Copy, FileText, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { toast } from "sonner";
 
 type Phase = "username" | "mnemonic";
 
@@ -22,10 +23,6 @@ export default function SignupPage() {
   const [saved, setSaved] = useState(false);
   const [warningChecked, setWarningChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [signupError, setSignupError] = useState<string | null>(null);
-  
-  // Toast ke liye new state
-  const [showToast, setShowToast] = useState(false);
 
   const isAvailable = useQuery(
     api.users.isUsernameAvailable,
@@ -51,6 +48,7 @@ export default function SignupPage() {
   async function handleCopy() {
     await navigator.clipboard.writeText(mnemonic.join(" "));
     setCopied(true);
+    toast.success("Recovery phrase copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   }
 
@@ -64,25 +62,24 @@ export default function SignupPage() {
     a.click();
     URL.revokeObjectURL(url);
     setSaved(true);
-    
-    // Toast show karne ka logic
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+    toast.success("lunex-key.txt saved successfully!", {
+      description: "Store this file somewhere safe. You will need it to login.",
+    });
   }
 
   async function handleSignup() {
     if (!warningChecked || !saved) return;
     setIsLoading(true);
-    setSignupError(null);
     try {
       const mnemonicString = mnemonic.join(" ");
       const keyPair = await deriveKeyPairFromMnemonic(mnemonicString);
       const publicKeyB64 = keyToBase64(keyPair.publicKey);
       const userId = await createUser({ username, publicKey: publicKeyB64 });
       login({ userId, username, publicKey: keyPair.publicKey, secretKey: keyPair.secretKey });
-      navigate("/chat");
+      toast.success("Welcome to Lunex, " + username + "!");
+      setTimeout(() => navigate("/chat"), 1000);
     } catch (err: unknown) {
-      setSignupError(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Signup failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -91,10 +88,8 @@ export default function SignupPage() {
   const formatValid = formatError === null && username.length >= 3;
   const canContinue = formatValid && isAvailable === true;
 
-  // Premium Background Styling
-  const bgStyle = "min-h-screen w-full flex flex-col items-center justify-center px-6 relative overflow-hidden bg-slate-50 dark:bg-[#09090b] transition-colors duration-500";
-  
-  // Ambient glows
+  const bgStyle = "min-h-screen w-full flex flex-col items-center justify-center px-6 relative overflow-hidden bg-slate-50 dark:bg-[#09090b]";
+
   const ambientGlows = (
     <>
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
@@ -102,19 +97,18 @@ export default function SignupPage() {
     </>
   );
 
-  // ── PHASE 1: Username Selection ──
+  // ── PHASE 1 ──
   if (phase === "username") {
     return (
       <div className={bgStyle}>
         {ambientGlows}
-        
+
         <div className="w-full max-w-md z-10 flex flex-col items-center">
-          
           <div className="w-full relative">
             <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-3 ml-2 tracking-wide uppercase">
               Enter Username
             </label>
-            
+
             <div className="relative flex items-center bg-white/60 dark:bg-[#121215]/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl backdrop-blur-xl shadow-sm transition-all focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 dark:focus-within:border-indigo-500">
               <input
                 value={username}
@@ -123,7 +117,7 @@ export default function SignupPage() {
                 maxLength={10}
                 className="flex-1 bg-transparent py-4 pl-5 pr-2 outline-none text-slate-900 dark:text-white text-xl placeholder:text-slate-400/60 font-medium"
               />
-              
+
               <div className="flex items-center gap-3 pr-2">
                 <div className="flex-shrink-0">
                   {username.length >= 3 && (
@@ -165,26 +159,18 @@ export default function SignupPage() {
               </Link>
             </p>
           </div>
-
         </div>
       </div>
     );
   }
 
-  // ── PHASE 2: Mnemonic Phrase ──
+  // ── PHASE 2 ──
   return (
     <div className={bgStyle}>
       {ambientGlows}
 
-      {showToast && (
-        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-xl shadow-emerald-500/20 font-medium text-sm animate-in fade-in slide-in-from-top-5 duration-300">
-          <CheckCircle size={18} />
-          <span>lunex-key.txt saved successfully!</span>
-        </div>
-      )}
-
       <div className="w-full max-w-2xl z-10 flex flex-col gap-8">
-        
+
         <div>
           <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 ml-1 tracking-wide uppercase">
             Your Recovery Phrase
@@ -228,12 +214,11 @@ export default function SignupPage() {
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer group w-fit">
-            {/* Hidden Input add kar diya gaya hai yahan */}
-            <input 
-              type="checkbox" 
-              className="hidden" 
+            <input
+              type="checkbox"
+              className="hidden"
               checked={warningChecked}
-              onChange={() => setWarningChecked(!warningChecked)} 
+              onChange={() => setWarningChecked(!warningChecked)}
             />
             <div className={`w-6 h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${
               warningChecked ? "bg-indigo-600 border-indigo-600" : "border-slate-300 dark:border-slate-600 group-hover:border-indigo-400"
@@ -245,8 +230,6 @@ export default function SignupPage() {
             </span>
           </label>
         </div>
-
-        {signupError && <p className="text-red-500 text-sm font-medium">{signupError}</p>}
 
         <div className="flex gap-4 pt-4 border-t border-slate-200 dark:border-slate-800/80">
           <button
