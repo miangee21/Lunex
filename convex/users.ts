@@ -86,3 +86,10 @@ export const setOnlineStatus = mutation({
     });
   },
 });
+
+export const getProfilePicUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
