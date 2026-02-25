@@ -1,48 +1,105 @@
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import { ArrowLeft, Search, MoreVertical, UserX, Shield, ShieldOff } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { ArrowLeft, Search, MoreVertical, UserX, Shield, ShieldOff, Users, Ban } from "lucide-react";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
+import UserAvatar from "@/components/shared/UserAvatar";
+import { Id } from "../../../convex/_generated/dataModel";
 
 type ProfileView = "main" | "friends" | "blocked";
 
-const DUMMY_FRIENDS = [
-  { id: "1", username: "yaram45", hasBlockedMe: false },
-  { id: "2", username: "hassan12", hasBlockedMe: true },
-];
-
-const DUMMY_BLOCKED = [
-  { id: "3", username: "sara56" },
-];
-
 export default function MyProfilePanel() {
   const { setSidebarView } = useChatStore();
+  const userId = useAuthStore((s) => s.userId);
   const username = useAuthStore((s) => s.username);
 
   const [view, setView] = useState<ProfileView>("main");
-  const [bio, setBio] = useState("Hey there! I am using Lunex.");
   const [editingBio, setEditingBio] = useState(false);
-  const [bioValue, setBioValue] = useState(bio);
+  const [bioValue, setBioValue] = useState("");
   const [friendSearch, setFriendSearch] = useState("");
   const [blockedSearch, setBlockedSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
-  const filteredFriends = DUMMY_FRIENDS.filter((f) =>
-    f.username.toLowerCase().includes(friendSearch.toLowerCase())
+  const friends = useQuery(
+    api.friends.getFriends,
+    userId ? { userId } : "skip"
   );
 
-  const filteredBlocked = DUMMY_BLOCKED.filter((b) =>
-    b.username.toLowerCase().includes(blockedSearch.toLowerCase())
+  const blockedUsers = useQuery(
+    api.friends.getBlockedUsers,
+    userId ? { userId } : "skip"
   );
 
-  function handleBioBlur() {
+  const userRecord = useQuery(
+    api.users.getUserById,
+    userId ? { userId } : "skip"
+  );
+
+  const updateProfile = useMutation(api.users.updateUserProfile);
+  const unfriend = useMutation(api.friends.unfriend);
+  const blockUser = useMutation(api.friends.blockUser);
+  const unblockUser = useMutation(api.friends.unblockUser);
+
+  const bio = userRecord?.bio ?? "";
+
+  async function handleBioBlur() {
     setEditingBio(false);
-    if (bioValue.trim() !== bio) {
-      setBio(bioValue.trim());
-      toast.success("Bio updated!");
+    if (bioValue.trim() !== bio && userId) {
+      try {
+        await updateProfile({ userId, bio: bioValue.trim() });
+        toast.success("Bio updated!");
+      } catch {
+        toast.error("Failed to update bio.");
+      }
     }
   }
+
+  async function handleUnfriend(friendshipId: string, friendUsername: string) {
+    try {
+      await unfriend({ friendshipId: friendshipId as never });
+      toast.success(`Unfriended ${friendUsername}!`);
+      setMenuOpen(null);
+    } catch {
+      toast.error("Failed to unfriend.");
+    }
+  }
+
+  async function handleBlock(friendUserId: string, friendUsername: string) {
+    if (!userId) return;
+    try {
+      await blockUser({ fromUserId: userId, toUserId: friendUserId as never });
+      toast.success(`Blocked ${friendUsername}!`);
+      setMenuOpen(null);
+    } catch {
+      toast.error("Failed to block user.");
+    }
+  }
+
+  async function handleUnblock(recordId: string, toUserId: string, friendUsername: string) {
+    if (!userId) return;
+    try {
+      await unblockUser({
+        recordId: recordId as never,
+        fromUserId: userId,
+        toUserId: toUserId as never,
+      });
+      toast.success(`Unblocked ${friendUsername}!`);
+      setMenuOpen(null);
+    } catch {
+      toast.error("Failed to unblock.");
+    }
+  }
+
+  const filteredFriends = (friends ?? []).filter((f) =>
+    f?.username.toLowerCase().includes(friendSearch.toLowerCase())
+  );
+
+  const filteredBlocked = (blockedUsers ?? []).filter((b) =>
+    b.username.toLowerCase().includes(blockedSearch.toLowerCase())
+  );
 
   // ── FRIENDS VIEW ──
   if (view === "friends") {
@@ -57,11 +114,10 @@ export default function MyProfilePanel() {
           </button>
           <h2 className="text-foreground font-bold text-lg">Friends</h2>
           <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-            {DUMMY_FRIENDS.length}
+            {friends?.length ?? 0}
           </span>
         </div>
 
-        {/* Search */}
         <div className="px-3 pb-3">
           <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
             <Search size={15} className="text-muted-foreground flex-shrink-0" />
@@ -74,80 +130,77 @@ export default function MyProfilePanel() {
           </div>
         </div>
 
-        {/* Friends list */}
         <div className="flex-1 overflow-y-auto">
-          {filteredFriends.length === 0 ? (
+          {friends === undefined ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          ) : filteredFriends.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-muted-foreground text-sm">No friends found</p>
             </div>
           ) : (
-            filteredFriends.map((friend) => (
-              <div
-                key={friend.id}
-                className="flex items-center gap-3 px-3 py-3 hover:bg-accent/50 transition-colors"
-              >
-                {/* Avatar */}
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm flex-shrink-0 ${
-                  friend.hasBlockedMe
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-primary text-primary-foreground"
-                }`}>
-                  {friend.username[0].toUpperCase()}
-                </div>
+            filteredFriends.map((friend) =>
+              friend ? (
+                <div
+                  key={friend.userId}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-accent/50 transition-colors"
+                >
+                  <UserAvatar
+                    username={friend.username}
+                    profilePicStorageId={friend.profilePicStorageId as Id<"_storage"> | null}
+                    isGrayedOut={friend.hasBlockedMe || friend.iBlockedThem}
+                  />
 
-                {/* Username + Badge */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className={`text-sm font-semibold truncate ${
-                    friend.hasBlockedMe ? "text-muted-foreground" : "text-foreground"
-                  }`}>
-                    {friend.username}
-                  </span>
-                  {friend.hasBlockedMe && (
-                    <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
-                      Blocked you
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className={`text-sm font-semibold truncate ${
+                      friend.hasBlockedMe || friend.iBlockedThem
+                        ? "text-muted-foreground"
+                        : "text-foreground"
+                    }`}>
+                      {friend.username}
                     </span>
-                  )}
-                </div>
+                    {friend.hasBlockedMe && (
+                      <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                        Blocked you
+                      </span>
+                    )}
+                  </div>
 
-                {/* Three dots */}
-                <div className="relative">
-                  <button
-                    onClick={() => setMenuOpen(menuOpen === friend.id ? null : friend.id)}
-                    className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
-                  >
-                    <MoreVertical size={15} />
-                  </button>
-
-                  {menuOpen === friend.id && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
-                      <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
-                        <button
-                          onClick={() => {
-                            toast.success(`Unfriended ${friend.username}!`);
-                            setMenuOpen(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <UserX size={14} />
-                          Unfriend
-                        </button>
-                        <button
-                          onClick={() => {
-                            toast.success(`Blocked ${friend.username}!`);
-                            setMenuOpen(null);
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                        >
-                          <Shield size={14} />
-                          Block
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <div className="relative">
+                    <button
+                      onClick={() => setMenuOpen(menuOpen === friend.userId ? null : friend.userId)}
+                      className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+                    >
+                      <MoreVertical size={15} />
+                    </button>
+                    {menuOpen === friend.userId && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                        <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                          <button
+                            onClick={() => handleUnfriend(friend.friendshipId, friend.username)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                          >
+                            <UserX size={14} />
+                            Unfriend
+                          </button>
+                          {!friend.iBlockedThem && (
+                            <button
+                              onClick={() => handleBlock(friend.userId, friend.username)}
+                              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                              <Shield size={14} />
+                              Block
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              ) : null
+            )
           )}
         </div>
       </div>
@@ -167,11 +220,10 @@ export default function MyProfilePanel() {
           </button>
           <h2 className="text-foreground font-bold text-lg">Blocked</h2>
           <span className="ml-auto bg-destructive text-white text-xs font-bold px-2 py-0.5 rounded-full">
-            {DUMMY_BLOCKED.length}
+            {blockedUsers?.length ?? 0}
           </span>
         </div>
 
-        {/* Search */}
         <div className="px-3 pb-3">
           <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
             <Search size={15} className="text-muted-foreground flex-shrink-0" />
@@ -184,43 +236,42 @@ export default function MyProfilePanel() {
           </div>
         </div>
 
-        {/* Blocked list */}
         <div className="flex-1 overflow-y-auto">
-          {filteredBlocked.length === 0 ? (
+          {blockedUsers === undefined ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            </div>
+          ) : filteredBlocked.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-muted-foreground text-sm">No blocked users</p>
             </div>
           ) : (
             filteredBlocked.map((user) => (
               <div
-                key={user.id}
+                key={user.userId}
                 className="flex items-center gap-3 px-3 py-3 hover:bg-accent/50 transition-colors"
               >
-                <div className="w-10 h-10 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground font-bold text-sm flex-shrink-0">
-                  {user.username[0].toUpperCase()}
-                </div>
+                <UserAvatar
+                  username={user.username}
+                  profilePicStorageId={user.profilePicStorageId as Id<"_storage"> | null}
+                  isGrayedOut
+                />
                 <span className="text-muted-foreground text-sm font-semibold flex-1 truncate">
                   {user.username}
                 </span>
-
-                {/* Three dots */}
                 <div className="relative">
                   <button
-                    onClick={() => setMenuOpen(menuOpen === user.id ? null : user.id)}
+                    onClick={() => setMenuOpen(menuOpen === user.userId ? null : user.userId)}
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
                   >
                     <MoreVertical size={15} />
                   </button>
-
-                  {menuOpen === user.id && (
+                  {menuOpen === user.userId && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
                       <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
                         <button
-                          onClick={() => {
-                            toast.success(`Unblocked ${user.username}!`);
-                            setMenuOpen(null);
-                          }}
+                          onClick={() => handleUnblock(user.recordId, user.userId, user.username)}
                           className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <ShieldOff size={14} />
@@ -241,8 +292,6 @@ export default function MyProfilePanel() {
   // ── MAIN PROFILE VIEW ──
   return (
     <div className="flex flex-col h-full">
-
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
           onClick={() => setSidebarView("chats")}
@@ -254,8 +303,6 @@ export default function MyProfilePanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4">
-
-        {/* Avatar + Username */}
         <div className="flex flex-col items-center gap-3 py-6">
           <AvatarUpload />
           <div className="text-center">
@@ -270,15 +317,18 @@ export default function MyProfilePanel() {
         <div className="mb-6">
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-2">Bio</p>
           {editingBio ? (
-            <textarea
-              value={bioValue}
-              onChange={(e) => setBioValue(e.target.value)}
-              onBlur={handleBioBlur}
-              maxLength={120}
-              autoFocus
-              rows={3}
-              className="w-full bg-accent rounded-xl px-3 py-2 text-sm text-foreground outline-none resize-none border border-primary"
-            />
+            <>
+              <textarea
+                value={bioValue}
+                onChange={(e) => setBioValue(e.target.value)}
+                onBlur={handleBioBlur}
+                maxLength={120}
+                autoFocus
+                rows={3}
+                className="w-full bg-accent rounded-xl px-3 py-2 text-sm text-foreground outline-none resize-none border border-primary"
+              />
+              <p className="text-muted-foreground text-xs mt-1 text-right">{bioValue.length}/120</p>
+            </>
           ) : (
             <p
               onClick={() => { setEditingBio(true); setBioValue(bio); }}
@@ -286,9 +336,6 @@ export default function MyProfilePanel() {
             >
               {bio || "Click to add a bio..."}
             </p>
-          )}
-          {editingBio && (
-            <p className="text-muted-foreground text-xs mt-1 text-right">{bioValue.length}/120</p>
           )}
         </div>
 
@@ -298,25 +345,34 @@ export default function MyProfilePanel() {
         <div className="flex flex-col gap-2 pb-6">
           <button
             onClick={() => setView("friends")}
-            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors"
+            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group"
           >
-            <span className="text-foreground font-semibold text-sm">Friends</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Users size={16} className="text-primary" />
+              </div>
+              <span className="text-foreground font-semibold text-sm">Friends</span>
+            </div>
             <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-0.5 rounded-full">
-              {DUMMY_FRIENDS.length}
+              {friends?.length ?? 0}
             </span>
           </button>
 
           <button
             onClick={() => setView("blocked")}
-            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors"
+            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group"
           >
-            <span className="text-foreground font-semibold text-sm">Blocked</span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+                <Ban size={16} className="text-destructive" />
+              </div>
+              <span className="text-foreground font-semibold text-sm">Blocked</span>
+            </div>
             <span className="bg-destructive text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
-              {DUMMY_BLOCKED.length}
+              {blockedUsers?.length ?? 0}
             </span>
           </button>
         </div>
-
       </div>
     </div>
   );

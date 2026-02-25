@@ -1,5 +1,7 @@
 import { useChatStore } from "@/store/chatStore";
 import { useState } from "react";
+import UserAvatar from "@/components/shared/UserAvatar";
+import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Trash2 } from "lucide-react";
 
 interface ChatListItemProps {
@@ -9,6 +11,7 @@ interface ChatListItemProps {
   time: string;
   unread: number;
   isOnline: boolean;
+  profilePicStorageId?: string | null;
 }
 
 export default function ChatListItem({
@@ -18,6 +21,7 @@ export default function ChatListItem({
   time,
   unread,
   isOnline,
+  profilePicStorageId,
 }: ChatListItemProps) {
   const { setActiveChat, activeChatId } = useChatStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -33,15 +37,12 @@ export default function ChatListItem({
       }`}
     >
       {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <div className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-base">
-          {username[0].toUpperCase()}
-        </div>
-        {/* Online dot */}
-        {isOnline && (
-          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-sidebar rounded-full" />
-        )}
-      </div>
+      <UserAvatar
+        username={username}
+        profilePicStorageId={profilePicStorageId as Id<"_storage"> | null}
+        size="md"
+        isOnline={isOnline}
+      />
 
       {/* Content */}
       <div className="flex-1 min-w-0">

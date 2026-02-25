@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type SidebarView = "chats" | "requests" | "profile" | "friends" | "blocked";
+type SidebarView = "chats" | "requests" | "profile" | "friends" | "blocked" | "search";
 
 interface ChatState {
   // Sidebar

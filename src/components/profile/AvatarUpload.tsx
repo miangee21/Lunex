@@ -1,25 +1,40 @@
 import { useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Camera } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AvatarUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const userId = useAuthStore((s) => s.userId);
   const username = useAuthStore((s) => s.username);
-  const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const generateUploadUrl = useMutation(api.media.generateUploadUrl);
   const updateUserProfile = useMutation(api.users.updateUserProfile);
+  const deleteFile = useMutation(api.media.deleteFile);
+  const removeProfilePic = useMutation(api.users.removeProfilePic);
+
+  // Load user from Convex — reactive, always fresh
+  const userRecord = useQuery(
+    api.users.getUserById,
+    userId ? { userId } : "skip"
+  );
+
+  // Load avatar URL from Convex storage
+  const avatarUrl = useQuery(
+    api.users.getProfilePicUrl,
+    userRecord?.profilePicStorageId
+      ? { storageId: userRecord.profilePicStorageId }
+      : "skip"
+  );
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !userId) return;
 
-    // Validate
     if (!file.type.startsWith("image/")) {
       toast.error("Only image files are allowed.");
       return;
@@ -30,14 +45,15 @@ export default function AvatarUpload() {
     }
 
     setUploading(true);
+    setDropdownOpen(false);
 
     try {
-      // Show preview immediately
-      const reader = new FileReader();
-      reader.onload = (ev) => setPreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
+      // Delete old file from Convex storage if exists
+      if (userRecord?.profilePicStorageId) {
+        await deleteFile({ storageId: userRecord.profilePicStorageId });
+      }
 
-      // Get upload URL from Convex
+      // Get upload URL
       const uploadUrl = await generateUploadUrl();
 
       // Upload file
@@ -51,46 +67,98 @@ export default function AvatarUpload() {
 
       const { storageId } = await response.json();
 
-      // Save storageId to user profile
-      await updateUserProfile({
-        userId,
-        profilePicStorageId: storageId,
-      });
+      // Save to user profile
+      await updateUserProfile({ userId, profilePicStorageId: storageId });
 
       toast.success("Profile picture updated!");
-    } catch (err) {
+    } catch {
       toast.error("Failed to upload image. Please try again.");
-      setPreview(null);
     } finally {
       setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleRemove() {
+    if (!userId || !userRecord?.profilePicStorageId) return;
+    setDropdownOpen(false);
+    try {
+      // Delete from Convex storage
+      await deleteFile({ storageId: userRecord.profilePicStorageId });
+      // Remove from user record
+      await removeProfilePic({ userId });
+      toast.success("Profile picture removed!");
+    } catch {
+      toast.error("Failed to remove picture.");
     }
   }
 
   return (
-    <div className="relative group">
-      {/* Avatar circle */}
-      <div className="w-20 h-20 rounded-3xl overflow-hidden bg-primary flex items-center justify-center">
-        {preview ? (
-          <img src={preview} alt="avatar" className="w-full h-full object-cover" />
+    <div className="relative">
+
+      {/* Avatar */}
+      <button
+        onClick={() => setDropdownOpen((v) => !v)}
+        disabled={uploading}
+        className="w-20 h-20 rounded-3xl overflow-hidden bg-primary flex items-center justify-center relative group"
+      >
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt="avatar"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <span className="text-primary-foreground font-bold text-3xl">
             {username?.[0]?.toUpperCase() ?? "?"}
           </span>
         )}
-      </div>
 
-      {/* Camera overlay on hover */}
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
-        className="absolute inset-0 w-20 h-20 rounded-3xl bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-      >
-        {uploading ? (
-          <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-        ) : (
-          <Camera size={20} className="text-white" />
-        )}
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          {uploading ? (
+            <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+          ) : (
+            <Camera size={20} className="text-white" />
+          )}
+        </div>
       </button>
+
+      {/* Dropdown */}
+      {dropdownOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setDropdownOpen(false)}
+          />
+          <div className="absolute left-0 top-full mt-2 w-44 bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50">
+            <button
+              onClick={() => {
+                setDropdownOpen(false);
+                fileInputRef.current?.click();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-accent transition-colors"
+            >
+              <Camera size={15} className="text-muted-foreground" />
+              Change Avatar
+            </button>
+
+            {userRecord?.profilePicStorageId && (
+              <>
+                <div className="h-px bg-border mx-2" />
+                <button
+                  onClick={handleRemove}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <Trash2 size={15} />
+                  Remove Avatar
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Hidden file input */}
       <input

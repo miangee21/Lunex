@@ -1,41 +1,29 @@
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import ChatListItem from "@/components/chat/ChatListItem";
 import RequestsPanel from "@/components/friends/RequestItem";
+import SearchUsers from "@/components/friends/SearchUsers";
 import { Search, Plus } from "lucide-react";
 import { useState } from "react";
 
-// Dummy chats for now — will be dynamic in Step 9
-const DUMMY_CHATS = [
-  {
-    id: "1",
-    username: "John1",
-    lastMessage: "Hey! How are you doing?",
-    time: "2m",
-    unread: 3,
-    isOnline: true,
-  },
-  {
-    id: "2",
-    username: "Beck2",
-    lastMessage: "Let's catch up soon!",
-    time: "1h",
-    unread: 0,
-    isOnline: false,
-  },
-];
-
 export default function ChatList() {
   const { sidebarView, setSidebarView } = useChatStore();
+  const userId = useAuthStore((s) => s.userId);
   const [search, setSearch] = useState("");
 
-  const filteredChats = DUMMY_CHATS.filter((c) =>
-    c.username.toLowerCase().includes(search.toLowerCase())
+  const friends = useQuery(
+    api.friends.getFriends,
+    userId ? { userId } : "skip"
   );
 
-  // Requests view
-  if (sidebarView === "requests") {
-    return <RequestsPanel />;
-  }
+  if (sidebarView === "requests") return <RequestsPanel />;
+  if (sidebarView === "search") return <SearchUsers />;
+
+  const filteredFriends = (friends ?? []).filter((f) =>
+    f?.username.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -44,8 +32,9 @@ export default function ChatList() {
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-foreground font-bold text-lg">Chats</h2>
         <button
+          onClick={() => setSidebarView("search")}
           className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
-          title="New Chat"
+          title="Find People"
         >
           <Plus size={18} />
         </button>
@@ -64,24 +53,37 @@ export default function ChatList() {
         </div>
       </div>
 
-      {/* Chat list */}
+      {/* List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredChats.length === 0 ? (
+        {friends === undefined ? (
           <div className="flex items-center justify-center h-32">
-            <p className="text-muted-foreground text-sm">No chats found</p>
+            <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        ) : filteredFriends.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 gap-2">
+            <p className="text-muted-foreground text-sm">No chats yet</p>
+            <button
+              onClick={() => setSidebarView("search")}
+              className="text-primary text-xs font-semibold hover:underline"
+            >
+              Find people to chat with
+            </button>
           </div>
         ) : (
-          filteredChats.map((chat) => (
-            <ChatListItem
-              key={chat.id}
-              id={chat.id}
-              username={chat.username}
-              lastMessage={chat.lastMessage}
-              time={chat.time}
-              unread={chat.unread}
-              isOnline={chat.isOnline}
-            />
-          ))
+          filteredFriends.map((friend) =>
+            friend ? (
+              <ChatListItem
+                key={friend.userId}
+                id={friend.userId}
+                username={friend.username}
+                lastMessage="Say hello! 👋"
+                time=""
+                unread={0}
+                isOnline={friend.isOnline}
+                profilePicStorageId={friend.profilePicStorageId ?? null} 
+              />
+            ) : null
+          )
         )}
       </div>
 

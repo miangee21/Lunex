@@ -2,6 +2,7 @@ import { useChatStore } from "@/store/chatStore";
 import SlimBar from "@/components/sidebar/SlimBar";
 import ChatList from "@/components/chat/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
+import SearchUsers from "@/components/friends/SearchUsers";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
@@ -17,6 +18,8 @@ export default function ChatPage() {
       case "friends":
       case "blocked":
         return <MyProfilePanel />;
+      case "search":
+        return <SearchUsers />;
       default:
         return <ChatList />;
     }
