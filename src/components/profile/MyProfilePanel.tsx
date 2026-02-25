@@ -70,7 +70,10 @@ export default function MyProfilePanel() {
   async function handleBlock(friendUserId: string, friendUsername: string) {
     if (!userId) return;
     try {
-      await blockUser({ fromUserId: userId, toUserId: friendUserId as never });
+      await blockUser({
+        blockerId: userId,
+        blockedId: friendUserId as never,
+      });
       toast.success(`Blocked ${friendUsername}!`);
       setMenuOpen(null);
     } catch {
@@ -78,14 +81,9 @@ export default function MyProfilePanel() {
     }
   }
 
-  async function handleUnblock(recordId: string, toUserId: string, friendUsername: string) {
-    if (!userId) return;
+  async function handleUnblock(recordId: string, friendUsername: string) {
     try {
-      await unblockUser({
-        recordId: recordId as never,
-        fromUserId: userId,
-        toUserId: toUserId as never,
-      });
+      await unblockUser({ recordId: recordId as never });
       toast.success(`Unblocked ${friendUsername}!`);
       setMenuOpen(null);
     } catch {
@@ -93,9 +91,10 @@ export default function MyProfilePanel() {
     }
   }
 
-  const filteredFriends = (friends ?? []).filter((f) =>
-    f?.username.toLowerCase().includes(friendSearch.toLowerCase())
-  );
+  const actualFriends = (friends ?? []).filter((f) => f && !f.iBlockedThem);
+  const filteredFriends = actualFriends.filter((f) =>
+  f!.username.toLowerCase().includes(friendSearch.toLowerCase())
+ );
 
   const filteredBlocked = (blockedUsers ?? []).filter((b) =>
     b.username.toLowerCase().includes(blockedSearch.toLowerCase())
@@ -114,7 +113,7 @@ export default function MyProfilePanel() {
           </button>
           <h2 className="text-foreground font-bold text-lg">Friends</h2>
           <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">
-            {friends?.length ?? 0}
+            {actualFriends.length}
           </span>
         </div>
 
@@ -271,7 +270,7 @@ export default function MyProfilePanel() {
                       <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
                       <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
                         <button
-                          onClick={() => handleUnblock(user.recordId, user.userId, user.username)}
+                          onClick={() => handleUnblock(user.recordId, user.username)}
                           className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <ShieldOff size={14} />
@@ -354,7 +353,7 @@ export default function MyProfilePanel() {
               <span className="text-foreground font-semibold text-sm">Friends</span>
             </div>
             <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-0.5 rounded-full">
-              {friends?.length ?? 0}
+              {actualFriends.length}
             </span>
           </button>
 

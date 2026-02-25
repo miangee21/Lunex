@@ -2,8 +2,6 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-
-  // Users table — one row per registered user
   users: defineTable({
     username: v.string(),
     publicKey: v.string(),
@@ -15,40 +13,40 @@ export default defineSchema({
     .index("by_username", ["username"])
     .index("by_public_key", ["publicKey"]),
 
-  // Friend requests table
   friendRequests: defineTable({
     fromUserId: v.id("users"),
     toUserId: v.id("users"),
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
-      v.literal("rejected"),
-      v.literal("blocked"),
+      v.literal("rejected")
     ),
     createdAt: v.number(),
   })
-    .index("by_to_user", ["toUserId", "status"])
     .index("by_from_user", ["fromUserId", "status"])
+    .index("by_to_user", ["toUserId", "status"])
     .index("by_pair", ["fromUserId", "toUserId"]),
 
-  // Conversations table — one per pair of friends
+  
+  blockedUsers: defineTable({
+    blockerId: v.id("users"),
+    blockedId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_blocker", ["blockerId"])
+    .index("by_blocked", ["blockedId"])
+    .index("by_pair", ["blockerId", "blockedId"]),
+
   conversations: defineTable({
     participantIds: v.array(v.id("users")),
-    disappearingMode: v.optional(v.union(
-      v.literal("1h"),
-      v.literal("6h"),
-      v.literal("12h"),
-      v.literal("1d"),
-      v.literal("3d"),
-      v.literal("1w"),
-    )),
+    disappearingMode: v.optional(v.boolean()),
     disappearingSetBy: v.optional(v.id("users")),
     createdAt: v.number(),
-    lastMessageAt: v.number(),
+    lastMessageAt: v.optional(v.number()),
   })
-    .index("by_participants", ["participantIds"]),
+    .index("by_participants", ["participantIds"])
+    .index("by_last_message", ["lastMessageAt"]),
 
-  // Messages table
   messages: defineTable({
     conversationId: v.id("conversations"),
     senderId: v.id("users"),
@@ -58,8 +56,8 @@ export default defineSchema({
       v.literal("text"),
       v.literal("image"),
       v.literal("video"),
-      v.literal("document"),
-      v.literal("emoji"),
+      v.literal("audio"),
+      v.literal("file")
     ),
     mediaStorageId: v.optional(v.id("_storage")),
     mediaDeletedAt: v.optional(v.number()),
@@ -81,7 +79,6 @@ export default defineSchema({
     .index("by_expires", ["mediaExpiresAt"])
     .index("by_disappears", ["disappearsAt"]),
 
-  // Typing indicators
   typingIndicators: defineTable({
     conversationId: v.id("conversations"),
     userId: v.id("users"),
@@ -90,12 +87,10 @@ export default defineSchema({
   })
     .index("by_conversation", ["conversationId"]),
 
-  // Chat deletions — tracks when a user deleted a chat
   chatDeletions: defineTable({
     conversationId: v.id("conversations"),
     userId: v.id("users"),
     deletedAt: v.number(),
   })
-    .index("by_user_and_conversation", ["userId", "conversationId"]),
-
+    .index("by_user_conversation", ["userId", "conversationId"]),
 });

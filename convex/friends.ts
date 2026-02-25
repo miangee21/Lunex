@@ -23,7 +23,7 @@ export const getFriends = query({
     const limit = args.limit ?? 30;
 
     // Records where current user sent the request and it was accepted
-    const sent = await ctx.db
+    const sentRecords = await ctx.db
       .query("friendRequests")
       .withIndex("by_from_user", (q) =>
         q.eq("fromUserId", args.userId).eq("status", "accepted")
@@ -31,36 +31,42 @@ export const getFriends = query({
       .take(limit);
 
     // Records where current user received the request and it was accepted
-    const received = await ctx.db
+    const receivedRecords = await ctx.db
       .query("friendRequests")
       .withIndex("by_to_user", (q) =>
         q.eq("toUserId", args.userId).eq("status", "accepted")
       )
       .take(limit);
 
+    // Helper — get block flags between current user and other user
+    async function getBlockFlags(otherUserId: string) {
+      // Did I block them?
+      const iBlockedRecord = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q.eq("blockerId", args.userId).eq("blockedId", otherUserId as never)
+        )
+        .unique();
+
+      // Did they block me?
+      const theyBlockedRecord = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q.eq("blockerId", otherUserId as never).eq("blockedId", args.userId)
+        )
+        .unique();
+
+      return {
+        iBlockedThem: !!iBlockedRecord,
+        hasBlockedMe: !!theyBlockedRecord,
+      };
+    }
+
     const sentFriends = await Promise.all(
-      sent.map(async (r) => {
+      sentRecords.map(async (r) => {
         const user = await ctx.db.get(r.toUserId);
         if (!user) return null;
-
-        // Did they block me?
-        const theyBlockedMe = await ctx.db
-          .query("friendRequests")
-          .withIndex("by_pair", (q) =>
-            q.eq("fromUserId", r.toUserId).eq("toUserId", args.userId)
-          )
-          .filter((q) => q.eq(q.field("status"), "blocked"))
-          .unique();
-
-        // Did I block them?
-        const iBlockedThem = await ctx.db
-          .query("friendRequests")
-          .withIndex("by_pair", (q) =>
-            q.eq("fromUserId", args.userId).eq("toUserId", r.toUserId)
-          )
-          .filter((q) => q.eq(q.field("status"), "blocked"))
-          .unique();
-
+        const { iBlockedThem, hasBlockedMe } = await getBlockFlags(user._id);
         return {
           friendshipId: r._id,
           userId: user._id,
@@ -68,33 +74,17 @@ export const getFriends = query({
           profilePicStorageId: user.profilePicStorageId ?? null,
           isOnline: user.isOnline,
           lastSeen: user.lastSeen,
-          hasBlockedMe: !!theyBlockedMe,
-          iBlockedThem: !!iBlockedThem,
+          hasBlockedMe,
+          iBlockedThem,
         };
       })
     );
 
     const receivedFriends = await Promise.all(
-      received.map(async (r) => {
+      receivedRecords.map(async (r) => {
         const user = await ctx.db.get(r.fromUserId);
         if (!user) return null;
-
-        const theyBlockedMe = await ctx.db
-          .query("friendRequests")
-          .withIndex("by_pair", (q) =>
-            q.eq("fromUserId", r.fromUserId).eq("toUserId", args.userId)
-          )
-          .filter((q) => q.eq(q.field("status"), "blocked"))
-          .unique();
-
-        const iBlockedThem = await ctx.db
-          .query("friendRequests")
-          .withIndex("by_pair", (q) =>
-            q.eq("fromUserId", args.userId).eq("toUserId", r.fromUserId)
-          )
-          .filter((q) => q.eq(q.field("status"), "blocked"))
-          .unique();
-
+        const { iBlockedThem, hasBlockedMe } = await getBlockFlags(user._id);
         return {
           friendshipId: r._id,
           userId: user._id,
@@ -102,15 +92,21 @@ export const getFriends = query({
           profilePicStorageId: user.profilePicStorageId ?? null,
           isOnline: user.isOnline,
           lastSeen: user.lastSeen,
-          hasBlockedMe: !!theyBlockedMe,
-          iBlockedThem: !!iBlockedThem,
+          hasBlockedMe,
+          iBlockedThem,
         };
       })
     );
 
-    // Combine — include everyone (blocked by me shows in friends with iBlockedThem flag)
-    // But if iBlockedThem — they appear in BOTH friends and blocked list
-    return [...sentFriends, ...receivedFriends].filter(Boolean);
+    const all = [...sentFriends, ...receivedFriends].filter(Boolean);
+
+    // Remove duplicates by userId
+    const seen = new Set<string>();
+    return all.filter((f) => {
+      if (!f || seen.has(f.userId)) return false;
+      seen.add(f.userId);
+      return true;
+    });
   },
 });
 
@@ -169,18 +165,16 @@ export const getBlockedUsers = query({
   handler: async (ctx, args) => {
     const limit = args.limit ?? 30;
     const blocked = await ctx.db
-      .query("friendRequests")
-      .withIndex("by_from_user", (q) =>
-        q.eq("fromUserId", args.userId).eq("status", "blocked")
-      )
+      .query("blockedUsers")
+      .withIndex("by_blocker", (q) => q.eq("blockerId", args.userId))
       .take(limit);
 
     return Promise.all(
       blocked.map(async (r) => {
-        const user = await ctx.db.get(r.toUserId);
+        const user = await ctx.db.get(r.blockedId);
         return {
           recordId: r._id,
-          userId: r.toUserId,
+          userId: r.blockedId,
           username: user?.username ?? "Unknown",
           profilePicStorageId: user?.profilePicStorageId ?? null,
         };
@@ -232,6 +226,23 @@ export const sendFriendRequest = mutation({
   handler: async (ctx, args) => {
     if (args.fromUserId === args.toUserId) throw new Error("Cannot send request to yourself");
 
+    // Check if I blocked them or they blocked me
+    const iBlockedThem = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_pair", (q) =>
+        q.eq("blockerId", args.fromUserId).eq("blockedId", args.toUserId)
+      )
+      .unique();
+
+    const theyBlockedMe = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_pair", (q) =>
+        q.eq("blockerId", args.toUserId).eq("blockedId", args.fromUserId)
+      )
+      .unique();
+
+    if (iBlockedThem || theyBlockedMe) throw new Error("Cannot send request");
+
     const existing = await ctx.db
       .query("friendRequests")
       .withIndex("by_pair", (q) =>
@@ -242,7 +253,6 @@ export const sendFriendRequest = mutation({
     if (existing) {
       if (existing.status === "pending") throw new Error("Request already sent");
       if (existing.status === "accepted") throw new Error("Already friends");
-      if (existing.status === "blocked") throw new Error("Cannot send request");
       if (existing.status === "rejected") {
         await ctx.db.patch(existing._id, { status: "pending", createdAt: Date.now() });
         return;
@@ -259,7 +269,6 @@ export const sendFriendRequest = mutation({
     if (reverse) {
       if (reverse.status === "pending") throw new Error("They already sent you a request");
       if (reverse.status === "accepted") throw new Error("Already friends");
-      if (reverse.status === "blocked") throw new Error("Cannot send request");
     }
 
     await ctx.db.insert("friendRequests", {
@@ -302,79 +311,32 @@ export const unfriend = mutation({
 });
 
 export const blockUser = mutation({
-  args: { fromUserId: v.id("users"), toUserId: v.id("users") },
+  args: { blockerId: v.id("users"), blockedId: v.id("users") },
   handler: async (ctx, args) => {
-    // Check if friendship exists from my side
-    const myRecord = await ctx.db
-      .query("friendRequests")
+    if (args.blockerId === args.blockedId) throw new Error("Cannot block yourself");
+
+    // Check if already blocked
+    const existing = await ctx.db
+      .query("blockedUsers")
       .withIndex("by_pair", (q) =>
-        q.eq("fromUserId", args.fromUserId).eq("toUserId", args.toUserId)
+        q.eq("blockerId", args.blockerId).eq("blockedId", args.blockedId)
       )
       .unique();
 
-    if (myRecord) {
-      // Update my record to blocked
-      await ctx.db.patch(myRecord._id, { status: "blocked" });
-      return;
-    }
+    if (existing) throw new Error("Already blocked");
 
-    // Check if friendship exists from their side
-    const theirRecord = await ctx.db
-      .query("friendRequests")
-      .withIndex("by_pair", (q) =>
-        q.eq("fromUserId", args.toUserId).eq("toUserId", args.fromUserId)
-      )
-      .unique();
-
-    if (theirRecord && theirRecord.status === "accepted") {
-      // Keep their accepted record intact — friendship still visible on their side
-      // Create new block record from my side
-      await ctx.db.insert("friendRequests", {
-        fromUserId: args.fromUserId,
-        toUserId: args.toUserId,
-        status: "blocked",
-        createdAt: Date.now(),
-      });
-      return;
-    }
-
-    // No existing record — create block
-    await ctx.db.insert("friendRequests", {
-      fromUserId: args.fromUserId,
-      toUserId: args.toUserId,
-      status: "blocked",
+    // Insert block record — friendship record stays intact on both sides
+    await ctx.db.insert("blockedUsers", {
+      blockerId: args.blockerId,
+      blockedId: args.blockedId,
       createdAt: Date.now(),
     });
   },
 });
 
 export const unblockUser = mutation({
-  args: {
-    recordId: v.id("friendRequests"),
-    fromUserId: v.id("users"),
-    toUserId: v.id("users"),
-  },
+  args: { recordId: v.id("blockedUsers") },
   handler: async (ctx, args) => {
-    // Delete the block record
     await ctx.db.delete(args.recordId);
-
-    // Check if friendship record still exists from their side
-    const theirRecord = await ctx.db
-      .query("friendRequests")
-      .withIndex("by_pair", (q) =>
-        q.eq("fromUserId", args.toUserId).eq("toUserId", args.fromUserId)
-      )
-      .unique();
-
-    // If their accepted record exists — friendship is restored automatically
-    // If not — create accepted record so they are friends again
-    if (!theirRecord) {
-      await ctx.db.insert("friendRequests", {
-        fromUserId: args.fromUserId,
-        toUserId: args.toUserId,
-        status: "accepted",
-        createdAt: Date.now(),
-      });
-    }
   },
 });
