@@ -23,17 +23,20 @@ export default function ChatListItem({
   isOnline,
   profilePicStorageId,
 }: ChatListItemProps) {
-  const { setActiveChat, activeChatId } = useChatStore();
+  const { setActiveChat, activeChat } = useChatStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const isActive = activeChatId === id;
+  const isActive = activeChat?.userId === id;
 
   return (
     <div
-      onClick={() => setActiveChat(id, username)}
+      onClick={() => setActiveChat({
+        userId: id,
+        username,
+        profilePicStorageId: profilePicStorageId ?? null,
+        isOnline,
+      })}
       className={`relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors group ${
-        isActive
-          ? "bg-accent"
-          : "hover:bg-accent/50"
+        isActive ? "bg-accent" : "hover:bg-accent/50"
       }`}
     >
       {/* Avatar */}

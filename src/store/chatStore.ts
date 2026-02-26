@@ -2,6 +2,13 @@ import { create } from "zustand";
 
 type SidebarView = "chats" | "requests" | "profile" | "friends" | "blocked" | "search";
 
+interface ActiveChat {
+  userId: string;
+  username: string;
+  profilePicStorageId: string | null;
+  isOnline: boolean;
+}
+
 interface ChatState {
   // Sidebar
   sidebarOpen: boolean;
@@ -10,10 +17,14 @@ interface ChatState {
   setSidebarView: (view: SidebarView) => void;
 
   // Active chat
-  activeChatId: string | null;
-  activeChatUsername: string | null;
-  setActiveChat: (chatId: string, username: string) => void;
+  activeChat: ActiveChat | null;
+  setActiveChat: (chat: ActiveChat) => void;
   clearActiveChat: () => void;
+
+  // Right profile panel
+  profilePanelOpen: boolean;
+  toggleProfilePanel: () => void;
+  setProfilePanelOpen: (open: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -24,8 +35,12 @@ export const useChatStore = create<ChatState>((set) => ({
   setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
 
   // Active chat
-  activeChatId: null,
-  activeChatUsername: null,
-  setActiveChat: (chatId, username) => set({ activeChatId: chatId, activeChatUsername: username }),
-  clearActiveChat: () => set({ activeChatId: null, activeChatUsername: null }),
+  activeChat: null,
+  setActiveChat: (chat) => set({ activeChat: chat, profilePanelOpen: false }),
+  clearActiveChat: () => set({ activeChat: null, profilePanelOpen: false }),
+
+  // Right profile panel
+  profilePanelOpen: false,
+  toggleProfilePanel: () => set((s) => ({ profilePanelOpen: !s.profilePanelOpen })),
+  setProfilePanelOpen: (open) => set({ profilePanelOpen: open }),
 }));
