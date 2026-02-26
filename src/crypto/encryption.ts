@@ -38,3 +38,53 @@ export function decryptMessage(
 
   return new TextDecoder().decode(decrypted);
 }
+
+
+// ── SYMMETRIC ENCRYPTION (for messages) ──
+export async function encryptMessageSymmetric(
+  plaintext: string,
+  secretKey: Uint8Array
+): Promise<{ encryptedContent: string; iv: string }> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    secretKey.slice(0, 32),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
+  const encoded = new TextEncoder().encode(plaintext);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    keyMaterial,
+    encoded
+  );
+  return {
+    encryptedContent: btoa(String.fromCharCode(...new Uint8Array(encrypted))),
+    iv: btoa(String.fromCharCode(...iv)),
+  };
+}
+
+export async function decryptMessageSymmetric(
+  encryptedContent: string,
+  iv: string,
+  secretKey: Uint8Array
+): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    secretKey.slice(0, 32),
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"]
+  );
+  const ivBytes = Uint8Array.from(atob(iv), (c) => c.charCodeAt(0));
+  const encryptedBytes = Uint8Array.from(atob(encryptedContent), (c) =>
+    c.charCodeAt(0)
+  );
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: ivBytes },
+    keyMaterial,
+    encryptedBytes
+  );
+  return new TextDecoder().decode(decrypted);
+}

@@ -3,16 +3,20 @@ import { useState } from "react";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Trash2 } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
 
 interface ChatListItemProps {
   id: string;
+  conversationId?: string;
   username: string;
   lastMessage: string;
   time: string;
   unread: number;
   isOnline: boolean;
   profilePicStorageId?: string | null;
-  // ── NEW: Added preset and text colors to props ──
   chatPresetName?: string;
   chatBgColor?: string;
   myBubbleColor?: string;
@@ -23,6 +27,7 @@ interface ChatListItemProps {
 
 export default function ChatListItem({
   id,
+  conversationId,
   username,
   lastMessage,
   time,
@@ -36,25 +41,48 @@ export default function ChatListItem({
   myTextColor,
   otherTextColor,
 }: ChatListItemProps) {
-  const { setActiveChat, activeChat } = useChatStore();
+  const { setActiveChat, setConversationId, activeChat, clearActiveChat } = useChatStore();
+  const userId = useAuthStore((s) => s.userId);
   const [menuOpen, setMenuOpen] = useState(false);
   const isActive = activeChat?.userId === id;
 
+  const deleteChat = useMutation(api.conversations.deleteChat);
+
+  async function handleDeleteChat(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!userId || !conversationId) return;
+    try {
+      await deleteChat({
+        conversationId: conversationId as never,
+        userId,
+      });
+      // Agar ye chat abhi open hai to clear kar do
+      if (isActive) clearActiveChat();
+      toast.success("Chat deleted!");
+      setMenuOpen(false);
+    } catch {
+      toast.error("Failed to delete chat.");
+    }
+  }
+
   return (
     <div
-      onClick={() => setActiveChat({
-        userId: id,
-        username,
-        profilePicStorageId: profilePicStorageId ?? null,
-        isOnline,
-        // ── NEW: Pass all the theme variables to the store ──
-        chatPresetName,
-        chatBgColor,
-        myBubbleColor,
-        otherBubbleColor,
-        myTextColor,
-        otherTextColor,
-      })}
+      onClick={() => {
+        setActiveChat({
+          userId: id,
+          username,
+          profilePicStorageId: profilePicStorageId ?? null,
+          isOnline,
+          conversationId: conversationId ?? null,
+          chatPresetName,
+          chatBgColor,
+          myBubbleColor,
+          otherBubbleColor,
+          myTextColor,
+          otherTextColor,
+        });
+        if (conversationId) setConversationId(conversationId);
+      }}
       className={`relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors group ${
         isActive ? "bg-accent" : "hover:bg-accent/50"
       }`}
@@ -104,10 +132,7 @@ export default function ChatListItem({
         {menuOpen && (
           <div className="absolute right-0 top-8 w-36 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-              }}
+              onClick={handleDeleteChat}
               className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
             >
               <Trash2 size={14} />

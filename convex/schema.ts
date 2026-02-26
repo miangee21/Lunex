@@ -47,7 +47,6 @@ export default defineSchema({
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
   })
-    .index("by_participants", ["participantIds"])
     .index("by_last_message", ["lastMessageAt"]),
 
   messages: defineTable({

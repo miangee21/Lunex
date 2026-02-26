@@ -1,164 +1,255 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChatStore } from "@/store/chatStore";
-import { useAuthStore } from "@/store/authStore"; // ── NEW: Imported Auth Store
-import { useQuery } from "convex/react"; // ── NEW: Imported Convex Query
+import { useAuthStore } from "@/store/authStore";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/ChatInput";
 import MessageBubble from "@/components/chat/ChatBubble";
 import { CheckSquare, X } from "lucide-react";
-
-// Dummy messages
-const DUMMY_MESSAGES = [
-  {
-    id: "1",
-    senderId: "other",
-    text: "Hey! How are you doing?",
-    time: "10:30 AM",
-    isOwn: false,
-  },
-  {
-    id: "2",
-    senderId: "me",
-    text: "I'm doing great! Just testing this awesome app 🚀",
-    time: "10:31 AM",
-    isOwn: true,
-  },
-  {
-    id: "3",
-    senderId: "other",
-    text: "Lunex looks amazing so far! I really love how you added the custom themes, they look just like Signal and Telegram. It gives the app such a premium feel compared to standard web apps. What are you going to build next?",
-    time: "10:32 AM",
-    isOwn: false,
-  },
-  {
-    id: "4",
-    senderId: "me",
-    text: "Thanks! Built with love ❤️ Wait until you see the backend wired up in Step 11!",
-    time: "10:33 AM",
-    isOwn: true,
-  },
-];
+import { decryptMessage } from "@/crypto/encryption";
+import { base64ToKey } from "@/crypto/keyDerivation";
 
 export default function ChatArea() {
   const { activeChat, clearActiveChat, syncChatTheme } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
-  
-  // ── STATE: Custom Context Menu ──
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const secretKey = useAuthStore((s) => s.secretKey);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Close the right-click menu if the user clicks anywhere else on the screen
+  // ── STATE: Custom Context Menu ──
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Close the right-click menu if the user clicks anywhere else
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
-  // ════════════════════════════════════════════════════════════════════════
-  // ── NEW: CLOUD SYNC LOGIC FOR PER-CHAT THEMES ──
-  // ════════════════════════════════════════════════════════════════════════
-  
-  // 1. Fetch the theme for this specific chat from Convex
+  // ── CLOUD SYNC LOGIC FOR PER-CHAT THEMES ──
   const cloudTheme = useQuery(
     api.chatThemes.getChatTheme,
     userId && activeChat?.userId
-      ? { 
-          userId: userId as Id<"users">, 
-          otherUserId: activeChat.userId as Id<"users"> 
+      ? {
+          userId: userId as Id<"users">,
+          otherUserId: activeChat.userId as Id<"users">,
         }
-      : "skip"
+      : "skip",
   );
 
-  // 2. Automatically sync it to the Zustand store when data arrives
   useEffect(() => {
     if (userId && activeChat?.userId && cloudTheme !== undefined) {
-      // Extract only the theme properties, or fallback to undefined to clear it
-      const themeData = cloudTheme ? {
-        chatPresetName: cloudTheme.chatPresetName,
-        chatBgColor: cloudTheme.chatBgColor,
-        myBubbleColor: cloudTheme.myBubbleColor,
-        otherBubbleColor: cloudTheme.otherBubbleColor,
-        myTextColor: cloudTheme.myTextColor,
-        otherTextColor: cloudTheme.otherTextColor,
-      } : {
-        chatPresetName: undefined,
-        chatBgColor: undefined,
-        myBubbleColor: undefined,
-        otherBubbleColor: undefined,
-        myTextColor: undefined,
-        otherTextColor: undefined,
-      };
-
-      // Push to Zustand store (this updates the screen instantly)
+      const themeData = cloudTheme
+        ? {
+            chatPresetName: cloudTheme.chatPresetName,
+            chatBgColor: cloudTheme.chatBgColor,
+            myBubbleColor: cloudTheme.myBubbleColor,
+            otherBubbleColor: cloudTheme.otherBubbleColor,
+            myTextColor: cloudTheme.myTextColor,
+            otherTextColor: cloudTheme.otherTextColor,
+          }
+        : {
+            chatPresetName: undefined,
+            chatBgColor: undefined,
+            myBubbleColor: undefined,
+            otherBubbleColor: undefined,
+            myTextColor: undefined,
+            otherTextColor: undefined,
+          };
       syncChatTheme(userId, activeChat.userId, themeData);
     }
   }, [cloudTheme, userId, activeChat?.userId, syncChatTheme]);
 
-  // ════════════════════════════════════════════════════════════════════════
+  // ── REAL MESSAGES ──
+  const rawMessages = useQuery(
+    api.messages.getMessages,
+    activeChat?.conversationId && userId
+      ? {
+          conversationId: activeChat.conversationId as Id<"conversations">,
+          userId: userId as Id<"users">,
+        }
+      : "skip",
+  );
+
+  // ── MARK AS READ ──
+  const markAsRead = useMutation(api.messages.markMessagesAsRead);
+  const otherUser = useQuery(
+  api.users.getUserById,
+  activeChat?.userId ? { userId: activeChat.userId as never } : "skip"
+);
+
+  useEffect(() => {
+    if (activeChat?.conversationId && userId) {
+      markAsRead({
+        conversationId: activeChat.conversationId as Id<"conversations">,
+        userId: userId as Id<"users">,
+      });
+    }
+  }, [activeChat?.conversationId, rawMessages?.length]);
+
+  // ── DECRYPT MESSAGES ──
+  type DecryptedMessage = {
+    id: string;
+    text: string;
+    time: string;
+    isOwn: boolean;
+    senderId: string;
+    reactions: Array<{ userId: string; emoji: string }>;
+    editedAt: number | null;
+    readBy: string[];
+  };
+
+  const [decryptedMessages, setDecryptedMessages] = useState<
+    DecryptedMessage[]
+  >([]);
+
+  useEffect(() => {
+    if (!rawMessages || !secretKey) return;
+
+    async function decryptAll() {
+      const result = await Promise.all(
+        rawMessages!.map(async (msg) => {
+          let text = "";
+          try {
+            if (!otherUser?.publicKey) {
+              text = "🔒 Unable to decrypt message";
+              return {
+                ...msg,
+                text,
+                time: new Date(msg.sentAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              };
+            }
+            const theirPublicKey = base64ToKey(otherUser.publicKey);
+            text = decryptMessage(
+              { encryptedContent: msg.encryptedContent, iv: msg.iv },
+              secretKey!,
+              theirPublicKey,
+            );
+          } catch {
+            text = "🔒 Unable to decrypt message";
+          }
+          return {
+            id: msg.id,
+            text,
+            time: new Date(msg.sentAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isOwn: msg.isOwn,
+            senderId: msg.senderId,
+            reactions: msg.reactions,
+            editedAt: msg.editedAt,
+            readBy: msg.readBy,
+          };
+        }),
+      );
+      setDecryptedMessages(result);
+    }
+
+    decryptAll();
+  }, [rawMessages, secretKey, otherUser?.publicKey]);
+
+  // ── AUTO SCROLL TO BOTTOM ──
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [decryptedMessages]);
 
   if (!activeChat) return null;
 
-  // ── 1. PRESET THEME CLASS ──
-  const themeClass = activeChat.chatPresetName 
-    ? `theme-${activeChat.chatPresetName.toLowerCase()}` 
+  // ── PRESET THEME CLASS ──
+  const themeClass = activeChat.chatPresetName
+    ? `theme-${activeChat.chatPresetName.toLowerCase()}`
     : "";
 
-  // ── 2. CUSTOM OVERRIDES ──
+  // ── CUSTOM OVERRIDES ──
   const customThemeStyles = {
-    ...(activeChat.chatBgColor && { "--background": activeChat.chatBgColor, "--sidebar": activeChat.chatBgColor }),
+    ...(activeChat.chatBgColor && {
+      "--background": activeChat.chatBgColor,
+      "--sidebar": activeChat.chatBgColor,
+    }),
     ...(activeChat.myBubbleColor && { "--primary": activeChat.myBubbleColor }),
-    ...(activeChat.otherBubbleColor && { "--secondary": activeChat.otherBubbleColor }),
-    ...(activeChat.myTextColor && { "--primary-foreground": activeChat.myTextColor }),
-    ...(activeChat.otherTextColor && { "--secondary-foreground": activeChat.otherTextColor }),
+    ...(activeChat.otherBubbleColor && {
+      "--secondary": activeChat.otherBubbleColor,
+    }),
+    ...(activeChat.myTextColor && {
+      "--primary-foreground": activeChat.myTextColor,
+    }),
+    ...(activeChat.otherTextColor && {
+      "--secondary-foreground": activeChat.otherTextColor,
+    }),
   } as React.CSSProperties;
 
+  const isLoading = activeChat.conversationId && rawMessages === undefined;
+
   return (
-    <div 
+    <div
       className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative ${themeClass}`}
       style={customThemeStyles}
       onContextMenu={(e) => e.preventDefault()}
     >
-
       {/* Header */}
       <ChatHeader />
 
       {/* Messages area */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2"
         onContextMenu={(e) => {
-          e.preventDefault(); 
-          setContextMenu({ x: e.clientX, y: e.clientY }); 
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY });
         }}
       >
-        {DUMMY_MESSAGES.map((msg) => (
-          <div 
-            key={msg.id} 
-            onContextMenu={(e) => {
-              e.preventDefault();  
-              e.stopPropagation(); 
-            }} 
-          >
-            <MessageBubble
-              text={msg.text}
-              time={msg.time}
-              isOwn={msg.isOwn}
-            />
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
-        ))}
+        ) : decryptedMessages.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground text-sm">
+              No messages yet — say hello! 👋
+            </p>
+          </div>
+        ) : (
+          decryptedMessages.map((msg) => (
+            <div
+              key={msg.id}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <MessageBubble
+                text={msg.text}
+                time={msg.time}
+                isOwn={msg.isOwn}
+                reactions={msg.reactions}
+                editedAt={msg.editedAt}
+                readBy={msg.readBy}
+              />
+            </div>
+          ))
+        )}
+        {/* Auto scroll anchor */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
       <ChatInput />
 
-      {/* ── Right-Click Custom Context Menu UI ── */}
+      {/* Right-Click Custom Context Menu UI */}
       {contextMenu && (
-        <div 
+        <div
           className="fixed z-50 w-48 bg-card border border-border shadow-xl rounded-xl overflow-hidden animate-in fade-in-80 zoom-in-95"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button 
+          <button
             onClick={() => {
               console.log("Select messages clicked");
               setContextMenu(null);
@@ -168,10 +259,10 @@ export default function ChatArea() {
             <CheckSquare size={14} className="text-muted-foreground" />
             Select messages
           </button>
-          
+
           <div className="h-px bg-border w-full" />
-          
-          <button 
+
+          <button
             onClick={() => {
               clearActiveChat();
               setContextMenu(null);
@@ -183,7 +274,6 @@ export default function ChatArea() {
           </button>
         </div>
       )}
-
     </div>
   );
 }

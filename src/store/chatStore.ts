@@ -9,7 +9,7 @@ interface ActiveChat {
   username: string;
   profilePicStorageId: string | null;
   isOnline: boolean;
-  // Per-chat theme customization
+  conversationId?: string | null;
   chatPresetName?: string;
   chatBgColor?: string;
   myBubbleColor?: string;
@@ -38,9 +38,9 @@ interface ChatState {
   setActiveChat: (chat: ActiveChat) => void;
   clearActiveChat: () => void;
   updateActiveChatTheme: (themeData: ThemeOptions) => void;
+  setConversationId: (conversationId: string) => void;
 
-  // ── NEW: Cloud Sync Method ──
-  // Called when Convex returns data to ensure local UI matches the backend
+  // ── Cloud Sync Method ──
   syncChatTheme: (myUserId: string, friendId: string, themeData: ThemeOptions) => void;
 
   // Right profile panel
@@ -66,7 +66,6 @@ export const useChatStore = create<ChatState>()(
       activeChat: null,
       
       setActiveChat: (chat) => set((s) => {
-        // Grab the current logged-in user's ID
         const myUserId = useAuthStore.getState().userId;
         const myThemes = myUserId ? (s.localThemes[myUserId] || {}) : {};
 
@@ -102,17 +101,15 @@ export const useChatStore = create<ChatState>()(
         };
       }),
 
-      // ── NEW: SYNC FROM CLOUD ──
+      // ── SYNC FROM CLOUD ──
       syncChatTheme: (myUserId, friendId, themeData) => set((s) => {
         const myThemes = s.localThemes[myUserId] || {};
         const isCurrentlyActive = s.activeChat?.userId === friendId;
 
         return {
-          // Agar ye chat abhi open hai toh screen par usi waqt update kar do
           ...(isCurrentlyActive && s.activeChat && {
             activeChat: { ...s.activeChat, ...themeData }
           }),
-          // Local cache ko update kar do taake baad mein fast load ho
           localThemes: {
             ...s.localThemes,
             [myUserId]: {
@@ -122,6 +119,13 @@ export const useChatStore = create<ChatState>()(
           }
         };
       }),
+
+      // ── SET CONVERSATION ID ──
+      setConversationId: (conversationId) => set((s) => ({
+        activeChat: s.activeChat
+          ? { ...s.activeChat, conversationId }
+          : null,
+      })),
 
       // Right profile panel
       profilePanelOpen: false,
@@ -162,7 +166,6 @@ export const useChatStore = create<ChatState>()(
       
     }),
     {
-      // ── CHANGED NAME: This ensures we start fresh with the new cloud-sync logic ──
       name: "lunex-chat-themes-cloud-sync", 
       partialize: (state) => ({ localThemes: state.localThemes }), 
     }
