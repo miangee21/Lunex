@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-
 // Check if a username is available (returns true if available)
 export const isUsernameAvailable = query({
   args: { username: v.string() },
@@ -71,6 +70,25 @@ export const updateUserProfile = mutation({
     if (args.profilePicStorageId !== undefined) patch.profilePicStorageId = args.profilePicStorageId;
     if (args.bio !== undefined) patch.bio = args.bio;
     await ctx.db.patch(args.userId, patch);
+  },
+});
+
+// ── NEW: Update Global Theme Settings ──
+export const updateThemeSettings = mutation({
+  args: {
+    userId: v.id("users"),
+    theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
+    globalPreset: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const patch: Record<string, unknown> = {};
+    if (args.theme !== undefined) patch.theme = args.theme;
+    if (args.globalPreset !== undefined) patch.globalPreset = args.globalPreset;
+    
+    // Only patch if there is something to update
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.userId, patch);
+    }
   },
 });
 

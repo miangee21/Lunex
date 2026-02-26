@@ -1,21 +1,28 @@
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react"; // ── NEW: Added useMutation
 import { api } from "../../../convex/_generated/api";
 import AvatarMenu from "@/components/sidebar/AvatarMenu";
 import { MessageSquare, Users, Sun, Moon } from "lucide-react";
 import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
-import icon from "@/assets/icon.png";
+import LunexLogo from "@/components/shared/LunexLogo";
 import { useState } from "react";
 
 export default function SlimBar() {
   const { sidebarOpen, toggleSidebar, setSidebarView, sidebarView } = useChatStore();
-  const { theme, toggleTheme } = useThemeStore();
+  
+  const { userConfigs, toggleTheme } = useThemeStore();
   const userId = useAuthStore((s) => s.userId);
   const username = useAuthStore((s) => s.username);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+
+  // Dynamically grab the theme for the currently logged-in user
+  const currentTheme = userId && userConfigs[userId] ? userConfigs[userId].theme : "dark";
+
+  // ── NEW: Convex Mutation for Cloud Sync ──
+  const updateThemeSettings = useMutation(api.users.updateThemeSettings);
 
   // Real-time requests badge
   const requestsCount = useQuery(
@@ -24,9 +31,28 @@ export default function SlimBar() {
   );
 
   const userRecord = useQuery(
-  api.users.getUserById,
-  userId ? { userId } : "skip"
-);
+    api.users.getUserById,
+    userId ? { userId } : "skip"
+  );
+
+  // ── NEW: Handler to sync theme locally and to the cloud ──
+  const handleThemeToggle = async () => {
+    if (userId) {
+      // 1. Instant Local UI Update (Optimistic UI)
+      toggleTheme(userId); 
+      
+      // 2. Background Cloud Sync
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+      try {
+        await updateThemeSettings({ 
+          userId: userId as Id<"users">, 
+          theme: nextTheme 
+        });
+      } catch (error) {
+        console.error("Failed to sync theme to cloud:", error);
+      }
+    }
+  };
 
   return (
     <div className="flex flex-col items-center h-screen w-14 flex-shrink-0 bg-sidebar border-r border-border py-3 gap-2 z-20">
@@ -37,7 +63,7 @@ export default function SlimBar() {
         className="w-9 h-9 rounded-xl overflow-hidden mb-2 hover:opacity-80 transition-opacity flex-shrink-0"
         title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
       >
-        <img src={icon} alt="Lunex" className="w-full h-full object-cover" />
+        <LunexLogo />
       </button>
 
       {/* Chats button */}
@@ -77,11 +103,11 @@ export default function SlimBar() {
 
       {/* Theme toggle */}
       <button
-        onClick={toggleTheme}
+        onClick={handleThemeToggle} // ── FIXED: Uses the new sync handler ──
         title="Toggle theme"
         className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
-        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+        {currentTheme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
       </button>
 
       {/* Avatar — opens menu */}
@@ -89,7 +115,7 @@ export default function SlimBar() {
         onClick={() => setAvatarMenuOpen((v) => !v)}
         title={username ?? "Profile"}
         className="w-10 h-10 rounded-xl overflow-hidden hover:opacity-90 transition-opacity"
-     >
+      >
        <UserAvatar
          username={username ?? "?"}
          profilePicStorageId={userRecord?.profilePicStorageId as Id<"_storage"> | null}

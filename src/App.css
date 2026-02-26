@@ -37,28 +37,31 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* LIGHT MODE — white background, light blue accents */
+/* ==========================================================================
+   DEFAULT THEME (Global App Theme)
+   ========================================================================== */
+
 :root {
     --radius: 0.625rem;
-    --background: oklch(1 0 0);               /* pure white */
-    --foreground: oklch(0.2 0.04 264);         /* near black text */
-    --card: oklch(0.97 0.01 240);              /* very light blue-white card */
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.2 0.04 264);
+    --card: oklch(0.97 0.01 240);
     --card-foreground: oklch(0.2 0.04 264);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.2 0.04 264);
-    --primary: oklch(0.55 0.18 240);           /* medium blue — buttons, links */
-    --primary-foreground: oklch(1 0 0);        /* white text on blue buttons */
-    --secondary: oklch(0.92 0.04 240);         /* soft light blue */
+    --primary: oklch(0.55 0.18 240);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.92 0.04 240);
     --secondary-foreground: oklch(0.2 0.04 264);
-    --muted: oklch(0.94 0.02 240);             /* very light muted blue-grey */
-    --muted-foreground: oklch(0.5 0.04 257);   /* medium grey text */
-    --accent: oklch(0.88 0.06 240);            /* light blue accent */
+    --muted: oklch(0.94 0.02 240);
+    --muted-foreground: oklch(0.5 0.04 257);
+    --accent: oklch(0.88 0.06 240);
     --accent-foreground: oklch(0.2 0.04 264);
-    --destructive: oklch(0.577 0.245 27.325);  /* red for delete/danger */
-    --border: oklch(0.88 0.03 240);            /* light blue-grey border */
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.88 0.03 240);
     --input: oklch(0.88 0.03 240);
     --ring: oklch(0.55 0.18 240);
-    --sidebar: oklch(0.95 0.03 240);           /* sidebar slightly blue-white */
+    --sidebar: oklch(0.95 0.03 240);
     --sidebar-foreground: oklch(0.2 0.04 264);
     --sidebar-primary: oklch(0.55 0.18 240);
     --sidebar-primary-foreground: oklch(1 0 0);
@@ -68,27 +71,26 @@
     --sidebar-ring: oklch(0.55 0.18 240);
 }
 
-/* DARK MODE — deep blue like Signal/Telegram */
-.dark {
-    --background: oklch(0.18 0.04 264);        /* deep dark blue — main background */
-    --foreground: oklch(0.95 0.01 240);        /* near white text */
-    --card: oklch(0.23 0.045 264);             /* slightly lighter dark blue for cards */
+html.dark {
+    --background: oklch(0.18 0.04 264);
+    --foreground: oklch(0.95 0.01 240);
+    --card: oklch(0.23 0.045 264);
     --card-foreground: oklch(0.95 0.01 240);
     --popover: oklch(0.23 0.045 264);
     --popover-foreground: oklch(0.95 0.01 240);
-    --primary: oklch(0.6 0.2 240);             /* bright blue — buttons, links */
-    --primary-foreground: oklch(1 0 0);        /* white text on blue buttons */
-    --secondary: oklch(0.28 0.05 264);         /* dark blue secondary */
+    --primary: oklch(0.6 0.2 240);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.28 0.05 264);
     --secondary-foreground: oklch(0.95 0.01 240);
-    --muted: oklch(0.28 0.05 264);             /* muted dark blue */
-    --muted-foreground: oklch(0.65 0.03 257);  /* medium light grey text */
-    --accent: oklch(0.32 0.06 264);            /* slightly lighter accent */
+    --muted: oklch(0.28 0.05 264);
+    --muted-foreground: oklch(0.65 0.03 257);
+    --accent: oklch(0.32 0.06 264);
     --accent-foreground: oklch(0.95 0.01 240);
-    --destructive: oklch(0.65 0.22 22);        /* red for delete/danger */
-    --border: oklch(1 0 0 / 10%);              /* subtle white border */
+    --destructive: oklch(0.65 0.22 22);
+    --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 12%);
     --ring: oklch(0.55 0.18 240);
-    --sidebar: oklch(0.21 0.045 264);          /* sidebar slightly different dark blue */
+    --sidebar: oklch(0.21 0.045 264);
     --sidebar-foreground: oklch(0.95 0.01 240);
     --sidebar-primary: oklch(0.6 0.2 240);
     --sidebar-primary-foreground: oklch(1 0 0);
@@ -98,6 +100,220 @@
     --sidebar-ring: oklch(0.55 0.18 240);
 }
 
+/* ==========================================================================
+   GLOBAL THEMES (Applies to the entire app via HTML class)
+   ========================================================================== */
+
+/* 1. SAPPHIRE (Deep Premium Blue) */
+html.global-theme-sapphire {
+    --primary: oklch(0.5 0.25 250);
+    --sidebar: oklch(0.96 0.02 250);
+    --accent: oklch(0.92 0.05 250);
+}
+html.dark.global-theme-sapphire {
+    --background: oklch(0.15 0.05 250);
+    --sidebar: oklch(0.18 0.05 250);
+    --card: oklch(0.2 0.05 250);
+    --primary: oklch(0.55 0.25 250);
+    --accent: oklch(0.25 0.06 250);
+}
+
+/* 2. EMERALD (WhatsApp/Signal Rich Green) */
+html.global-theme-emerald {
+    --primary: oklch(0.55 0.18 150);
+    --sidebar: oklch(0.96 0.02 150);
+    --accent: oklch(0.92 0.05 150);
+}
+html.dark.global-theme-emerald {
+    --background: oklch(0.16 0.03 150);
+    --sidebar: oklch(0.19 0.03 150);
+    --card: oklch(0.22 0.03 150);
+    --primary: oklch(0.6 0.18 150);
+    --accent: oklch(0.26 0.04 150);
+}
+
+/* 3. AMETHYST (Discord Dark Violet/Purple) */
+html.global-theme-amethyst {
+    --primary: oklch(0.5 0.22 300);
+    --sidebar: oklch(0.97 0.02 300);
+    --accent: oklch(0.92 0.05 300);
+}
+html.dark.global-theme-amethyst {
+    --background: oklch(0.17 0.04 300);
+    --sidebar: oklch(0.2 0.04 300);
+    --card: oklch(0.23 0.04 300);
+    --primary: oklch(0.6 0.2 300);
+    --accent: oklch(0.28 0.05 300);
+}
+
+/* 4. CRIMSON (Netflix/YouTube Bold Red) */
+html.global-theme-crimson {
+    --primary: oklch(0.5 0.22 25);
+    --sidebar: oklch(0.98 0.01 25);
+    --accent: oklch(0.92 0.04 25);
+}
+html.dark.global-theme-crimson {
+    --background: oklch(0.15 0.02 25);
+    --sidebar: oklch(0.18 0.02 25);
+    --card: oklch(0.2 0.02 25);
+    --primary: oklch(0.55 0.22 25);
+    --accent: oklch(0.25 0.04 25);
+}
+
+/* 5. SUNSET (Warm Orange/Peach) */
+html.global-theme-sunset {
+    --primary: oklch(0.6 0.18 50);
+    --sidebar: oklch(0.97 0.02 50);
+    --accent: oklch(0.92 0.05 50);
+}
+html.dark.global-theme-sunset {
+    --background: oklch(0.16 0.02 50);
+    --sidebar: oklch(0.19 0.02 50);
+    --card: oklch(0.22 0.02 50);
+    --primary: oklch(0.65 0.18 50);
+    --accent: oklch(0.26 0.04 50);
+}
+
+/* 6. MIDNIGHT ABYSS (True OLED Black / Stark White) */
+html.global-theme-midnight {
+    --primary: oklch(0.2 0 0); /* Near black primary in light mode */
+    --sidebar: oklch(0.98 0 0);
+    --accent: oklch(0.92 0 0);
+}
+html.dark.global-theme-midnight {
+    --background: oklch(0 0 0); /* TRUE OLED BLACK */
+    --sidebar: oklch(0.1 0 0);
+    --card: oklch(0.1 0 0);
+    --primary: oklch(0.9 0 0); /* Near white primary */
+    --primary-foreground: oklch(0 0 0);
+    --accent: oklch(0.15 0 0);
+    --border: oklch(1 0 0 / 15%);
+}
+
+/* 7. MONOCHROME (Minimalist Greys) */
+html.global-theme-monochrome {
+    --primary: oklch(0.4 0 0);
+    --sidebar: oklch(0.95 0 0);
+    --accent: oklch(0.85 0 0);
+    --background: oklch(0.99 0 0);
+}
+html.dark.global-theme-monochrome {
+    --background: oklch(0.2 0 0);
+    --sidebar: oklch(0.25 0 0);
+    --card: oklch(0.25 0 0);
+    --primary: oklch(0.8 0 0);
+    --primary-foreground: oklch(0.2 0 0);
+    --accent: oklch(0.3 0 0);
+}
+
+/* ==========================================================================
+   PER-CHAT THEMES (Overrides global theme only inside the ChatArea)
+   ========================================================================== */
+
+/* ── LIGHT MODE VARIANTS ── */
+.theme-ocean {
+    --background: oklch(0.97 0.02 240);
+    --sidebar: oklch(0.98 0.01 240);
+    --primary: oklch(0.55 0.18 240);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.92 0.04 240);
+    --secondary-foreground: oklch(0.2 0.04 264);
+    --accent: oklch(0.9 0.05 240);
+    --border: oklch(0.9 0.03 240);
+}
+.theme-forest {
+    --background: oklch(0.97 0.03 150);
+    --sidebar: oklch(0.98 0.01 150);
+    --primary: oklch(0.55 0.15 150);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.92 0.04 150);
+    --secondary-foreground: oklch(0.2 0.04 150);
+    --accent: oklch(0.9 0.05 150);
+    --border: oklch(0.9 0.03 150);
+}
+.theme-signal {
+    --background: oklch(1 0 0);
+    --sidebar: oklch(0.98 0 0);
+    --primary: oklch(0.55 0.2 260);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.92 0 0);
+    --secondary-foreground: oklch(0.2 0 0);
+    --accent: oklch(0.9 0 0);
+    --border: oklch(0.9 0 0);
+}
+.theme-telegram {
+    --background: oklch(0.94 0.02 240);
+    --sidebar: oklch(1 0 0);
+    --primary: oklch(0.85 0.1 140);
+    --primary-foreground: oklch(0.2 0 0);
+    --secondary: oklch(1 0 0);
+    --secondary-foreground: oklch(0.2 0 0);
+    --accent: oklch(0.9 0.02 240);
+    --border: oklch(0.9 0.02 240);
+}
+.theme-midnight {
+    --background: oklch(0.95 0.02 280);
+    --sidebar: oklch(0.97 0.01 280);
+    --primary: oklch(0.5 0.2 280);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.9 0.04 280);
+    --secondary-foreground: oklch(0.2 0.04 280);
+    --accent: oklch(0.88 0.05 280);
+    --border: oklch(0.88 0.03 280);
+}
+
+/* ── DARK MODE VARIANTS ── */
+html.dark .theme-ocean {
+    --background: oklch(0.2 0.04 240);
+    --sidebar: oklch(0.22 0.04 240);
+    --primary: oklch(0.6 0.18 240);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.28 0.05 240);
+    --secondary-foreground: oklch(0.95 0.01 240);
+    --accent: oklch(0.3 0.06 240);
+    --border: oklch(1 0 0 / 10%);
+}
+html.dark .theme-forest {
+    --background: oklch(0.2 0.04 150);
+    --sidebar: oklch(0.22 0.04 150);
+    --primary: oklch(0.6 0.15 150);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.28 0.05 150);
+    --secondary-foreground: oklch(0.95 0.01 150);
+    --accent: oklch(0.3 0.06 150);
+    --border: oklch(1 0 0 / 10%);
+}
+html.dark .theme-signal {
+    --background: oklch(0.15 0 0);
+    --sidebar: oklch(0.18 0 0);
+    --primary: oklch(0.6 0.2 260);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.25 0 0);
+    --secondary-foreground: oklch(0.95 0 0);
+    --accent: oklch(0.28 0 0);
+    --border: oklch(1 0 0 / 10%);
+}
+html.dark .theme-telegram {
+    --background: oklch(0.2 0.02 240);
+    --sidebar: oklch(0.22 0.02 240);
+    --primary: oklch(0.5 0.1 200);
+    --primary-foreground: oklch(1 0 0);
+    --secondary: oklch(0.25 0.02 240);
+    --secondary-foreground: oklch(0.95 0 0);
+    --accent: oklch(0.3 0.02 240);
+    --border: oklch(1 0 0 / 10%);
+}
+html.dark .theme-midnight {
+    --background: oklch(0.18 0.03 280);
+    --sidebar: oklch(0.2 0.03 280);
+    --primary: oklch(0.65 0.2 280);
+    --primary-foreground: oklch(0.1 0.05 280);
+    --secondary: oklch(0.25 0.04 280);
+    --secondary-foreground: oklch(0.95 0.02 280);
+    --accent: oklch(0.28 0.05 280);
+    --border: oklch(1 0 0 / 10%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -105,4 +321,40 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* ==========================================================================
+   CUSTOM SCROLLBAR - DYNAMIC FOR ALL THEMES
+   ========================================================================== */
+
+/* Thin scrollbar for all browsers */
+* {
+  scrollbar-width: thin;
+  /* Automatically uses the active theme's variables */
+  scrollbar-color: var(--border) transparent;
+  scroll-behavior: smooth;
+}
+
+/* Webkit (Chrome in Tauri) */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Track (background area) */
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Thumb (the draggable part) */
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+  /* Adds a gap around the thumb matching the background */
+  border: 2px solid var(--background);
+}
+
+/* Hover state */
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
 }

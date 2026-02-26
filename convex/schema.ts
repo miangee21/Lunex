@@ -9,6 +9,10 @@ export default defineSchema({
     bio: v.optional(v.string()),
     isOnline: v.boolean(),
     lastSeen: v.number(),
+    
+    // ── NEW: Global Theme Sync ──
+    theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
+    globalPreset: v.optional(v.string()),
   })
     .index("by_username", ["username"])
     .index("by_public_key", ["publicKey"]),
@@ -27,7 +31,6 @@ export default defineSchema({
     .index("by_to_user", ["toUserId", "status"])
     .index("by_pair", ["fromUserId", "toUserId"]),
 
-  
   blockedUsers: defineTable({
     blockerId: v.id("users"),
     blockedId: v.id("users"),
@@ -93,4 +96,17 @@ export default defineSchema({
     deletedAt: v.number(),
   })
     .index("by_user_conversation", ["userId", "conversationId"]),
+
+  // ── NEW: Per-Chat Themes Table ──
+  chatThemes: defineTable({
+    userId: v.id("users"),        
+    otherUserId: v.id("users"),   
+    chatPresetName: v.optional(v.string()),
+    chatBgColor: v.optional(v.string()),
+    myBubbleColor: v.optional(v.string()),
+    otherBubbleColor: v.optional(v.string()),
+    myTextColor: v.optional(v.string()),
+    otherTextColor: v.optional(v.string()),
+  })
+    .index("by_user_and_other", ["userId", "otherUserId"]),
 });

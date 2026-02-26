@@ -1,14 +1,68 @@
+import { useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import SlimBar from "@/components/sidebar/SlimBar";
 import ChatList from "@/components/chat/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/ChatArea";
-import ChatUserProfile from "@/components/chat/ChatUserProfile";
+import OtherUserPanel from "@/components/profile/OtherUserPanel"; 
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
 export default function ChatPage() {
-  const { sidebarOpen, sidebarView, activeChat, profilePanelOpen } = useChatStore();
+  const { 
+    sidebarOpen, 
+    sidebarView, 
+    activeChat, 
+    profilePanelOpen 
+  } = useChatStore();
+
+  // ════════════════════════════════════════════════════════════════════════
+  // ── SOLVES ISSUE 1 & 3: Smart Threshold-Based Resize Listener ──
+  // ════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    let prevWidth = window.innerWidth;
+
+    const handleResize = () => {
+      const width = window.innerWidth;
+      
+      // Zustand se latest state directly get kar rahe hain taake infinite loop na banay
+      const state = useChatStore.getState();
+
+      // 1. Agar window expand ho kar 1100px se badi ho gayi (Full Screen) -> Sidebar open kar do (Sab fit aa jayega)
+      if (width >= 1100 && prevWidth < 1100) {
+        state.setSidebarOpen(true);
+      }
+      
+      // 2. Agar window expand ho kar 900px se badi hui -> Sidebar open karo LEKIN tab agar profile band ho
+      else if (width >= 900 && prevWidth < 900) {
+        if (!state.profilePanelOpen) {
+          state.setSidebarOpen(true);
+        }
+      }
+      
+      // 3. Agar window shrink ho kar 1100px se choti hui -> Profile open hai toh sidebar band kar do
+      else if (width < 1100 && prevWidth >= 1100) {
+        if (state.profilePanelOpen) {
+          state.setSidebarOpen(false);
+        }
+      }
+      
+      // 4. Agar window shrink ho kar 900px se bhi choti ho gayi -> Agar koi chat open hai toh sidebar band kar do
+      else if (width < 900 && prevWidth >= 900) {
+        if (state.activeChat) {
+          state.setSidebarOpen(false);
+        }
+      }
+
+      // Next resize event k liye isko save kar lo
+      prevWidth = width;
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []); // ── EMPTY DEPENDENCY ARRAY: Yehi Issue 3 ka fix ha! Ab manual click override nahi hoga. ──
+
+  // ════════════════════════════════════════════════════════════════════════
 
   const renderSidebarContent = () => {
     switch (sidebarView) {
@@ -71,7 +125,7 @@ export default function ChatPage() {
         {/* Right Profile Panel — slides in */}
         {activeChat && profilePanelOpen && (
           <div className="w-72 flex-shrink-0 border-l border-border bg-sidebar overflow-hidden">
-            <ChatUserProfile />
+            <OtherUserPanel />
           </div>
         )}
 

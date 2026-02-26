@@ -12,6 +12,13 @@ interface ChatListItemProps {
   unread: number;
   isOnline: boolean;
   profilePicStorageId?: string | null;
+  // ── NEW: Added preset and text colors to props ──
+  chatPresetName?: string;
+  chatBgColor?: string;
+  myBubbleColor?: string;
+  otherBubbleColor?: string;
+  myTextColor?: string;
+  otherTextColor?: string;
 }
 
 export default function ChatListItem({
@@ -22,6 +29,12 @@ export default function ChatListItem({
   unread,
   isOnline,
   profilePicStorageId,
+  chatPresetName,
+  chatBgColor,
+  myBubbleColor,
+  otherBubbleColor,
+  myTextColor,
+  otherTextColor,
 }: ChatListItemProps) {
   const { setActiveChat, activeChat } = useChatStore();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,6 +47,13 @@ export default function ChatListItem({
         username,
         profilePicStorageId: profilePicStorageId ?? null,
         isOnline,
+        // ── NEW: Pass all the theme variables to the store ──
+        chatPresetName,
+        chatBgColor,
+        myBubbleColor,
+        otherBubbleColor,
+        myTextColor,
+        otherTextColor,
       })}
       className={`relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors group ${
         isActive ? "bg-accent" : "hover:bg-accent/50"

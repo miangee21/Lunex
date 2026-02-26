@@ -3,13 +3,14 @@ import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { ArrowLeft, Search, MoreVertical, UserX, Shield, ShieldOff, Users, Ban } from "lucide-react";
+import { ArrowLeft, Search, MoreVertical, UserX, Shield, ShieldOff, Users, Ban, Palette } from "lucide-react";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
+import GlobalThemeCustomizer from "@/components/profile/GlobalThemeCustomizer";
 
-type ProfileView = "main" | "friends" | "blocked";
+type ProfileView = "main" | "friends" | "blocked" | "theme"; // ── ADDED "theme"
 
 export default function MyProfilePanel() {
   const { setSidebarView } = useChatStore();
@@ -27,12 +28,10 @@ export default function MyProfilePanel() {
     api.friends.getFriends,
     userId ? { userId } : "skip"
   );
-
   const blockedUsers = useQuery(
     api.friends.getBlockedUsers,
     userId ? { userId } : "skip"
   );
-
   const userRecord = useQuery(
     api.users.getUserById,
     userId ? { userId } : "skip"
@@ -93,12 +92,17 @@ export default function MyProfilePanel() {
 
   const actualFriends = (friends ?? []).filter((f) => f && !f.iBlockedThem);
   const filteredFriends = actualFriends.filter((f) =>
-  f!.username.toLowerCase().includes(friendSearch.toLowerCase())
- );
+    f!.username.toLowerCase().includes(friendSearch.toLowerCase())
+  );
 
   const filteredBlocked = (blockedUsers ?? []).filter((b) =>
     b.username.toLowerCase().includes(blockedSearch.toLowerCase())
   );
+
+  // ── THEME CUSTOMIZER VIEW ──
+  if (view === "theme") {
+    return <GlobalThemeCustomizer onBack={() => setView("main")} />;
+  }
 
   // ── FRIENDS VIEW ──
   if (view === "friends") {
@@ -290,15 +294,15 @@ export default function MyProfilePanel() {
 
   // ── MAIN PROFILE VIEW ──
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+    <div className="flex flex-col h-full animate-in slide-in-from-left-4 duration-300">
+      <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border">
         <button
           onClick={() => setSidebarView("chats")}
           className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
         >
           <ArrowLeft size={18} />
         </button>
-        <h2 className="text-foreground font-bold text-lg">My Profile</h2>
+        <h2 className="text-foreground font-bold text-sm">My Profile</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4">
@@ -314,7 +318,7 @@ export default function MyProfilePanel() {
 
         {/* Bio */}
         <div className="mb-6">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-2">Bio</p>
+          <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider mb-2">Bio</p>
           {editingBio ? (
             <>
               <textarea
@@ -324,14 +328,14 @@ export default function MyProfilePanel() {
                 maxLength={120}
                 autoFocus
                 rows={3}
-                className="w-full bg-accent rounded-xl px-3 py-2 text-sm text-foreground outline-none resize-none border border-primary"
+                className="w-full bg-accent rounded-xl px-3 py-2 text-sm text-foreground outline-none resize-none border border-primary transition-colors"
               />
               <p className="text-muted-foreground text-xs mt-1 text-right">{bioValue.length}/120</p>
             </>
           ) : (
             <p
               onClick={() => { setEditingBio(true); setBioValue(bio); }}
-              className="text-foreground text-sm cursor-pointer hover:bg-accent rounded-xl px-3 py-2 transition-colors"
+              className="text-foreground text-sm leading-relaxed cursor-pointer hover:bg-accent rounded-xl px-3 py-2 transition-colors -mx-3"
             >
               {bio || "Click to add a bio..."}
             </p>
@@ -340,8 +344,22 @@ export default function MyProfilePanel() {
 
         <div className="h-px bg-border mb-4" />
 
-        {/* Friends + Blocked buttons */}
+        {/* Actions Buttons */}
         <div className="flex flex-col gap-2 pb-6">
+          
+          {/* ── NEW: Customize Global Theme Button ── */}
+          <button
+            onClick={() => setView("theme")}
+            className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group mb-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Palette size={16} className="text-primary" />
+              </div>
+              <span className="text-foreground font-semibold text-sm">Customize Global Theme</span>
+            </div>
+          </button>
+
           <button
             onClick={() => setView("friends")}
             className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group"

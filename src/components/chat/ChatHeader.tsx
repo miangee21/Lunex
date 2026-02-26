@@ -1,7 +1,7 @@
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
-import { Phone, Video, MoreVertical } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 
 export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
@@ -37,25 +37,10 @@ export default function ChatHeader() {
       </div>
 
       {/* Action buttons */}
-      <div
-        className="flex items-center gap-1"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="flex items-center gap-1">
         <button
           className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
-          title="Voice call (coming soon)"
-        >
-          <Phone size={18} />
-        </button>
-        <button
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
-          title="Video call (coming soon)"
-        >
-          <Video size={18} />
-        </button>
-        <button
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
-          title="More options"
+          title="View profile options"
         >
           <MoreVertical size={18} />
         </button>

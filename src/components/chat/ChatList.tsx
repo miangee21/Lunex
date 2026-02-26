@@ -85,6 +85,13 @@ export default function ChatList() {
                       username: friend.username,
                       profilePicStorageId: friend.profilePicStorageId,
                       isOnline: friend.isOnline,
+                      // ── NEW: Pass all theme variables down to the store ──
+                      chatPresetName: (friend as any).chatPresetName,
+                      chatBgColor: (friend as any).chatBgColor,
+                      myBubbleColor: (friend as any).myBubbleColor,
+                      otherBubbleColor: (friend as any).otherBubbleColor,
+                      myTextColor: (friend as any).myTextColor,
+                      otherTextColor: (friend as any).otherTextColor,
                     });
                     setShowFriends(false);
                     setSearch("");
@@ -179,6 +186,13 @@ export default function ChatList() {
                 unread={0}
                 isOnline={friend.isOnline}
                 profilePicStorageId={friend.profilePicStorageId ?? null}
+                // ── NEW: Pass the theme variables from the DB to ChatListItem ──
+                chatPresetName={(friend as any).chatPresetName}
+                chatBgColor={(friend as any).chatBgColor}
+                myBubbleColor={(friend as any).myBubbleColor}
+                otherBubbleColor={(friend as any).otherBubbleColor}
+                myTextColor={(friend as any).myTextColor}
+                otherTextColor={(friend as any).otherTextColor}
               />
             ) : null
           )
