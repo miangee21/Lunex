@@ -1,39 +1,43 @@
-import { useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, Reply, Copy, CheckSquare, Pencil, Trash2 } from "lucide-react";
+// ── UPDATED: Info icon import kiya ──
+import { ChevronDown, Reply, Copy, CheckSquare, Pencil, Trash2, Info } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import { Id } from "../../../convex/_generated/dataModel";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface MessageBubbleProps {
+  messageId: string; // ── NEW: Info track karne ke liye ──
   text: string;
   time: string;
   isOwn: boolean;
   reactions?: Array<{ userId: string; emoji: string }>;
   editedAt?: number | null;
-  readBy?: string[];
+  // ── UPDATED: Naye object format ke mutabiq ──
+  readBy?: { userId: string; time: number }[];
+  deliveredTo?: { userId: string; time: number }[];
+  otherUserId?: string;
+  onSelect?: () => void;
 }
 
 export default function MessageBubble({
+  messageId,
   text,
   time,
   isOwn,
   reactions = [],
   editedAt = null,
   readBy = [],
+  deliveredTo = [],
+  otherUserId,
+  onSelect,
 }: MessageBubbleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const userId = useAuthStore((s) => s.userId);
-  const { activeChat } = useChatStore();
+  // ── NEW: Store function to open Info panel ──
+  const setSelectedMessageForInfo = useChatStore((s) => s.setSelectedMessageForInfo);
 
   const deleteForMe = useMutation(api.messages.deleteMessageForMe);
   const deleteForEveryone = useMutation(api.messages.deleteMessageForEveryone);
@@ -44,9 +48,38 @@ export default function MessageBubble({
   const displayText =
     shouldTruncate && !isExpanded ? text.slice(0, CHAR_LIMIT) + "..." : text;
 
-  // Read receipt — show if other user has read
-  const otherUserId = activeChat?.userId;
-  const isReadByOther = otherUserId ? readBy.includes(otherUserId) : false;
+  // ── SHAPE BASED TICKS ──
+  // Seen — other user ne padha
+  const isSeen = otherUserId ? readBy.some((r) => r.userId === otherUserId) : false;
+  // Delivered — other user ke device tak pahuncha
+  const isDelivered = otherUserId ? deliveredTo.some((d) => d.userId === otherUserId) : false;
+
+  // Shape-Based Status Icon (Messenger Style)
+  function TickIcon() {
+    if (isSeen) {
+      // ── SEEN: Solid Filled Circle with Checkmark ──
+      return (
+        <svg className="w-3.5 h-3.5 ml-1 text-current opacity-100 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+      );
+    }
+    if (isDelivered) {
+      // ── DELIVERED: Hollow Circle with Checkmark ──
+      return (
+        <svg className="w-3.5 h-3.5 ml-1 text-current opacity-70 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="12" cy="12" r="10" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12.5l2.5 2.5l5 -5" />
+        </svg>
+      );
+    }
+    // ── SENT: Only Hollow Circle ──
+    return (
+      <svg className="w-3.5 h-3.5 ml-1 text-current opacity-70 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    );
+  }
 
   return (
     <div className={`flex w-full group py-1.5 ${isOwn ? "justify-end" : "justify-start"}`}>
@@ -105,15 +138,11 @@ export default function MessageBubble({
             </div>
           )}
 
-          {/* Time + Edited + Read receipt */}
+          {/* Time + Edited + Signal Ticks */}
           <div className="flex justify-end items-center gap-1 mt-1 -mb-0.5 text-[10.5px] font-medium tracking-wide opacity-70">
             {editedAt && <span>edited</span>}
             <span>{time}</span>
-            {isOwn && (
-              <span className={isReadByOther ? "text-blue-400 opacity-100" : ""}>
-                {isReadByOther ? "✓✓" : "✓"}
-              </span>
-            )}
+            {isOwn && <TickIcon />}
           </div>
 
           {/* Hover Menu */}
@@ -149,21 +178,43 @@ export default function MessageBubble({
                 >
                   <Copy className="w-4 h-4 mr-2 text-muted-foreground" /> Copy
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-lg py-2">
+                <DropdownMenuItem
+                  className="cursor-pointer rounded-lg py-2"
+                  onClick={() => onSelect?.()}
+                >
                   <CheckSquare className="w-4 h-4 mr-2 text-muted-foreground" /> Select
                 </DropdownMenuItem>
+
+                {/* Own message options */}
                 {isOwn && (
                   <>
                     <DropdownMenuSeparator className="my-1" />
+                    {/* ── NEW: Info Button ── */}
+                    <DropdownMenuItem 
+                      className="cursor-pointer rounded-lg py-2"
+                      onClick={() => setSelectedMessageForInfo({ id: messageId, text })}
+                    >
+                      <Info className="w-4 h-4 mr-2 text-muted-foreground" /> Info
+                    </DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer rounded-lg py-2">
                       <Pencil className="w-4 h-4 mr-2 text-muted-foreground" /> Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer rounded-lg py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                      onClick={async () => {
-                        // Delete for everyone — Step 11 mein messageId pass karenge
-                        toast.info("Delete coming soon!");
-                      }}
+                      onClick={() => toast.info("Delete coming soon!")}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" /> Delete
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Other user message options */}
+                {!isOwn && (
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem
+                      className="cursor-pointer rounded-lg py-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                      onClick={() => toast.info("Delete coming soon!")}
                     >
                       <Trash2 className="w-4 h-4 mr-2" /> Delete
                     </DropdownMenuItem>

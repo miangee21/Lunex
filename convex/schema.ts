@@ -75,7 +75,14 @@ export default defineSchema({
     deletedForEveryone: v.optional(v.boolean()),
     disappearsAt: v.optional(v.number()),
     sentAt: v.number(),
-    readBy: v.optional(v.array(v.id("users"))),
+    readBy: v.optional(v.array(v.object({
+      userId: v.id("users"),
+      time: v.number()
+    }))),
+    deliveredTo: v.optional(v.array(v.object({
+      userId: v.id("users"),
+      time: v.number()
+    }))),
   })
     .index("by_conversation", ["conversationId", "sentAt"])
     .index("by_expires", ["mediaExpiresAt"])
@@ -93,6 +100,7 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     userId: v.id("users"),
     deletedAt: v.number(),
+    isActive: v.optional(v.boolean()),
   })
     .index("by_user_conversation", ["userId", "conversationId"]),
 

@@ -12,7 +12,7 @@ import { decryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 
 export default function ChatArea() {
-  const { activeChat, clearActiveChat, syncChatTheme } = useChatStore();
+ const { activeChat, clearActiveChat, syncChatTheme, updateLastMessageCache, updateReadByCache, updateDeliveredToCache } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -22,6 +22,24 @@ export default function ChatArea() {
     x: number;
     y: number;
   } | null>(null);
+
+  // ── STATE: Selected Messages ──
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+
+  function toggleSelectMessage(id: string) {
+    setSelectedMessages((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedMessages(new Set());
+  }
 
   // Close the right-click menu if the user clicks anywhere else
   useEffect(() => {
@@ -77,6 +95,7 @@ export default function ChatArea() {
 
   // ── MARK AS READ ──
   const markAsRead = useMutation(api.messages.markMessagesAsRead);
+  const markAsDelivered = useMutation(api.messages.markAsDelivered);
   const otherUser = useQuery(
   api.users.getUserById,
   activeChat?.userId ? { userId: activeChat.userId as never } : "skip"
@@ -85,6 +104,10 @@ export default function ChatArea() {
   useEffect(() => {
     if (activeChat?.conversationId && userId) {
       markAsRead({
+        conversationId: activeChat.conversationId as Id<"conversations">,
+        userId: userId as Id<"users">,
+      });
+      markAsDelivered({
         conversationId: activeChat.conversationId as Id<"conversations">,
         userId: userId as Id<"users">,
       });
@@ -100,7 +123,8 @@ export default function ChatArea() {
     senderId: string;
     reactions: Array<{ userId: string; emoji: string }>;
     editedAt: number | null;
-    readBy: string[];
+    readBy: { userId: string; time: number }[];
+    deliveredTo: { userId: string; time: number }[];
   };
 
   const [decryptedMessages, setDecryptedMessages] = useState<
@@ -117,21 +141,14 @@ export default function ChatArea() {
           try {
             if (!otherUser?.publicKey) {
               text = "🔒 Unable to decrypt message";
-              return {
-                ...msg,
-                text,
-                time: new Date(msg.sentAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              };
+            } else {
+              const theirPublicKey = base64ToKey(otherUser.publicKey);
+              text = decryptMessage(
+                { encryptedContent: msg.encryptedContent, iv: msg.iv },
+                secretKey!,
+                theirPublicKey
+              );
             }
-            const theirPublicKey = base64ToKey(otherUser.publicKey);
-            text = decryptMessage(
-              { encryptedContent: msg.encryptedContent, iv: msg.iv },
-              secretKey!,
-              theirPublicKey,
-            );
           } catch {
             text = "🔒 Unable to decrypt message";
           }
@@ -141,16 +158,35 @@ export default function ChatArea() {
             time: new Date(msg.sentAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
+              hour12: true,
             }),
             isOwn: msg.isOwn,
             senderId: msg.senderId,
             reactions: msg.reactions,
             editedAt: msg.editedAt,
             readBy: msg.readBy,
+            deliveredTo: msg.deliveredTo,
           };
-        }),
+        })
       );
+
       setDecryptedMessages(result);
+
+      // ── Last message cache update karo ──
+      if (result.length > 0 && activeChat?.conversationId) {
+        const last = result[result.length - 1];
+        const lastRaw = rawMessages![rawMessages!.length - 1];
+        updateLastMessageCache(activeChat.conversationId, {
+          text: last.text,
+          senderId: last.senderId,
+          sentAt: lastRaw.sentAt,
+          type: lastRaw.type,
+        });
+        // ── ReadBy cache update karo ──
+        updateReadByCache(activeChat.conversationId, lastRaw.readBy ?? []);
+        // ── DeliveredTo cache update karo ──
+        updateDeliveredToCache(activeChat.conversationId, lastRaw.deliveredTo ?? []);
+      }
     }
 
     decryptAll();
@@ -202,7 +238,17 @@ export default function ChatArea() {
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2"
         onContextMenu={(e) => {
           e.preventDefault();
-          setContextMenu({ x: e.clientX, y: e.clientY });
+          e.stopPropagation();
+          // Viewport bounds check — menu screen se bahar na jaye
+          const menuWidth = 192;
+          const menuHeight = 100;
+          const x = e.clientX + menuWidth > window.innerWidth
+            ? window.innerWidth - menuWidth - 8
+            : e.clientX;
+          const y = e.clientY + menuHeight > window.innerHeight
+            ? window.innerHeight - menuHeight - 8
+            : e.clientY;
+          setContextMenu({ x, y });
         }}
       >
         {isLoading ? (
@@ -219,28 +265,60 @@ export default function ChatArea() {
           decryptedMessages.map((msg) => (
             <div
               key={msg.id}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              // ── FIX: Yahan se right-click blocker hata diya gaya hai ──
+              onClick={() => selectMode && toggleSelectMessage(msg.id)}
+              className={selectMode ? "cursor-pointer" : ""}
             >
+              {/* Select mode checkbox */}
+              {selectMode && (
+                <div className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} mb-1`}>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    selectedMessages.has(msg.id)
+                      ? "bg-primary border-primary"
+                      : "border-muted-foreground"
+                  }`}>
+                    {selectedMessages.has(msg.id) && (
+                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )}
               <MessageBubble
+                messageId={msg.id}
                 text={msg.text}
                 time={msg.time}
                 isOwn={msg.isOwn}
                 reactions={msg.reactions}
                 editedAt={msg.editedAt}
                 readBy={msg.readBy}
+                deliveredTo={msg.deliveredTo}
+                otherUserId={activeChat?.userId}
+                onSelect={() => {
+                  setSelectMode(true);
+                  toggleSelectMessage(msg.id);
+                }}
               />
             </div>
           ))
         )}
+       
         {/* Auto scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <ChatInput />
+      <ChatInput 
+        selectMode={selectMode}
+        selectedCount={selectedMessages.size}
+        onCancelSelect={exitSelectMode}
+        onDeleteSelected={() => {
+          // Future deletion logic yahan aayegi
+          console.log("Deleting:", Array.from(selectedMessages));
+          exitSelectMode();
+        }}
+      />
 
       {/* Right-Click Custom Context Menu UI */}
       {contextMenu && (
@@ -251,7 +329,7 @@ export default function ChatArea() {
         >
           <button
             onClick={() => {
-              console.log("Select messages clicked");
+              setSelectMode(true); // ── FIX: Ab ye select mode on kar dega ──
               setContextMenu(null);
             }}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent transition-colors cursor-pointer"
@@ -265,6 +343,7 @@ export default function ChatArea() {
           <button
             onClick={() => {
               clearActiveChat();
+              setSelectMode(true);
               setContextMenu(null);
             }}
             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"

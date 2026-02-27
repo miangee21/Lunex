@@ -2,14 +2,12 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
 // ── GET MESSAGES ──
-// Conversation ki saari messages fetch karo
 export const getMessages = query({
   args: {
     conversationId: v.id("conversations"),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Check if user deleted this chat
     const deletion = await ctx.db
       .query("chatDeletions")
       .withIndex("by_user_conversation", (q) =>
@@ -25,16 +23,14 @@ export const getMessages = query({
       .order("asc")
       .collect();
 
-    // Agar user ne chat delete ki thi — sirf us ke baad ki messages dikhao
-    const filteredMessages = deletion
+    // ── FIX: Hamesha purane messages ko filter karo ──
+    const filteredMessages = deletion 
       ? messages.filter((m) => m.sentAt > deletion.deletedAt)
       : messages;
 
     return filteredMessages
       .filter((m) => {
-        // deletedForEveryone — kisi ko mat dikhao
         if (m.deletedForEveryone) return false;
-        // deletedForSender — sirf sender ko mat dikhao
         if (m.deletedForSender && m.senderId === args.userId) return false;
         return true;
       })
@@ -53,6 +49,7 @@ export const getMessages = query({
         disappearsAt: m.disappearsAt ?? null,
         sentAt: m.sentAt,
         readBy: m.readBy ?? [],
+        deliveredTo: m.deliveredTo ?? [],
         isOwn: m.senderId === args.userId,
       }));
   },
@@ -80,7 +77,7 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    const messageId = await ctx.db.insert("messages", {
+    await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: args.senderId,
       encryptedContent: args.encryptedContent,
@@ -91,28 +88,16 @@ export const sendMessage = mutation({
       replyToMessageId: args.replyToMessageId,
       disappearsAt: args.disappearsAt,
       sentAt: now,
-      readBy: [args.senderId],
+      // ── UPDATED: Naye object format ke mutabiq ──
+      readBy: [{ userId: args.senderId, time: now }],
+      deliveredTo: [{ userId: args.senderId, time: now }],
     });
 
-    // Update conversation lastMessageAt
     await ctx.db.patch(args.conversationId, {
       lastMessageAt: now,
     });
-
-    // If sender had deleted this chat before — remove deletion record
-    // so chat reappears in their list
-    const deletion = await ctx.db
-      .query("chatDeletions")
-      .withIndex("by_user_conversation", (q) =>
-        q.eq("userId", args.senderId).eq("conversationId", args.conversationId)
-      )
-      .unique();
-
-    if (deletion) {
-      await ctx.db.delete(deletion._id);
-    }
-
-    return messageId;
+    
+    // ── FIX: Yahan se deletion record ko modify karne ka logic hata diya gaya hai ──
   },
 });
 
@@ -130,17 +115,19 @@ export const markMessagesAsRead = mutation({
       )
       .collect();
 
-    // Sirf wahi messages update karo jo is user ne nahi padhe
+    const now = Date.now();
     const unread = messages.filter(
       (m) =>
         m.senderId !== args.userId &&
-        (!m.readBy || !m.readBy.includes(args.userId))
+        // ── UPDATED: Check if user already read it ──
+        (!m.readBy || !m.readBy.some((r) => r.userId === args.userId))
     );
 
     await Promise.all(
       unread.map((m) =>
         ctx.db.patch(m._id, {
-          readBy: [...(m.readBy ?? []), args.userId],
+          // ── UPDATED: Save user ID with current time ──
+          readBy: [...(m.readBy ?? []), { userId: args.userId, time: now }],
         })
       )
     );
@@ -160,7 +147,6 @@ export const deleteMessageForMe = mutation({
     if (message.senderId === args.userId) {
       await ctx.db.patch(args.messageId, { deletedForSender: true });
     }
-    // If receiver — we handle this via chatDeletions (delete chat)
   },
 });
 
@@ -196,11 +182,8 @@ export const addReaction = mutation({
     if (!message) throw new Error("Message not found");
 
     const reactions = message.reactions ?? [];
-
-    // Remove existing reaction from this user if any
     const filtered = reactions.filter((r) => r.userId !== args.userId);
 
-    // Add new reaction
     await ctx.db.patch(args.messageId, {
       reactions: [...filtered, { userId: args.userId, emoji: args.emoji }],
     });
@@ -252,5 +235,38 @@ export const getMessageById = query({
   args: { messageId: v.id("messages") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.messageId);
+  },
+});
+
+// ── MARK AS DELIVERED ──
+export const markAsDelivered = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .collect();
+
+    const now = Date.now();
+    const undelivered = messages.filter(
+      (m) =>
+        m.senderId !== args.userId &&
+        // ── UPDATED: Check if already delivered to this user ──
+        (!m.deliveredTo || !m.deliveredTo.some((d) => d.userId === args.userId))
+    );
+
+    await Promise.all(
+      undelivered.map((m) =>
+        ctx.db.patch(m._id, {
+          // ── UPDATED: Save user ID with current time ──
+          deliveredTo: [...(m.deliveredTo ?? []), { userId: args.userId, time: now }],
+        })
+      )
+    );
   },
 });

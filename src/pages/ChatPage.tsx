@@ -5,6 +5,7 @@ import ChatList from "@/components/chat/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel"; 
+import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
@@ -13,7 +14,8 @@ export default function ChatPage() {
     sidebarOpen, 
     sidebarView, 
     activeChat, 
-    profilePanelOpen 
+    profilePanelOpen,
+    selectedMessageForInfo 
   } = useChatStore();
 
   // ════════════════════════════════════════════════════════════════════════
@@ -122,10 +124,18 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Right Profile Panel — slides in */}
+        {/* Right Profile Panel / Message Info Panel — slides in */}
         {activeChat && profilePanelOpen && (
           <div className="w-72 flex-shrink-0 border-l border-border bg-sidebar overflow-hidden">
-            <OtherUserPanel />
+            {/* ── UPDATED: Message Info aur Profile ke darmiyan switch ── */}
+            {selectedMessageForInfo ? (
+              <MessageInfoPanel 
+                messageId={selectedMessageForInfo.id} 
+                messageText={selectedMessageForInfo.text} 
+              />
+            ) : (
+              <OtherUserPanel />
+            )}
           </div>
         )}
 

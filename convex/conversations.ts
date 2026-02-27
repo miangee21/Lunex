@@ -2,17 +2,13 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
 // ── GET OR CREATE CONVERSATION ──
-// Jab user kisi friend pe click kare — conversation dhundo ya naya banao
 export const getOrCreateConversation = mutation({
   args: {
     myUserId: v.id("users"),
     otherUserId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Dono participants ki existing conversations dhundo
-    const existing = await ctx.db
-      .query("conversations")
-      .collect();
+    const existing = await ctx.db.query("conversations").collect();
 
     const found = existing.find(
       (c) =>
@@ -23,7 +19,6 @@ export const getOrCreateConversation = mutation({
 
     if (found) return found._id;
 
-    // Nahi mili — naya banao
     const conversationId = await ctx.db.insert("conversations", {
       participantIds: [args.myUserId, args.otherUserId],
       createdAt: Date.now(),
@@ -35,25 +30,20 @@ export const getOrCreateConversation = mutation({
 });
 
 // ── GET CONVERSATIONS LIST ──
-// Chat list ke liye — current user ki saari conversations
 export const getConversationsList = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    // Saari conversations collect karo
     const allConversations = await ctx.db
       .query("conversations")
       .order("desc")
       .collect();
 
-    // Sirf wahi jisme current user hai
     const myConversations = allConversations.filter((c) =>
       c.participantIds.includes(args.userId)
     );
 
-    // Har conversation ke liye extra info fetch karo
     const result = await Promise.all(
       myConversations.map(async (conv) => {
-        // Doosra participant kaun hai
         const otherUserId = conv.participantIds.find(
           (id) => id !== args.userId
         );
@@ -62,7 +52,6 @@ export const getConversationsList = query({
         const otherUser = await ctx.db.get(otherUserId);
         if (!otherUser) return null;
 
-        // Last message fetch karo
         const lastMessage = await ctx.db
           .query("messages")
           .withIndex("by_conversation", (q) =>
@@ -71,21 +60,6 @@ export const getConversationsList = query({
           .order("desc")
           .first();
 
-        // Unread count — jo messages mujhe nahi padhe
-        const allMessages = await ctx.db
-          .query("messages")
-          .withIndex("by_conversation", (q) =>
-            q.eq("conversationId", conv._id)
-          )
-          .collect();
-
-        const unreadCount = allMessages.filter(
-          (m) =>
-            m.senderId !== args.userId &&
-            (!m.readBy || !m.readBy.includes(args.userId))
-        ).length;
-
-        // Check if this chat was deleted by current user
         const deletion = await ctx.db
           .query("chatDeletions")
           .withIndex("by_user_conversation", (q) =>
@@ -93,13 +67,25 @@ export const getConversationsList = query({
           )
           .unique();
 
-        // Agar user ne chat delete ki thi aur last message us ke baad ka nahi
-        if (deletion && lastMessage && lastMessage.sentAt < deletion.deletedAt) {
+        if (deletion && (!lastMessage || lastMessage.sentAt <= deletion.deletedAt)) {
           return null;
         }
-        if (deletion && !lastMessage) {
-          return null;
-        }
+
+        const allMessages = await ctx.db
+          .query("messages")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conv._id)
+          )
+          .collect();
+
+        // ── FIX: Unread count mein wo messages count na hon jo delete ho chuke hain ──
+        const unreadCount = allMessages.filter(
+          (m) =>
+            m.senderId !== args.userId &&
+            // ── UPDATED: ab includes ki jagah some() use hoga kyunke readBy ab array of objects hai ──
+            (!m.readBy || !m.readBy.some((r) => r.userId === args.userId)) &&
+            (!deletion || m.sentAt > deletion.deletedAt) 
+        ).length;
 
         return {
           conversationId: conv._id,
@@ -122,7 +108,6 @@ export const getConversationsList = query({
       })
     );
 
-    // null filter karo aur time ke hisaab se sort karo
     return result
       .filter(Boolean)
       .sort((a, b) => (b!.lastMessageAt ?? 0) - (a!.lastMessageAt ?? 0));
@@ -144,7 +129,6 @@ export const deleteChat = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Check if already deleted
     const existing = await ctx.db
       .query("chatDeletions")
       .withIndex("by_user_conversation", (q) =>
@@ -153,7 +137,6 @@ export const deleteChat = mutation({
       .unique();
 
     if (existing) {
-      // Update deletedAt timestamp
       await ctx.db.patch(existing._id, { deletedAt: Date.now() });
     } else {
       await ctx.db.insert("chatDeletions", {
@@ -161,6 +144,38 @@ export const deleteChat = mutation({
         userId: args.userId,
         deletedAt: Date.now(),
       });
+    }
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) return;
+
+    const allDeletions = await Promise.all(
+      conversation.participantIds.map((participantId) =>
+        ctx.db
+          .query("chatDeletions")
+          .withIndex("by_user_conversation", (q) =>
+            q.eq("userId", participantId).eq("conversationId", args.conversationId)
+          )
+          .unique()
+      )
+    );
+
+    // ── FIX: Chat server se tab hi wipe hogi jab DONO users ne latest message ke baad delete kiya ho ──
+    const allDeleted = allDeletions.every(
+      (d) => d !== null && d.deletedAt >= (conversation.lastMessageAt ?? 0)
+    );
+
+    if (allDeleted) {
+      const messages = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q) =>
+          q.eq("conversationId", args.conversationId)
+        )
+        .collect();
+
+      await Promise.all(messages.map((m) => ctx.db.delete(m._id)));
+      await Promise.all(allDeletions.map((d) => d && ctx.db.delete(d._id)));
+      await ctx.db.delete(args.conversationId);
     }
   },
 });

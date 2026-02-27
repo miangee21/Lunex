@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
@@ -11,8 +11,15 @@ import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 
 export default function ChatList() {
-  const { sidebarView, setSidebarView, setActiveChat, setConversationId } =
-    useChatStore();
+  const {
+    sidebarView,
+    setSidebarView,
+    setActiveChat,
+    setConversationId,
+    lastMessageCache,
+    readByCache,
+    deliveredToCache,
+  } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const [search, setSearch] = useState("");
   const [showFriends, setShowFriends] = useState(false);
@@ -31,6 +38,25 @@ export default function ChatList() {
   const getOrCreateConversation = useMutation(
     api.conversations.getOrCreateConversation,
   );
+
+  // ── FIX: Add Delivery Mutation ──
+  const markAsDelivered = useMutation(api.messages.markAsDelivered);
+
+  // ── NEW: BACKGROUND DELIVERY SYNC ──
+  // Jab receiver app open karega, yeh uske tamam unread messages ko automatically
+  // "Delivered" mark kar dega. Sender ko fauran 2 grey ticks nazar aayenge!
+  useEffect(() => {
+    if (conversations && userId) {
+      conversations.forEach((conv) => {
+        if (conv && conv.unreadCount > 0) {
+          markAsDelivered({
+            conversationId: conv.conversationId as Id<"conversations">,
+            userId: userId as Id<"users">,
+          }).catch(console.error);
+        }
+      });
+    }
+  }, [conversations, userId, markAsDelivered]);
 
   if (sidebarView === "requests") return <RequestsPanel />;
   if (sidebarView === "search") return <SearchUsers />;
@@ -243,25 +269,88 @@ export default function ChatList() {
                 id={conv.otherUserId}
                 conversationId={conv.conversationId}
                 username={conv.username}
-                lastMessage={
-                  conv.lastMessage
-                    ? conv.lastMessage.type !== "text"
-                      ? conv.lastMessage.senderId === userId
-                        ? "You: 📎 Attachment"
-                        : "📎 Attachment"
-                      : conv.lastMessage.senderId === userId
-                        ? "You: Message"
-                        : "Message"
-                    : "Say hello! 👋"
-                }
-                time={
-                  conv.lastMessage
-                    ? new Date(conv.lastMessage.sentAt).toLocaleTimeString([], {
+                lastMessage={(() => {
+                  const cached = conv.conversationId
+                    ? lastMessageCache[conv.conversationId]
+                    : null;
+                  if (cached) {
+                    if (cached.type === "image")
+                      return cached.senderId === userId
+                        ? "You: 📷 New photo"
+                        : "📷 New photo";
+                    if (cached.type === "video")
+                      return cached.senderId === userId
+                        ? "You: 🎥 New video"
+                        : "🎥 New video";
+                    if (cached.type === "audio")
+                      return cached.senderId === userId
+                        ? "You: 🎵 New audio"
+                        : "🎵 New audio";
+                    if (cached.type === "file")
+                      return cached.senderId === userId
+                        ? "You: 📎 New document"
+                        : "📎 New document";
+                    // Text — 40 character limit
+                    const preview =
+                      cached.text.length > 40
+                        ? cached.text.slice(0, 40) + "..."
+                        : cached.text;
+                    return cached.senderId === userId
+                      ? `You: ${preview}`
+                      : preview;
+                  }
+                  if (conv.lastMessage) {
+                    if (conv.lastMessage.type === "image")
+                      return conv.lastMessage.senderId === userId
+                        ? "You: 📷 New photo"
+                        : "📷 New photo";
+                    if (conv.lastMessage.type === "video")
+                      return conv.lastMessage.senderId === userId
+                        ? "You: 🎥 New video"
+                        : "🎥 New video";
+                    if (conv.lastMessage.type === "audio")
+                      return conv.lastMessage.senderId === userId
+                        ? "You: 🎵 New audio"
+                        : "🎵 New audio";
+                    if (conv.lastMessage.type === "file")
+                      return conv.lastMessage.senderId === userId
+                        ? "You: 📎 New document"
+                        : "📎 New document";
+                    return conv.lastMessage.senderId === userId
+                      ? "You: New message"
+                      : "New message 📩";
+                  }
+                  return "Say hello! 👋";
+                })()}
+                time={(() => {
+                  const cached = conv.conversationId
+                    ? lastMessageCache[conv.conversationId]
+                    : null;
+                  const sentAt = cached?.sentAt ?? conv.lastMessage?.sentAt;
+                  return sentAt
+                    ? new Date(sentAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
+                        hour12: true,
                       })
-                    : ""
-                }
+                    : "";
+                })()}
+                isRead={(() => {
+                  const cached = conv.conversationId
+                    ? lastMessageCache[conv.conversationId]
+                    : null;
+                  if (!cached || cached.senderId !== userId) return undefined;
+                  const readBy = conv.conversationId
+                    ? readByCache[conv.conversationId]
+                    : [];
+                  const deliveredTo = conv.conversationId
+                    ? deliveredToCache[conv.conversationId]
+                    : [];
+                  const otherUserId = conv.otherUserId;
+                  if (readBy?.some((r) => r.userId === otherUserId)) return "read";
+                  if (deliveredTo?.some((d) => d.userId === otherUserId)) return "delivered";
+                  return "sent";
+                })()}
                 unread={conv.unreadCount}
                 isOnline={conv.isOnline}
                 profilePicStorageId={conv.profilePicStorageId ?? null}
