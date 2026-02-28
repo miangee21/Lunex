@@ -42,6 +42,7 @@ export const getMessages = query({
         iv: m.iv,
         type: m.type,
         mediaStorageId: m.mediaStorageId ?? null,
+        mediaIv: m.mediaIv ?? null,
         mediaOriginalName: m.mediaOriginalName ?? null,
         replyToMessageId: m.replyToMessageId ?? null,
         reactions: m.reactions ?? [],
@@ -70,6 +71,7 @@ export const sendMessage = mutation({
       v.literal("file")
     ),
     mediaStorageId: v.optional(v.id("_storage")),
+    mediaIv: v.optional(v.string()),
     mediaOriginalName: v.optional(v.string()),
     replyToMessageId: v.optional(v.id("messages")),
     disappearsAt: v.optional(v.number()),
@@ -84,6 +86,7 @@ export const sendMessage = mutation({
       iv: args.iv,
       type: args.type,
       mediaStorageId: args.mediaStorageId,
+      mediaIv: args.mediaIv,
       mediaOriginalName: args.mediaOriginalName,
       replyToMessageId: args.replyToMessageId,
       disappearsAt: args.disappearsAt,

@@ -62,6 +62,7 @@ export default defineSchema({
       v.literal("file")
     ),
     mediaStorageId: v.optional(v.id("_storage")),
+    mediaIv: v.optional(v.string()),
     mediaDeletedAt: v.optional(v.number()),
     mediaExpiresAt: v.optional(v.number()),
     mediaOriginalName: v.optional(v.string()),
