@@ -1,4 +1,3 @@
-//src/components/profile/OtherUserPanel.tsx
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
@@ -9,6 +8,7 @@ import { X, UserX, Shield, ShieldOff, Timer, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import ChatThemeCustomizer from "@/components/chat/ChatThemeCustomizer";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function OtherUserPanel() {
   const { activeChat, setProfilePanelOpen, clearActiveChat } = useChatStore();
@@ -207,43 +207,58 @@ export default function OtherUserPanel() {
 
         <div className="px-4 pb-6 flex flex-col gap-2">
           {friendship && (
-            <button
-              onClick={handleUnfriend}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-destructive/10 transition-colors group"
+            <ConfirmModal
+              title={`Unfriend ${activeChat.username}?`}
+              description="Are you sure you want to remove them from your friends list? You will no longer be able to see their private updates."
+              onConfirm={handleUnfriend}
+              confirmText="Unfriend"
+              isDestructive={true}
             >
-              <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
-                <UserX size={16} className="text-destructive" />
-              </div>
-              <span className="text-destructive font-semibold text-sm">
-                Unfriend
-              </span>
-            </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-destructive/10 transition-colors group">
+                <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+                  <UserX size={16} className="text-destructive" />
+                </div>
+                <span className="text-destructive font-semibold text-sm">
+                  Unfriend
+                </span>
+              </button>
+            </ConfirmModal>
           )}
 
           {iBlockedThem ? (
-            <button
-              onClick={handleUnblock}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group"
+            <ConfirmModal
+              title={`Unblock ${activeChat.username}?`}
+              description="They will be able to send you messages, call you, and see your profile again."
+              onConfirm={handleUnblock}
+              confirmText="Unblock"
+              isDestructive={false}
             >
-              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <ShieldOff size={16} className="text-primary" />
-              </div>
-              <span className="text-foreground font-semibold text-sm">
-                Unblock
-              </span>
-            </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <ShieldOff size={16} className="text-primary" />
+                </div>
+                <span className="text-foreground font-semibold text-sm">
+                  Unblock
+                </span>
+              </button>
+            </ConfirmModal>
           ) : (
-            <button
-              onClick={handleBlock}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-destructive/10 transition-colors group"
+            <ConfirmModal
+              title={`Block ${activeChat.username}?`}
+              description="They won't be able to send you messages, call you, or see your profile. This action can be undone later."
+              onConfirm={handleBlock}
+              confirmText="Block"
+              isDestructive={true}
             >
-              <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
-                <Shield size={16} className="text-destructive" />
-              </div>
-              <span className="text-destructive font-semibold text-sm">
-                Block
-              </span>
-            </button>
+              <button className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-accent hover:bg-destructive/10 transition-colors group">
+                <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
+                  <Shield size={16} className="text-destructive" />
+                </div>
+                <span className="text-destructive font-semibold text-sm">
+                  Block
+                </span>
+              </button>
+            </ConfirmModal>
           )}
         </div>
       </div>
