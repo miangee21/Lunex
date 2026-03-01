@@ -9,7 +9,7 @@ export default function MessageStatusTick({
   if (isSeen) {
     return (
       <svg
-        className="w-3.5 h-3.5 ml-1 text-current opacity-100 flex-shrink-0 drop-shadow-md"
+        className="w-3.5 h-3.5 ml-1 text-current opacity-100 shrink-0 drop-shadow-md"
         viewBox="0 0 24 24"
         fill="currentColor"
       >
@@ -20,7 +20,7 @@ export default function MessageStatusTick({
   if (isDelivered) {
     return (
       <svg
-        className="w-3.5 h-3.5 ml-1 text-current opacity-90 flex-shrink-0 drop-shadow-md"
+        className="w-3.5 h-3.5 ml-1 text-current opacity-90 shrink-0 drop-shadow-md"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -37,7 +37,7 @@ export default function MessageStatusTick({
   }
   return (
     <svg
-      className="w-3.5 h-3.5 ml-1 text-current opacity-90 flex-shrink-0 drop-shadow-md"
+      className="w-3.5 h-3.5 ml-1 text-current opacity-90 shrink-0 drop-shadow-md"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

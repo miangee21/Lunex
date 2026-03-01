@@ -52,10 +52,10 @@ export default function SlimBar() {
   };
 
   return (
-    <div className="flex flex-col items-center h-screen w-14 flex-shrink-0 bg-sidebar border-r border-border py-3 gap-2 z-20">
+    <div className="flex flex-col items-center h-screen w-14 shrink-0 bg-sidebar border-r border-border py-3 gap-2 z-20">
       <button
         onClick={toggleSidebar}
-        className="w-9 h-9 rounded-xl overflow-hidden mb-2 hover:opacity-80 transition-opacity flex-shrink-0"
+        className="w-9 h-9 rounded-xl overflow-hidden mb-2 hover:opacity-80 transition-opacity shrink-0"
         title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
       >
         <LunexLogo />
@@ -85,7 +85,7 @@ export default function SlimBar() {
         <Users size={20} />
 
         {requestsCount !== undefined && requestsCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+          <span className="absolute top-1 right-1 min-w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
             {requestsCount > 99 ? "99+" : requestsCount}
           </span>
         )}

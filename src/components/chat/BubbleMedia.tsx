@@ -165,7 +165,7 @@ export default function BubbleMedia({
 
       {type === "image" && (
         <div
-          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-[220px] h-[140px] sm:w-[260px] sm:h-[180px] bg-black/10 dark:bg-white/10"
+          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-55 h-35 sm:w-65 sm:h-45 bg-black/10 dark:bg-white/10"
           onClick={() => finalUrl && setPreviewOpen(true)}
         >
           {finalUrl ? (
@@ -182,7 +182,7 @@ export default function BubbleMedia({
 
       {type === "video" && (
         <div
-          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-[220px] h-[140px] sm:w-[260px] sm:h-[180px] bg-black/10 dark:bg-white/10"
+          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-55 h-35 sm:w-65 sm:h-45 bg-black/10 dark:bg-white/10"
           onClick={() => finalUrl && setPreviewOpen(true)}
         >
           {finalUrl ? (
@@ -206,13 +206,13 @@ export default function BubbleMedia({
 
       {type === "file" && (
         <div
-          className={`flex items-center gap-3 mb-1 p-3 rounded-xl bg-black/10 dark:bg-white/10 transition-colors max-w-[240px] ${finalUrl || !isDownloaded ? "cursor-pointer hover:bg-black/15 dark:hover:bg-white/15" : ""}`}
+          className={`flex items-center gap-3 mb-1 p-3 rounded-xl bg-black/10 dark:bg-white/10 transition-colors max-w-60 ${finalUrl || !isDownloaded ? "cursor-pointer hover:bg-black/15 dark:hover:bg-white/15" : ""}`}
           onClick={() => {
             if (finalUrl) setPreviewOpen(true);
             else if (!isDownloaded) setIsDownloaded(true);
           }}
         >
-          <div className="w-11 h-11 rounded-lg bg-current/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+          <div className="w-11 h-11 rounded-lg bg-current/10 flex items-center justify-center shrink-0 relative overflow-hidden">
             {finalUrl ? (
               <FileText size={20} className="opacity-70" />
             ) : !isDownloaded ? (

@@ -66,7 +66,7 @@ export default function ProfileFriendsList({ onBack }: { onBack: () => void }) {
 
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
-          <Search size={15} className="text-muted-foreground flex-shrink-0" />
+          <Search size={15} className="text-muted-foreground shrink-0" />
           <input
             value={friendSearch}
             onChange={(e) => setFriendSearch(e.target.value)}
@@ -111,7 +111,7 @@ export default function ProfileFriendsList({ onBack }: { onBack: () => void }) {
                     {friend.username}
                   </span>
                   {friend.hasBlockedMe && (
-                    <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                    <span className="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
                       Blocked you
                     </span>
                   )}

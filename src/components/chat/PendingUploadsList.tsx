@@ -26,7 +26,7 @@ export default function PendingUploadsList({
     <div className="flex w-full group py-1.5 justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="relative flex items-start gap-2 flex-row-reverse">
         <div
-          className={`relative px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 bg-primary text-primary-foreground rounded-br-sm opacity-90 w-[240px] sm:w-[280px]`}
+          className={`relative px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 bg-primary text-primary-foreground rounded-br-sm opacity-90 w-60 sm:w-70`}
         >
           {currentPending.length === 1 ? (
             <div

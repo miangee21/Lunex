@@ -75,7 +75,7 @@ export default function MessageBubble({
           )}
 
           {type === "text" && (
-            <div className="leading-relaxed break-words pr-6 whitespace-pre-wrap">
+            <div className="leading-relaxed wrap-break-word pr-6 whitespace-pre-wrap">
               {displayText}
               {shouldTruncate && (
                 <button

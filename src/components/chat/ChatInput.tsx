@@ -260,7 +260,7 @@ export default function ChatInput({
       <div className="flex items-end gap-2 bg-background border border-border/50 rounded-2xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
+          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
           title="Attach file"
         >
           <Paperclip size={20} />
@@ -289,12 +289,12 @@ export default function ChatInput({
             }
           }}
           placeholder="Write a message..."
-          className="flex-1 max-h-[120px] min-h-[24px] bg-transparent outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground py-2.5 px-2 overflow-y-auto"
+          className="flex-1 max-h-30 min-h-6 bg-transparent outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground py-2.5 px-2 overflow-y-auto"
           rows={1}
         />
 
         <button
-          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
+          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
           title="Choose emoji"
         >
           <Smile size={20} />
@@ -304,7 +304,7 @@ export default function ChatInput({
           onClick={handleSend}
           disabled={!message.trim()}
           title="Send message"
-          className={`p-2 mb-0.5 rounded-xl flex-shrink-0 transition-all duration-200 ${
+          className={`p-2 mb-0.5 rounded-xl shrink-0 transition-all duration-200 ${
             message.trim()
               ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90 scale-100"
               : "bg-transparent text-muted-foreground opacity-50 cursor-not-allowed scale-95"

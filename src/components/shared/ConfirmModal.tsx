@@ -34,7 +34,7 @@ export default function ConfirmModal({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-      <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-[400px]">
+      <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-100">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground font-bold">
             {title}

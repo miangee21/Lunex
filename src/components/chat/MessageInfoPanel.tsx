@@ -14,7 +14,6 @@ import {
   X,
   CalendarDays,
   Clock,
-  Image as ImageIcon,
   Play,
   FileText,
 } from "lucide-react";
@@ -85,9 +84,9 @@ function MiniMediaThumbnail({ msg }: { msg: any }) {
 
   if (msg.type === "file") {
     return (
-      <div className="flex items-center gap-2 p-2.5 bg-black/10 dark:bg-white/10 rounded-xl mb-1.5 min-w-[150px]">
+      <div className="flex items-center gap-2 p-2.5 bg-black/10 dark:bg-white/10 rounded-xl mb-1.5 min-w-37.5">
         <FileText size={18} className="opacity-80" />
-        <span className="text-[13px] font-medium truncate max-w-[150px]">
+        <span className="text-[13px] font-medium truncate max-w-37.5">
           {msg.mediaOriginalName || "Document"}
         </span>
       </div>
@@ -95,7 +94,7 @@ function MiniMediaThumbnail({ msg }: { msg: any }) {
   }
 
   return (
-    <div className="relative w-[160px] h-[100px] mb-1.5 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center border border-white/5">
+    <div className="relative w-40 h-25 mb-1.5 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center border border-white/5">
       {decryptedUrl ? (
         msg.type === "video" ? (
           <>
@@ -244,7 +243,7 @@ export default function MessageInfoPanel({
               msg.type === "text" ||
               (msg.type !== "file" &&
                 messageText !== msg.mediaOriginalName)) && (
-              <p className="text-[15px] leading-relaxed break-words">
+              <p className="text-[15px] leading-relaxed wrap-break-word">
                 {messageText.replace(/\n/g, " ").length > 40
                   ? messageText.replace(/\n/g, " ").substring(0, 40) + "..."
                   : messageText.replace(/\n/g, " ")}
@@ -268,7 +267,7 @@ export default function MessageInfoPanel({
           <div className="relative pl-6 border-l-2 border-border/40 space-y-8 ml-2">
             <div className="relative">
               <div
-                className={`absolute -left-[35px] top-0.5 p-1 rounded-full bg-background ${
+                className={`absolute -left-8.75 top-0.5 p-1 rounded-full bg-background ${
                   readRecord ? "text-primary" : "text-muted-foreground/30"
                 }`}
               >
@@ -303,7 +302,7 @@ export default function MessageInfoPanel({
 
             <div className="relative">
               <div
-                className={`absolute -left-[35px] top-0.5 p-1 rounded-full bg-background ${deliveredRecord ? "text-muted-foreground" : "text-muted-foreground/30"}`}
+                className={`absolute -left-8.75 top-0.5 p-1 rounded-full bg-background ${deliveredRecord ? "text-muted-foreground" : "text-muted-foreground/30"}`}
               >
                 <svg
                   className="w-5 h-5"
@@ -338,7 +337,7 @@ export default function MessageInfoPanel({
             </div>
 
             <div className="relative">
-              <div className="absolute -left-[35px] top-0.5 p-1 rounded-full bg-background text-muted-foreground">
+              <div className="absolute -left-8.75 top-0.5 p-1 rounded-full bg-background text-muted-foreground">
                 <svg
                   className="w-5 h-5"
                   fill="none"

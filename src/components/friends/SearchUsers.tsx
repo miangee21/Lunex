@@ -21,8 +21,6 @@ export default function SearchUsers() {
       : "skip",
   );
 
-  const relationships = useQuery(api.friends.getRelationshipStatus, "skip");
-
   async function handleSendRequest(toUserId: string) {
     if (!userId) return;
     try {
@@ -52,7 +50,7 @@ export default function SearchUsers() {
 
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary border border-transparent transition-all">
-          <Search size={15} className="text-muted-foreground flex-shrink-0" />
+          <Search size={15} className="text-muted-foreground shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value.toLowerCase())}
@@ -193,7 +191,7 @@ function SearchUserItem({
 
   return (
     <div className="flex items-center gap-3 px-3 py-3 hover:bg-accent/50 transition-colors">
-      <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm flex-shrink-0">
+      <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
         {username[0].toUpperCase()}
       </div>
       <span className="text-foreground text-sm font-semibold flex-1 truncate">

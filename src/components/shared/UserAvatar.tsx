@@ -30,7 +30,7 @@ export default function UserAvatar({
   );
 
   return (
-    <div className="relative flex-shrink-0">
+    <div className="relative shrink-0">
       <div
         className={`
         ${sizeClasses[size]} rounded-2xl overflow-hidden flex items-center justify-center font-bold

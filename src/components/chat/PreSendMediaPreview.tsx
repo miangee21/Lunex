@@ -57,7 +57,7 @@ export default function PreSendMediaPreview({
     : undefined;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in zoom-in-95 duration-200 text-foreground">
+    <div className="fixed inset-0 z-100 bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in zoom-in-95 duration-200 text-foreground">
       <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
         <button
           onClick={onCancel}
@@ -89,7 +89,7 @@ export default function PreSendMediaPreview({
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
               <FileText size={40} className="text-primary" />
             </div>
-            <p className="text-foreground font-semibold text-lg max-w-[200px] text-center truncate">
+            <p className="text-foreground font-semibold text-lg max-w-50 text-center truncate">
               {currentItem?.file.name}
             </p>
             <p className="text-muted-foreground text-sm">
@@ -104,7 +104,7 @@ export default function PreSendMediaPreview({
           {files.map((item, idx) => (
             <div
               key={idx}
-              className={`relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all ${
+              className={`relative w-14 h-14 shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all ${
                 safeIndex === idx
                   ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
                   : "opacity-60 hover:opacity-100"
@@ -141,7 +141,7 @@ export default function PreSendMediaPreview({
           ))}
 
           {files.length < 10 && (
-            <label className="w-14 h-14 flex-shrink-0 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors ml-1 cursor-pointer">
+            <label className="w-14 h-14 shrink-0 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors ml-1 cursor-pointer">
               <Plus size={24} />
               <input
                 type="file"
@@ -161,7 +161,7 @@ export default function PreSendMediaPreview({
 
         <button
           onClick={onSend}
-          className="w-14 h-14 flex-shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xl hover:opacity-90 transition-all hover:scale-105 ml-auto"
+          className="w-14 h-14 shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xl hover:opacity-90 transition-all hover:scale-105 ml-auto"
         >
           <Send size={22} className="ml-1" />
         </button>

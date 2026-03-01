@@ -21,7 +21,7 @@ export default function MediaUploadProgress({
   return (
     <div className="px-4 py-3 bg-sidebar border-t border-border">
       <div className="flex items-center gap-3 bg-accent rounded-2xl px-4 py-3">
-        <span className="text-xl flex-shrink-0">{icon}</span>
+        <span className="text-xl shrink-0">{icon}</span>
 
         <div className="flex-1 min-w-0">
           {uploadTotal > 1 && (
@@ -39,7 +39,7 @@ export default function MediaUploadProgress({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <span className="text-xs text-muted-foreground flex-shrink-0 w-8 text-right">
+            <span className="text-xs text-muted-foreground shrink-0 w-8 text-right">
               {progress}%
             </span>
           </div>
@@ -48,7 +48,7 @@ export default function MediaUploadProgress({
         {onCancel && progress < 100 && (
           <button
             onClick={onCancel}
-            className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 text-xs font-medium"
+            className="text-muted-foreground hover:text-destructive transition-colors shrink-0 text-xs font-medium"
           >
             Cancel
           </button>

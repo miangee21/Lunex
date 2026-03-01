@@ -428,7 +428,7 @@ export default function ChatArea() {
               <h3 className="text-lg font-bold text-foreground tracking-tight">
                 Nothing here yet
               </h3>
-              <p className="text-sm text-muted-foreground max-w-[250px] mx-auto leading-relaxed">
+              <p className="text-sm text-muted-foreground max-w-62.5 mx-auto leading-relaxed">
                 Send a message or media to start the conversation with{" "}
                 <span className="font-semibold text-foreground">
                   {activeChat?.username}

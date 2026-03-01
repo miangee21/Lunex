@@ -71,7 +71,7 @@ export default function ChatPage() {
 
       <div
         className={`
-        flex-shrink-0 border-r border-border bg-sidebar overflow-hidden
+        shrink-0 border-r border-border bg-sidebar overflow-hidden
         transition-all duration-300 ease-in-out
         ${sidebarOpen ? "w-72" : "w-0"}
       `}
@@ -109,7 +109,7 @@ export default function ChatPage() {
         )}
 
         {activeChat && profilePanelOpen && (
-          <div className="w-72 flex-shrink-0 border-l border-border bg-sidebar overflow-hidden">
+          <div className="w-72 shrink-0 border-l border-border bg-sidebar overflow-hidden">
             {selectedMessageForInfo ? (
               <MessageInfoPanel
                 messageId={selectedMessageForInfo.id}

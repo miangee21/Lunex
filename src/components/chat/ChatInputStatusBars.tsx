@@ -54,7 +54,7 @@ export default function ChatInputStatusBars({
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
         <div className="flex items-center justify-center gap-3 bg-accent/50 rounded-2xl px-4 py-3.5">
-          <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
             <Shield size={16} className="text-destructive" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
@@ -72,7 +72,7 @@ export default function ChatInputStatusBars({
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
         <div className="flex items-center justify-center gap-3 bg-accent/50 rounded-2xl px-4 py-3.5">
-          <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
             <ShieldOff size={16} className="text-destructive" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
@@ -100,7 +100,7 @@ export default function ChatInputStatusBars({
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
         <div className="flex items-center justify-center gap-3 bg-accent/50 rounded-2xl px-4 py-3.5">
-          <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
             <UserX size={16} className="text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">

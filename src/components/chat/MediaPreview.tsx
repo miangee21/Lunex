@@ -219,12 +219,12 @@ export default function MediaPreview({
     >
       {/* ── HEADER ── */}
       <div
-        className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 bg-gradient-to-b from-black/80 to-transparent z-20 flex-shrink-0"
+        className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 bg-linear-to-b from-black/80 to-transparent z-20 shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex flex-col">
-            <p className="text-white/90 text-sm font-semibold truncate max-w-[200px] sm:max-w-xs drop-shadow-md">
+            <p className="text-white/90 text-sm font-semibold truncate max-w-50 sm:max-w-xs drop-shadow-md">
               {currentItem.originalName ?? "Media"}
             </p>
             {isGallery && (
@@ -324,7 +324,7 @@ export default function MediaPreview({
               <FileText size={48} className="text-primary" />
             </div>
             <div className="text-center">
-              <p className="text-white font-bold text-xl max-w-[250px] truncate mb-1">
+              <p className="text-white font-bold text-xl max-w-62.5 truncate mb-1">
                 {currentItem.originalName ?? "Document"}
               </p>
               <p className="text-white/50 text-sm">Secure File</p>
@@ -345,7 +345,7 @@ export default function MediaPreview({
                 e.stopPropagation();
                 goPrev();
               }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 hover:scale-110 flex items-center justify-center text-white transition-all backdrop-blur-md hidden sm:flex border border-white/10"
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 hover:scale-110 flex items-center justify-center text-white transition-all backdrop-blur-md sm:flex border border-white/10"
             >
               <svg
                 className="w-6 h-6 mr-0.5"
@@ -366,7 +366,7 @@ export default function MediaPreview({
                 e.stopPropagation();
                 goNext();
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 hover:scale-110 flex items-center justify-center text-white transition-all backdrop-blur-md hidden sm:flex border border-white/10"
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 hover:bg-black/70 hover:scale-110 flex items-center justify-center text-white transition-all backdrop-blur-md sm:flex border border-white/10"
             >
               <svg
                 className="w-6 h-6 ml-0.5"
@@ -406,7 +406,7 @@ export default function MediaPreview({
                     setZoom(1);
                     setRotation(0);
                   }}
-                  className={`relative w-14 h-14 flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ${isActive ? "ring-2 ring-primary scale-110 mx-1 shadow-lg shadow-primary/20" : "opacity-40 hover:opacity-100 scale-95 hover:scale-100"}`}
+                  className={`relative w-14 h-14 shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 ${isActive ? "ring-2 ring-primary scale-110 mx-1 shadow-lg shadow-primary/20" : "opacity-40 hover:opacity-100 scale-95 hover:scale-100"}`}
                 >
                   {thumbUrl && g.type !== "file" ? (
                     g.type === "video" ? (

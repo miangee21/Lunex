@@ -25,7 +25,7 @@ export default function SentRequestsTab({
     <>
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
-          <Search size={15} className="text-muted-foreground flex-shrink-0" />
+          <Search size={15} className="text-muted-foreground shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

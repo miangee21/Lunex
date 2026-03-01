@@ -19,7 +19,6 @@ import {
   Film,
   Image as ImageIcon,
   Download,
-  X,
   ChevronDown,
   CornerDownLeft,
   CheckSquare,
@@ -33,7 +32,6 @@ function MediaGridItem({
   galleryIndex = 0,
   secretKey,
   theirPublicKeyBase64,
-  otherUserId,
   forceDownload,
 }: {
   msg: DecryptedMessage;
@@ -253,7 +251,7 @@ export default function MediaGridGroup({
       )}
 
       <div
-        className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-[240px] sm:w-[280px] ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}
+        className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-60 sm:w-70 ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}
       >
         <div
           className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}

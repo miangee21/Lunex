@@ -103,14 +103,14 @@ export default function ChatListItem({
           <span className="text-foreground font-semibold text-sm truncate">
             {username}
           </span>
-          <span className="text-muted-foreground text-xs flex-shrink-0 ml-1">
+          <span className="text-muted-foreground text-xs shrink-0 ml-1">
             {time}
           </span>
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <span className="text-muted-foreground text-xs truncate flex items-center gap-1">
             {isRead === "read" && (
-              <span className="mr-1 flex-shrink-0">
+              <span className="mr-1 shrink-0">
                 <svg
                   className="w-3.5 h-3.5 text-primary opacity-100"
                   viewBox="0 0 24 24"
@@ -121,7 +121,7 @@ export default function ChatListItem({
               </span>
             )}
             {isRead === "delivered" && (
-              <span className="mr-1 flex-shrink-0">
+              <span className="mr-1 shrink-0">
                 <svg
                   className="w-3.5 h-3.5 text-muted-foreground opacity-80"
                   fill="none"
@@ -139,7 +139,7 @@ export default function ChatListItem({
               </span>
             )}
             {isRead === "sent" && (
-              <span className="mr-1 flex-shrink-0">
+              <span className="mr-1 shrink-0">
                 <svg
                   className="w-3.5 h-3.5 text-muted-foreground opacity-80"
                   fill="none"
@@ -154,14 +154,14 @@ export default function ChatListItem({
             {lastMessage}
           </span>
           {unread > 0 && (
-            <span className="ml-1 flex-shrink-0 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
+            <span className="ml-1 shrink-0 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
               {unread}
             </span>
           )}
         </div>
       </div>
 
-      <div className="relative flex-shrink-0">
+      <div className="relative shrink-0">
         <button
           onClick={(e) => {
             e.stopPropagation();
