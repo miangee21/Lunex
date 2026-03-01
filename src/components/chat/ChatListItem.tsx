@@ -1,3 +1,4 @@
+//src/components/chat/ChatListItem.tsx
 import { useChatStore } from "@/store/chatStore";
 import { useState } from "react";
 import UserAvatar from "@/components/shared/UserAvatar";
@@ -43,7 +44,8 @@ export default function ChatListItem({
   otherTextColor,
   isRead,
 }: ChatListItemProps) {
-  const { setActiveChat, setConversationId, activeChat, clearActiveChat } = useChatStore();
+  const { setActiveChat, setConversationId, activeChat, clearActiveChat } =
+    useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const [menuOpen, setMenuOpen] = useState(false);
   const isActive = activeChat?.userId === id;
@@ -58,7 +60,7 @@ export default function ChatListItem({
         conversationId: conversationId as never,
         userId,
       });
-      // Agar ye chat abhi open hai to clear kar do
+
       if (isActive) clearActiveChat();
       toast.success("Chat deleted!");
       setMenuOpen(false);
@@ -89,7 +91,6 @@ export default function ChatListItem({
         isActive ? "bg-accent" : "hover:bg-accent/50"
       }`}
     >
-      {/* Avatar */}
       <UserAvatar
         username={username}
         profilePicStorageId={profilePicStorageId as Id<"_storage"> | null}
@@ -97,7 +98,6 @@ export default function ChatListItem({
         isOnline={isOnline}
       />
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <span className="text-foreground font-semibold text-sm truncate">
@@ -109,25 +109,44 @@ export default function ChatListItem({
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <span className="text-muted-foreground text-xs truncate flex items-center gap-1">
-            {/* Shape-Based Status Icons */}
             {isRead === "read" && (
               <span className="mr-1 flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-primary opacity-100" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  className="w-3.5 h-3.5 text-primary opacity-100"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
               </span>
             )}
             {isRead === "delivered" && (
               <span className="mr-1 flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-muted-foreground opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  className="w-3.5 h-3.5 text-muted-foreground opacity-80"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <circle cx="12" cy="12" r="10" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12.5l2.5 2.5l5 -5" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 12.5l2.5 2.5l5 -5"
+                  />
                 </svg>
               </span>
             )}
             {isRead === "sent" && (
               <span className="mr-1 flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-muted-foreground opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  className="w-3.5 h-3.5 text-muted-foreground opacity-80"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <circle cx="12" cy="12" r="10" />
                 </svg>
               </span>
@@ -142,7 +161,6 @@ export default function ChatListItem({
         </div>
       </div>
 
-      {/* Three dots menu */}
       <div className="relative flex-shrink-0">
         <button
           onClick={(e) => {
@@ -167,7 +185,6 @@ export default function ChatListItem({
         )}
       </div>
 
-      {/* Close menu on outside click */}
       {menuOpen && (
         <div
           className="fixed inset-0 z-40"

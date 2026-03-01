@@ -1,5 +1,6 @@
+//src/components/chat/PreSendMediaPreview.tsx
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom"; // ── FIX: Portal import kiya taake direct Global Theme uthaye ──
+import { createPortal } from "react-dom";
 import { X, Send, Plus, FileText, Play } from "lucide-react";
 import { type AllowedFileType } from "@/lib/fileValidation";
 
@@ -8,7 +9,7 @@ interface PreSendMediaPreviewProps {
   onSend: () => void;
   onCancel: () => void;
   onRemove: (index: number) => void;
-  onAddMore: (newFiles: File[]) => void; // ── FIX: Ab yeh direct files return karega ──
+  onAddMore: (newFiles: File[]) => void;
 }
 
 export default function PreSendMediaPreview({
@@ -21,7 +22,6 @@ export default function PreSendMediaPreview({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [urlMap, setUrlMap] = useState<Map<File, string>>(new Map());
 
-  // ── Smart Memory (Flicker Prevention) ──
   useEffect(() => {
     setUrlMap((prev) => {
       const next = new Map(prev);
@@ -40,7 +40,6 @@ export default function PreSendMediaPreview({
     });
   }, [files]);
 
-  // Handle out of bounds
   useEffect(() => {
     if (currentIndex >= files.length && files.length > 0) {
       setCurrentIndex(files.length - 1);
@@ -53,13 +52,12 @@ export default function PreSendMediaPreview({
 
   const safeIndex = Math.min(currentIndex, files.length - 1);
   const currentItem = files[safeIndex];
-  const currentUrl = currentItem ? urlMap.get(currentItem.file) || undefined : undefined;
+  const currentUrl = currentItem
+    ? urlMap.get(currentItem.file) || undefined
+    : undefined;
 
-  // ── Modal UI ──
   const modalContent = (
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md flex flex-col animate-in fade-in zoom-in-95 duration-200 text-foreground">
-      
-      {/* ── TOP HEADER ── */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-border/50">
         <button
           onClick={onCancel}
@@ -70,15 +68,22 @@ export default function PreSendMediaPreview({
         <span className="text-foreground font-semibold text-sm">
           {safeIndex + 1} of {files.length} selected
         </span>
-        <div className="w-10"></div> {/* Spacer */}
+        <div className="w-10"></div>
       </div>
 
-      {/* ── MAIN PREVIEW AREA ── */}
       <div className="flex-1 flex items-center justify-center p-4 overflow-hidden relative">
         {currentItem?.type === "image" ? (
-          <img src={currentUrl} alt="preview" className="max-w-full max-h-full object-contain rounded-xl shadow-lg" />
+          <img
+            src={currentUrl}
+            alt="preview"
+            className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+          />
         ) : currentItem?.type === "video" ? (
-          <video src={currentUrl} controls className="max-w-full max-h-full rounded-xl shadow-lg" />
+          <video
+            src={currentUrl}
+            controls
+            className="max-w-full max-h-full rounded-xl shadow-lg"
+          />
         ) : (
           <div className="flex flex-col items-center gap-4 bg-accent/50 p-10 rounded-3xl">
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
@@ -94,21 +99,23 @@ export default function PreSendMediaPreview({
         )}
       </div>
 
-      {/* ── BOTTOM THUMBNAIL STRIP & SEND ── */}
       <div className="p-4 bg-card border-t border-border flex items-center gap-4">
-        
-        {/* Thumbnails */}
         <div className="flex-1 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2">
           {files.map((item, idx) => (
-            <div 
-              key={idx} 
+            <div
+              key={idx}
               className={`relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer transition-all ${
-                safeIndex === idx ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105" : "opacity-60 hover:opacity-100"
+                safeIndex === idx
+                  ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-105"
+                  : "opacity-60 hover:opacity-100"
               }`}
               onClick={() => setCurrentIndex(idx)}
             >
               {item.type === "image" && (
-                <img src={urlMap.get(item.file)} className="w-full h-full object-cover" />
+                <img
+                  src={urlMap.get(item.file)}
+                  className="w-full h-full object-cover"
+                />
               )}
               {item.type === "video" && (
                 <div className="w-full h-full bg-black/80 flex items-center justify-center">
@@ -121,7 +128,7 @@ export default function PreSendMediaPreview({
                 </div>
               )}
 
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(idx);
@@ -133,7 +140,6 @@ export default function PreSendMediaPreview({
             </div>
           ))}
 
-          {/* ── FIX: Self-contained Add More Button ── */}
           {files.length < 10 && (
             <label className="w-14 h-14 flex-shrink-0 rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors ml-1 cursor-pointer">
               <Plus size={24} />
@@ -145,7 +151,7 @@ export default function PreSendMediaPreview({
                 onChange={(e) => {
                   if (e.target.files && e.target.files.length > 0) {
                     onAddMore(Array.from(e.target.files));
-                    e.target.value = ""; // reset input
+                    e.target.value = "";
                   }
                 }}
               />
@@ -153,18 +159,15 @@ export default function PreSendMediaPreview({
           )}
         </div>
 
-        {/* Send Button */}
-        <button 
+        <button
           onClick={onSend}
           className="w-14 h-14 flex-shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xl hover:opacity-90 transition-all hover:scale-105 ml-auto"
         >
           <Send size={22} className="ml-1" />
         </button>
-
       </div>
     </div>
   );
 
-  // ── FIX: Portal lagaya taake app ki main body (jahan Global Theme hai) usme render ho ──
   return createPortal(modalContent, document.body);
 }

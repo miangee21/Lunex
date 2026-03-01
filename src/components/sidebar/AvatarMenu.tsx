@@ -1,3 +1,4 @@
+//src/components/sidebar/AvatarMenu.tsx
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,6 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
   const setOnlineStatus = useMutation(api.users.setOnlineStatus);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -34,9 +34,7 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
       if (userId) {
         await setOnlineStatus({ userId, isOnline: false });
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     logout();
     toast.success("Logged out successfully!");
     navigate("/login");

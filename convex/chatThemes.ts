@@ -1,8 +1,7 @@
+// convex/chatThemes.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// ── GET CHAT THEME ──
-// Retrieve the custom theme settings for a specific chat
 export const getChatTheme = query({
   args: {
     userId: v.id("users"),
@@ -12,14 +11,12 @@ export const getChatTheme = query({
     return await ctx.db
       .query("chatThemes")
       .withIndex("by_user_and_other", (q) =>
-        q.eq("userId", args.userId).eq("otherUserId", args.otherUserId)
+        q.eq("userId", args.userId).eq("otherUserId", args.otherUserId),
       )
       .unique();
   },
 });
 
-// ── SET CHAT THEME (UPSERT) ──
-// Create or update the custom theme settings for a specific chat
 export const setChatTheme = mutation({
   args: {
     userId: v.id("users"),
@@ -32,11 +29,10 @@ export const setChatTheme = mutation({
     otherTextColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Pehle check karein ke kya in dono users ke darmiyan theme ka record mojood hai
     const existing = await ctx.db
       .query("chatThemes")
       .withIndex("by_user_and_other", (q) =>
-        q.eq("userId", args.userId).eq("otherUserId", args.otherUserId)
+        q.eq("userId", args.userId).eq("otherUserId", args.otherUserId),
       )
       .unique();
 
@@ -50,10 +46,8 @@ export const setChatTheme = mutation({
     };
 
     if (existing) {
-      // Agar record pehle se hai toh sirf usko UPDATE (patch) kar do
       await ctx.db.patch(existing._id, themeData);
     } else {
-      // Agar nahi hai toh naya record INSERT kar do
       await ctx.db.insert("chatThemes", {
         userId: args.userId,
         otherUserId: args.otherUserId,

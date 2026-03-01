@@ -1,3 +1,4 @@
+//src/components/friends/RequestItem.tsx
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -5,8 +6,17 @@ import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
-import { ArrowLeft, Search, Check, X, MoreVertical, UserPlus, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Search,
+  Check,
+  X,
+  MoreVertical,
+  UserPlus,
+  Clock,
+  Users,
+} from "lucide-react";
 
 type Tab = "received" | "sent" | "find";
 
@@ -20,19 +30,19 @@ export default function RequestsPanel() {
 
   const incomingRequests = useQuery(
     api.friends.getIncomingRequests,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const sentRequests = useQuery(
     api.friends.getSentRequests,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const searchResults = useQuery(
     api.friends.searchUsers,
     findSearch.length >= 2 && userId
       ? { username: findSearch.toLowerCase(), currentUserId: userId }
-      : "skip"
+      : "skip",
   );
 
   const acceptRequest = useMutation(api.friends.acceptFriendRequest);
@@ -77,22 +87,22 @@ export default function RequestsPanel() {
       });
       toast.success("Friend request sent!");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to send request.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send request.",
+      );
     }
   }
 
   const filteredReceived = (incomingRequests ?? []).filter((r) =>
-    r.username.toLowerCase().includes(search.toLowerCase())
+    r.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   const filteredSent = (sentRequests ?? []).filter((r) =>
-    r.username.toLowerCase().includes(search.toLowerCase())
+    r.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="flex flex-col h-full">
-
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
           onClick={() => setSidebarView("chats")}
@@ -103,10 +113,12 @@ export default function RequestsPanel() {
         <h2 className="text-foreground font-bold text-lg">Requests</h2>
       </div>
 
-      {/* Tabs */}
       <div className="flex mx-3 mb-3 bg-accent rounded-xl p-1">
         <button
-          onClick={() => { setTab("received"); setSearch(""); }}
+          onClick={() => {
+            setTab("received");
+            setSearch("");
+          }}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors relative ${
             tab === "received"
               ? "bg-background text-foreground shadow-sm"
@@ -121,7 +133,10 @@ export default function RequestsPanel() {
           )}
         </button>
         <button
-          onClick={() => { setTab("sent"); setSearch(""); }}
+          onClick={() => {
+            setTab("sent");
+            setSearch("");
+          }}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
             tab === "sent"
               ? "bg-background text-foreground shadow-sm"
@@ -131,7 +146,10 @@ export default function RequestsPanel() {
           Sent
         </button>
         <button
-          onClick={() => { setTab("find"); setFindSearch(""); }}
+          onClick={() => {
+            setTab("find");
+            setFindSearch("");
+          }}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
             tab === "find"
               ? "bg-background text-foreground shadow-sm"
@@ -147,7 +165,10 @@ export default function RequestsPanel() {
         <>
           <div className="px-3 pb-3">
             <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
-              <Search size={15} className="text-muted-foreground flex-shrink-0" />
+              <Search
+                size={15}
+                className="text-muted-foreground flex-shrink-0"
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -164,7 +185,9 @@ export default function RequestsPanel() {
               </div>
             ) : filteredReceived.length === 0 ? (
               <div className="flex items-center justify-center h-32">
-                <p className="text-muted-foreground text-sm">No requests received</p>
+                <p className="text-muted-foreground text-sm">
+                  No requests received
+                </p>
               </div>
             ) : (
               filteredReceived.map((req) => (
@@ -174,7 +197,9 @@ export default function RequestsPanel() {
                 >
                   <UserAvatar
                     username={req.username}
-                    profilePicStorageId={req.profilePicStorageId as Id<"_storage"> | null}
+                    profilePicStorageId={
+                      req.profilePicStorageId as Id<"_storage"> | null
+                    }
                   />
                   <span className="text-foreground text-sm font-semibold flex-1 truncate">
                     {req.username}
@@ -205,7 +230,10 @@ export default function RequestsPanel() {
         <>
           <div className="px-3 pb-3">
             <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
-              <Search size={15} className="text-muted-foreground flex-shrink-0" />
+              <Search
+                size={15}
+                className="text-muted-foreground flex-shrink-0"
+              />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -222,7 +250,9 @@ export default function RequestsPanel() {
               </div>
             ) : filteredSent.length === 0 ? (
               <div className="flex items-center justify-center h-32">
-                <p className="text-muted-foreground text-sm">No sent requests</p>
+                <p className="text-muted-foreground text-sm">
+                  No sent requests
+                </p>
               </div>
             ) : (
               filteredSent.map((req) => (
@@ -232,24 +262,35 @@ export default function RequestsPanel() {
                 >
                   <UserAvatar
                     username={req.username}
-                    profilePicStorageId={req.profilePicStorageId as Id<"_storage"> | null}
+                    profilePicStorageId={
+                      req.profilePicStorageId as Id<"_storage"> | null
+                    }
                   />
                   <span className="text-foreground text-sm font-semibold flex-1 truncate">
                     {req.username}
                   </span>
                   <div className="relative">
                     <button
-                      onClick={() => setMenuOpen(menuOpen === req.requestId ? null : req.requestId)}
+                      onClick={() =>
+                        setMenuOpen(
+                          menuOpen === req.requestId ? null : req.requestId,
+                        )
+                      }
                       className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
                     >
                       <MoreVertical size={15} />
                     </button>
                     {menuOpen === req.requestId && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setMenuOpen(null)}
+                        />
                         <div className="absolute right-0 top-9 w-36 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
                           <button
-                            onClick={() => handleUnsend(req.requestId, req.username)}
+                            onClick={() =>
+                              handleUnsend(req.requestId, req.username)
+                            }
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                           >
                             <X size={14} />
@@ -271,7 +312,10 @@ export default function RequestsPanel() {
         <>
           <div className="px-3 pb-3">
             <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 border border-transparent focus-within:border-primary transition-all">
-              <Search size={15} className="text-muted-foreground flex-shrink-0" />
+              <Search
+                size={15}
+                className="text-muted-foreground flex-shrink-0"
+              />
               <input
                 value={findSearch}
                 onChange={(e) => setFindSearch(e.target.value.toLowerCase())}
@@ -281,7 +325,10 @@ export default function RequestsPanel() {
               />
               {findSearch && (
                 <button onClick={() => setFindSearch("")}>
-                  <X size={15} className="text-muted-foreground hover:text-foreground transition-colors" />
+                  <X
+                    size={15}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  />
                 </button>
               )}
             </div>
@@ -291,7 +338,9 @@ export default function RequestsPanel() {
             {findSearch.length < 2 ? (
               <div className="flex flex-col items-center justify-center h-32 gap-2">
                 <Users size={24} className="text-muted-foreground/50" />
-                <p className="text-muted-foreground text-sm">Type at least 2 characters</p>
+                <p className="text-muted-foreground text-sm">
+                  Type at least 2 characters
+                </p>
               </div>
             ) : searchResults === undefined ? (
               <div className="flex items-center justify-center h-32">
@@ -316,12 +365,10 @@ export default function RequestsPanel() {
           </div>
         </>
       )}
-
     </div>
   );
 }
 
-// ── Find user row with relationship status ──
 function FindUserItem({
   userId,
   username,
@@ -342,7 +389,9 @@ function FindUserItem({
 
   function renderAction() {
     if (relationship === undefined) {
-      return <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />;
+      return (
+        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      );
     }
     if (!relationship) {
       return (
@@ -363,7 +412,10 @@ function FindUserItem({
         </span>
       );
     }
-    if (relationship.status === "pending" && relationship.direction === "sent") {
+    if (
+      relationship.status === "pending" &&
+      relationship.direction === "sent"
+    ) {
       return (
         <span className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
           <Clock size={13} />
@@ -371,7 +423,10 @@ function FindUserItem({
         </span>
       );
     }
-    if (relationship.status === "pending" && relationship.direction === "received") {
+    if (
+      relationship.status === "pending" &&
+      relationship.direction === "received"
+    ) {
       return (
         <span className="flex items-center gap-1.5 text-primary text-xs font-bold">
           <Clock size={13} />

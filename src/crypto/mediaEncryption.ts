@@ -1,16 +1,13 @@
+//src/crypto/mediaEncryption.ts
 import nacl from "tweetnacl";
 
-// ── DERIVE SHARED SECRET (same as text encryption) ──
-// sender: nacl.box.before(receiverPublicKey, senderSecretKey)
-// receiver: nacl.box.before(senderPublicKey, receiverSecretKey)
-// Dono sides pe same result — X25519 Diffie-Hellman
 async function deriveAesKey(
   ourSecretKey: Uint8Array,
-  theirPublicKey: Uint8Array
+  theirPublicKey: Uint8Array,
 ): Promise<CryptoKey> {
   const sharedSecret = nacl.box.before(
     theirPublicKey.slice(0, 32),
-    ourSecretKey.slice(0, 32)
+    ourSecretKey.slice(0, 32),
   );
 
   return await crypto.subtle.importKey(
@@ -18,7 +15,7 @@ async function deriveAesKey(
     new Uint8Array(sharedSecret),
     { name: "AES-GCM" },
     false,
-    ["encrypt", "decrypt"]
+    ["encrypt", "decrypt"],
   );
 }
 
@@ -26,7 +23,7 @@ async function deriveAesKey(
 export async function encryptMediaFile(
   file: File,
   ourSecretKey: Uint8Array,
-  theirPublicKey: Uint8Array
+  theirPublicKey: Uint8Array,
 ): Promise<{ encryptedBlob: Blob; iv: string }> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const aesKey = await deriveAesKey(ourSecretKey, theirPublicKey);
@@ -36,7 +33,7 @@ export async function encryptMediaFile(
   const encryptedBuffer = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     aesKey,
-    fileBuffer
+    fileBuffer,
   );
 
   const encryptedBlob = new Blob([encryptedBuffer], {
@@ -55,7 +52,7 @@ export async function decryptMediaFile(
   ivBase64: string,
   ourSecretKey: Uint8Array,
   theirPublicKey: Uint8Array,
-  originalMimeType: string
+  originalMimeType: string,
 ): Promise<string> {
   const response = await fetch(encryptedUrl);
   const encryptedBuffer = await response.arrayBuffer();
@@ -66,7 +63,7 @@ export async function decryptMediaFile(
   const decryptedBuffer = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv },
     aesKey,
-    encryptedBuffer
+    encryptedBuffer,
   );
 
   const blob = new Blob([decryptedBuffer], { type: originalMimeType });

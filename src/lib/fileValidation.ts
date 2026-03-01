@@ -1,3 +1,4 @@
+//src/lib/fileValidation.ts
 export type AllowedFileType = "image" | "video" | "file";
 
 interface ValidationResult {
@@ -6,14 +7,12 @@ interface ValidationResult {
   type?: AllowedFileType;
 }
 
-// ── SIZE LIMITS ──
 const LIMITS = {
   image: 15 * 1024 * 1024, // 15MB
   video: 20 * 1024 * 1024, // 20MB
-  file: 15 * 1024 * 1024,  // 15MB
+  file: 15 * 1024 * 1024, // 15MB
 };
 
-// ── ALLOWED MIME TYPES ──
 const IMAGE_TYPES = [
   "image/jpeg",
   "image/jpg",
@@ -28,7 +27,7 @@ const VIDEO_TYPES = [
   "video/webm",
   "video/ogg",
   "video/quicktime",
-  "video/x-msvideo", // .avi
+  "video/x-msvideo",
 ];
 
 const FILE_TYPES = [
@@ -46,7 +45,6 @@ const FILE_TYPES = [
   "text/csv",
 ];
 
-// ── DETECT FILE TYPE ──
 export function detectFileType(file: File): AllowedFileType | null {
   if (IMAGE_TYPES.includes(file.type)) return "image";
   if (VIDEO_TYPES.includes(file.type)) return "video";
@@ -54,14 +52,12 @@ export function detectFileType(file: File): AllowedFileType | null {
   return null;
 }
 
-// ── FORMAT FILE SIZE ──
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ── VALIDATE FILE ──
 export function validateFile(file: File): ValidationResult {
   const type = detectFileType(file);
 

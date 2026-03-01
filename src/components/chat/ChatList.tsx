@@ -1,3 +1,4 @@
+//src/components/chat/ChatList.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -29,7 +30,6 @@ export default function ChatList() {
     userId ? { userId } : "skip",
   );
 
-  // ── Real conversations list ──
   const conversations = useQuery(
     api.conversations.getConversationsList,
     userId ? { userId } : "skip",
@@ -39,12 +39,8 @@ export default function ChatList() {
     api.conversations.getOrCreateConversation,
   );
 
-  // ── FIX: Add Delivery Mutation ──
   const markAsDelivered = useMutation(api.messages.markAsDelivered);
 
-  // ── NEW: BACKGROUND DELIVERY SYNC ──
-  // Jab receiver app open karega, yeh uske tamam unread messages ko automatically
-  // "Delivered" mark kar dega. Sender ko fauran 2 grey ticks nazar aayenge!
   useEffect(() => {
     if (conversations && userId) {
       conversations.forEach((conv) => {
@@ -61,7 +57,6 @@ export default function ChatList() {
   if (sidebarView === "requests") return <RequestsPanel />;
   if (sidebarView === "search") return <SearchUsers />;
 
-  // ── Handle chat open — get or create conversation ──
   async function handleOpenChat(friend: {
     userId: string;
     username: string;
@@ -89,7 +84,6 @@ export default function ChatList() {
       otherTextColor: friend.otherTextColor,
     });
 
-    // Get or create conversation
     const conversationId = await getOrCreateConversation({
       myUserId: userId,
       otherUserId: friend.userId as never,
@@ -98,7 +92,6 @@ export default function ChatList() {
     setConversationId(conversationId);
   }
 
-  // ── FRIENDS LIST (plus button) ──
   if (showFriends) {
     const filteredFriends = (friends ?? []).filter(
       (f) =>
@@ -109,7 +102,6 @@ export default function ChatList() {
 
     return (
       <div className="flex flex-col h-full">
-        {/* Header */}
         <div className="flex items-center gap-3 px-4 pt-4 pb-2">
           <button
             onClick={() => {
@@ -123,7 +115,6 @@ export default function ChatList() {
           <h2 className="text-foreground font-bold text-lg">Friends</h2>
         </div>
 
-        {/* Search */}
         <div className="px-3 pb-3">
           <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
             <Search size={15} className="text-muted-foreground flex-shrink-0" />
@@ -145,7 +136,6 @@ export default function ChatList() {
           </div>
         </div>
 
-        {/* Friends list */}
         <div className="flex-1 overflow-y-auto">
           {friends === undefined ? (
             <div className="flex items-center justify-center h-32">
@@ -202,14 +192,12 @@ export default function ChatList() {
     );
   }
 
-  // ── CHAT LIST — real conversations ──
   const filteredConversations = (conversations ?? []).filter((c) =>
     c?.username.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-foreground font-bold text-lg">Chats</h2>
         <button
@@ -224,7 +212,6 @@ export default function ChatList() {
         </button>
       </div>
 
-      {/* Search */}
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
           <Search size={15} className="text-muted-foreground flex-shrink-0" />
@@ -245,7 +232,6 @@ export default function ChatList() {
         </div>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {conversations === undefined ? (
           <div className="flex items-center justify-center h-32">
@@ -290,7 +276,7 @@ export default function ChatList() {
                       return cached.senderId === userId
                         ? "You: 📎 New document"
                         : "📎 New document";
-                    // Text — 40 character limit
+
                     const preview =
                       cached.text.length > 40
                         ? cached.text.slice(0, 40) + "..."
@@ -347,8 +333,10 @@ export default function ChatList() {
                     ? deliveredToCache[conv.conversationId]
                     : [];
                   const otherUserId = conv.otherUserId;
-                  if (readBy?.some((r) => r.userId === otherUserId)) return "read";
-                  if (deliveredTo?.some((d) => d.userId === otherUserId)) return "delivered";
+                  if (readBy?.some((r) => r.userId === otherUserId))
+                    return "read";
+                  if (deliveredTo?.some((d) => d.userId === otherUserId))
+                    return "delivered";
                   return "sent";
                 })()}
                 unread={conv.unreadCount}

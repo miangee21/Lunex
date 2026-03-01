@@ -1,7 +1,7 @@
+// convex/typing.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// ── SET TYPING STATUS ──
 export const setTyping = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -12,7 +12,7 @@ export const setTyping = mutation({
     const existing = await ctx.db
       .query("typingIndicators")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .unique();
@@ -33,8 +33,6 @@ export const setTyping = mutation({
   },
 });
 
-// ── GET TYPING USERS ──
-// Returns list of userIds who are currently typing (excluding current user)
 export const getTypingUsers = query({
   args: {
     conversationId: v.id("conversations"),
@@ -44,14 +42,10 @@ export const getTypingUsers = query({
     const indicators = await ctx.db
       .query("typingIndicators")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .collect();
 
-    // Sirf wahi return karo jo:
-    // 1. Is typing (isTyping: true)
-    // 2. Current user nahi hai
-    // 3. 10 seconds se zyada purana nahi (stale typing indicator clean karo)
     const tenSecondsAgo = Date.now() - 10000;
 
     return indicators
@@ -59,13 +53,12 @@ export const getTypingUsers = query({
         (t) =>
           t.isTyping &&
           t.userId !== args.currentUserId &&
-          t.updatedAt > tenSecondsAgo
+          t.updatedAt > tenSecondsAgo,
       )
       .map((t) => t.userId);
   },
 });
 
-// ── CLEAR TYPING (call on blur or send) ──
 export const clearTyping = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -75,7 +68,7 @@ export const clearTyping = mutation({
     const existing = await ctx.db
       .query("typingIndicators")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .unique();

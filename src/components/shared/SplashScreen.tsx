@@ -32,14 +32,10 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden bg-slate-50 dark:bg-[#09090b]">
-
-      {/* Ambient glows */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="z-10 flex flex-col items-center gap-8">
-
-        {/* App Icon */}
         <div className="relative">
           <div className="w-28 h-28 rounded-3xl overflow-hidden shadow-2xl shadow-indigo-500/20 border border-slate-200/50 dark:border-slate-700/50">
             <img
@@ -48,11 +44,10 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               className="w-full h-full object-cover"
             />
           </div>
-          {/* Glow behind icon */}
+
           <div className="absolute inset-0 w-28 h-28 rounded-3xl bg-indigo-500/20 blur-xl -z-10" />
         </div>
 
-        {/* App name + tagline */}
         <div className="flex flex-col items-center gap-2">
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
             Lunex
@@ -62,7 +57,6 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           </p>
         </div>
 
-        {/* Progress bar */}
         <div className="w-48 flex flex-col items-center gap-2">
           <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
@@ -71,9 +65,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
             />
           </div>
         </div>
-
       </div>
-
     </div>
   );
 }

@@ -1,3 +1,4 @@
+//src/crypto/mnemonic.ts
 import * as bip39 from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 

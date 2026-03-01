@@ -1,6 +1,7 @@
+//src/components/chat/MediaUploadProgress.tsx
 interface MediaUploadProgressProps {
   fileName: string;
-  progress: number; // 0-100
+  progress: number;
   type: "image" | "video" | "file";
   onCancel?: () => void;
   uploadIndex?: number;
@@ -15,17 +16,13 @@ export default function MediaUploadProgress({
   uploadIndex = 1,
   uploadTotal = 1,
 }: MediaUploadProgressProps) {
-  const icon =
-    type === "image" ? "🖼️" : type === "video" ? "🎥" : "📎";
+  const icon = type === "image" ? "🖼️" : type === "video" ? "🎥" : "📎";
 
   return (
     <div className="px-4 py-3 bg-sidebar border-t border-border">
       <div className="flex items-center gap-3 bg-accent rounded-2xl px-4 py-3">
-
-        {/* Icon */}
         <span className="text-xl flex-shrink-0">{icon}</span>
 
-        {/* Info + Progress */}
         <div className="flex-1 min-w-0">
           {uploadTotal > 1 && (
             <p className="text-xs text-muted-foreground mb-0.5">
@@ -48,7 +45,6 @@ export default function MediaUploadProgress({
           </div>
         </div>
 
-        {/* Cancel */}
         {onCancel && progress < 100 && (
           <button
             onClick={onCancel}
@@ -57,7 +53,6 @@ export default function MediaUploadProgress({
             Cancel
           </button>
         )}
-
       </div>
     </div>
   );

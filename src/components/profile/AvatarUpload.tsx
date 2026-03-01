@@ -1,3 +1,4 @@
+//src/components/profile/AvatarUpload.tsx
 import { useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useMutation, useQuery } from "convex/react";
@@ -17,18 +18,16 @@ export default function AvatarUpload() {
   const deleteFile = useMutation(api.media.deleteFile);
   const removeProfilePic = useMutation(api.users.removeProfilePic);
 
-  // Load user from Convex — reactive, always fresh
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
-  // Load avatar URL from Convex storage
   const avatarUrl = useQuery(
     api.users.getProfilePicUrl,
     userRecord?.profilePicStorageId
       ? { storageId: userRecord.profilePicStorageId }
-      : "skip"
+      : "skip",
   );
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -48,15 +47,12 @@ export default function AvatarUpload() {
     setDropdownOpen(false);
 
     try {
-      // Delete old file from Convex storage if exists
       if (userRecord?.profilePicStorageId) {
         await deleteFile({ storageId: userRecord.profilePicStorageId });
       }
 
-      // Get upload URL
       const uploadUrl = await generateUploadUrl();
 
-      // Upload file
       const response = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": file.type },
@@ -67,7 +63,6 @@ export default function AvatarUpload() {
 
       const { storageId } = await response.json();
 
-      // Save to user profile
       await updateUserProfile({ userId, profilePicStorageId: storageId });
 
       toast.success("Profile picture updated!");
@@ -75,7 +70,7 @@ export default function AvatarUpload() {
       toast.error("Failed to upload image. Please try again.");
     } finally {
       setUploading(false);
-      // Reset file input
+
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
@@ -84,9 +79,8 @@ export default function AvatarUpload() {
     if (!userId || !userRecord?.profilePicStorageId) return;
     setDropdownOpen(false);
     try {
-      // Delete from Convex storage
       await deleteFile({ storageId: userRecord.profilePicStorageId });
-      // Remove from user record
+
       await removeProfilePic({ userId });
       toast.success("Profile picture removed!");
     } catch {
@@ -96,8 +90,6 @@ export default function AvatarUpload() {
 
   return (
     <div className="relative">
-
-      {/* Avatar */}
       <button
         onClick={() => setDropdownOpen((v) => !v)}
         disabled={uploading}
@@ -115,7 +107,6 @@ export default function AvatarUpload() {
           </span>
         )}
 
-        {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           {uploading ? (
             <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
@@ -125,7 +116,6 @@ export default function AvatarUpload() {
         </div>
       </button>
 
-      {/* Dropdown */}
       {dropdownOpen && (
         <>
           <div
@@ -160,7 +150,6 @@ export default function AvatarUpload() {
         </>
       )}
 
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"

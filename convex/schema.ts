@@ -1,3 +1,4 @@
+// convex/schema.ts
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -9,8 +10,7 @@ export default defineSchema({
     bio: v.optional(v.string()),
     isOnline: v.boolean(),
     lastSeen: v.number(),
-    
-    // ── NEW: Global Theme Sync ──
+
     theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
     globalPreset: v.optional(v.string()),
   })
@@ -23,7 +23,7 @@ export default defineSchema({
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
-      v.literal("rejected")
+      v.literal("rejected"),
     ),
     createdAt: v.number(),
   })
@@ -46,8 +46,7 @@ export default defineSchema({
     disappearingSetBy: v.optional(v.id("users")),
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
-  })
-    .index("by_last_message", ["lastMessageAt"]),
+  }).index("by_last_message", ["lastMessageAt"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
@@ -59,7 +58,7 @@ export default defineSchema({
       v.literal("image"),
       v.literal("video"),
       v.literal("audio"),
-      v.literal("file")
+      v.literal("file"),
     ),
     mediaStorageId: v.optional(v.id("_storage")),
     mediaIv: v.optional(v.string()),
@@ -67,23 +66,35 @@ export default defineSchema({
     mediaExpiresAt: v.optional(v.number()),
     mediaOriginalName: v.optional(v.string()),
     replyToMessageId: v.optional(v.id("messages")),
-    reactions: v.optional(v.array(v.object({
-      userId: v.id("users"),
-      emoji: v.string(),
-    }))),
+    reactions: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          emoji: v.string(),
+        }),
+      ),
+    ),
     editedAt: v.optional(v.number()),
     deletedForSender: v.optional(v.boolean()),
     deletedForEveryone: v.optional(v.boolean()),
     disappearsAt: v.optional(v.number()),
     sentAt: v.number(),
-    readBy: v.optional(v.array(v.object({
-      userId: v.id("users"),
-      time: v.number()
-    }))),
-    deliveredTo: v.optional(v.array(v.object({
-      userId: v.id("users"),
-      time: v.number()
-    }))),
+    readBy: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          time: v.number(),
+        }),
+      ),
+    ),
+    deliveredTo: v.optional(
+      v.array(
+        v.object({
+          userId: v.id("users"),
+          time: v.number(),
+        }),
+      ),
+    ),
   })
     .index("by_conversation", ["conversationId", "sentAt"])
     .index("by_expires", ["mediaExpiresAt"])
@@ -94,27 +105,23 @@ export default defineSchema({
     userId: v.id("users"),
     isTyping: v.boolean(),
     updatedAt: v.number(),
-  })
-    .index("by_conversation", ["conversationId"]),
+  }).index("by_conversation", ["conversationId"]),
 
   chatDeletions: defineTable({
     conversationId: v.id("conversations"),
     userId: v.id("users"),
     deletedAt: v.number(),
     isActive: v.optional(v.boolean()),
-  })
-    .index("by_user_conversation", ["userId", "conversationId"]),
+  }).index("by_user_conversation", ["userId", "conversationId"]),
 
-  // ── NEW: Per-Chat Themes Table ──
   chatThemes: defineTable({
-    userId: v.id("users"),        
-    otherUserId: v.id("users"),   
+    userId: v.id("users"),
+    otherUserId: v.id("users"),
     chatPresetName: v.optional(v.string()),
     chatBgColor: v.optional(v.string()),
     myBubbleColor: v.optional(v.string()),
     otherBubbleColor: v.optional(v.string()),
     myTextColor: v.optional(v.string()),
     otherTextColor: v.optional(v.string()),
-  })
-    .index("by_user_and_other", ["userId", "otherUserId"]),
+  }).index("by_user_and_other", ["userId", "otherUserId"]),
 });

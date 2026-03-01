@@ -1,12 +1,26 @@
+//src/pages/SignupPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { generateMnemonic, deriveKeyPairFromMnemonic, keyToBase64 } from "@/crypto";
 import { validateUsernameFormat } from "@/lib/usernameValidation";
 import { useAuthStore } from "@/store/authStore";
-import { CheckCircle, XCircle, Copy, FileText, AlertTriangle, ArrowRight, ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
+import {
+  generateMnemonic,
+  deriveKeyPairFromMnemonic,
+  keyToBase64,
+} from "@/crypto";
+import {
+  CheckCircle,
+  XCircle,
+  Copy,
+  FileText,
+  AlertTriangle,
+  ArrowRight,
+  ArrowLeft,
+  Check,
+} from "lucide-react";
 
 type Phase = "username" | "mnemonic";
 
@@ -26,11 +40,14 @@ export default function SignupPage() {
 
   const isAvailable = useQuery(
     api.users.isUsernameAvailable,
-    username.length >= 3 && !formatError ? { username } : "skip"
+    username.length >= 3 && !formatError ? { username } : "skip",
   );
 
   useEffect(() => {
-    if (username === "") { setFormatError(null); return; }
+    if (username === "") {
+      setFormatError(null);
+      return;
+    }
     const result = validateUsernameFormat(username);
     setFormatError(result.valid ? null : (result.error ?? null));
   }, [username]);
@@ -75,11 +92,18 @@ export default function SignupPage() {
       const keyPair = await deriveKeyPairFromMnemonic(mnemonicString);
       const publicKeyB64 = keyToBase64(keyPair.publicKey);
       const userId = await createUser({ username, publicKey: publicKeyB64 });
-      login({ userId, username, publicKey: keyPair.publicKey, secretKey: keyPair.secretKey });
+      login({
+        userId,
+        username,
+        publicKey: keyPair.publicKey,
+        secretKey: keyPair.secretKey,
+      });
       toast.success("Welcome to Lunex, " + username + "!");
       setTimeout(() => navigate("/chat"), 1000);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Signup failed. Please try again.");
+      toast.error(
+        err instanceof Error ? err.message : "Signup failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +112,8 @@ export default function SignupPage() {
   const formatValid = formatError === null && username.length >= 3;
   const canContinue = formatValid && isAvailable === true;
 
-  const bgStyle = "min-h-screen w-full flex flex-col items-center justify-center px-6 relative overflow-hidden bg-slate-50 dark:bg-[#09090b]";
+  const bgStyle =
+    "min-h-screen w-full flex flex-col items-center justify-center px-6 relative overflow-hidden bg-slate-50 dark:bg-[#09090b]";
 
   const ambientGlows = (
     <>
@@ -120,8 +145,8 @@ export default function SignupPage() {
 
               <div className="flex items-center gap-3 pr-2">
                 <div className="flex-shrink-0">
-                  {username.length >= 3 && (
-                    formatError ? (
+                  {username.length >= 3 &&
+                    (formatError ? (
                       <XCircle size={22} className="text-red-500" />
                     ) : isAvailable === true ? (
                       <CheckCircle size={22} className="text-emerald-500" />
@@ -129,8 +154,7 @@ export default function SignupPage() {
                       <XCircle size={22} className="text-red-500" />
                     ) : (
                       <div className="w-5 h-5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-                    )
-                  )}
+                    ))}
                 </div>
 
                 <button
@@ -145,16 +169,31 @@ export default function SignupPage() {
             </div>
 
             <div className="absolute -bottom-7 left-2 h-5">
-              {formatError && <p className="text-red-500 text-sm font-medium">{formatError}</p>}
-              {!formatError && isAvailable === false && <p className="text-red-500 text-sm font-medium">Username already taken</p>}
-              {!formatError && isAvailable === true && <p className="text-emerald-500 text-sm font-medium">Username is available!</p>}
+              {formatError && (
+                <p className="text-red-500 text-sm font-medium">
+                  {formatError}
+                </p>
+              )}
+              {!formatError && isAvailable === false && (
+                <p className="text-red-500 text-sm font-medium">
+                  Username already taken
+                </p>
+              )}
+              {!formatError && isAvailable === true && (
+                <p className="text-emerald-500 text-sm font-medium">
+                  Username is available!
+                </p>
+              )}
             </div>
           </div>
 
           <div className="mt-12">
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
               Already have an account?{" "}
-              <Link to="/login" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
+              <Link
+                to="/login"
+                className="text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+              >
                 Log in
               </Link>
             </p>
@@ -170,7 +209,6 @@ export default function SignupPage() {
       {ambientGlows}
 
       <div className="w-full max-w-2xl z-10 flex flex-col gap-8">
-
         <div>
           <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-4 ml-1 tracking-wide uppercase">
             Your Recovery Phrase
@@ -181,8 +219,12 @@ export default function SignupPage() {
                 key={i}
                 className="flex items-center gap-2 bg-white/60 dark:bg-[#121215]/60 border border-slate-200 dark:border-slate-800/80 backdrop-blur-md rounded-xl px-4 py-3 shadow-sm transition-all hover:border-indigo-500/30"
               >
-                <span className="text-slate-400 dark:text-slate-500 text-xs font-bold w-4">{i + 1}.</span>
-                <span className="text-slate-800 dark:text-slate-200 text-sm font-bold tracking-wide">{word}</span>
+                <span className="text-slate-400 dark:text-slate-500 text-xs font-bold w-4">
+                  {i + 1}.
+                </span>
+                <span className="text-slate-800 dark:text-slate-200 text-sm font-bold tracking-wide">
+                  {word}
+                </span>
               </div>
             ))}
           </div>
@@ -207,9 +249,16 @@ export default function SignupPage() {
 
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+            <AlertTriangle
+              size={20}
+              className="text-red-500 dark:text-red-400 shrink-0 mt-0.5"
+            />
             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              <strong className="text-red-600 dark:text-red-400 font-bold">Critical Warning:</strong> This is your ONLY way to access your account. If you lose this file, your account is gone forever. No recovery possible.
+              <strong className="text-red-600 dark:text-red-400 font-bold">
+                Critical Warning:
+              </strong>{" "}
+              This is your ONLY way to access your account. If you lose this
+              file, your account is gone forever. No recovery possible.
             </p>
           </div>
 
@@ -220,10 +269,16 @@ export default function SignupPage() {
               checked={warningChecked}
               onChange={() => setWarningChecked(!warningChecked)}
             />
-            <div className={`w-6 h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${
-              warningChecked ? "bg-indigo-600 border-indigo-600" : "border-slate-300 dark:border-slate-600 group-hover:border-indigo-400"
-            }`}>
-              {warningChecked && <Check size={14} className="text-white" strokeWidth={3} />}
+            <div
+              className={`w-6 h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${
+                warningChecked
+                  ? "bg-indigo-600 border-indigo-600"
+                  : "border-slate-300 dark:border-slate-600 group-hover:border-indigo-400"
+              }`}
+            >
+              {warningChecked && (
+                <Check size={14} className="text-white" strokeWidth={3} />
+              )}
             </div>
             <span className="text-slate-700 dark:text-slate-200 text-sm font-medium select-none">
               I have safely saved lunex-key.txt and understand the risks.
@@ -250,7 +305,6 @@ export default function SignupPage() {
             )}
           </button>
         </div>
-
       </div>
     </div>
   );

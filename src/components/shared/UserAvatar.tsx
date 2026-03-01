@@ -1,3 +1,4 @@
+//src/components/shared/UserAvatar.tsx
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -25,18 +26,21 @@ export default function UserAvatar({
 }: UserAvatarProps) {
   const avatarUrl = useQuery(
     api.users.getProfilePicUrl,
-    profilePicStorageId ? { storageId: profilePicStorageId } : "skip"
+    profilePicStorageId ? { storageId: profilePicStorageId } : "skip",
   );
 
   return (
     <div className="relative flex-shrink-0">
-      <div className={`
+      <div
+        className={`
         ${sizeClasses[size]} rounded-2xl overflow-hidden flex items-center justify-center font-bold
-        ${isGrayedOut
-          ? "bg-muted text-muted-foreground"
-          : "bg-primary text-primary-foreground"
+        ${
+          isGrayedOut
+            ? "bg-muted text-muted-foreground"
+            : "bg-primary text-primary-foreground"
         }
-      `}>
+      `}
+      >
         {avatarUrl ? (
           <img
             src={avatarUrl}
@@ -48,11 +52,12 @@ export default function UserAvatar({
         )}
       </div>
 
-      {/* Online dot */}
       {isOnline !== undefined && (
-        <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-sidebar ${
-          isOnline ? "bg-emerald-500" : "bg-muted-foreground/30"
-        }`} />
+        <span
+          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-sidebar ${
+            isOnline ? "bg-emerald-500" : "bg-muted-foreground/30"
+          }`}
+        />
       )}
     </div>
   );

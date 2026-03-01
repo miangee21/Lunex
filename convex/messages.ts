@@ -1,7 +1,7 @@
+// convex/messages.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// ── GET MESSAGES ──
 export const getMessages = query({
   args: {
     conversationId: v.id("conversations"),
@@ -11,20 +11,19 @@ export const getMessages = query({
     const deletion = await ctx.db
       .query("chatDeletions")
       .withIndex("by_user_conversation", (q) =>
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
+        q.eq("userId", args.userId).eq("conversationId", args.conversationId),
       )
       .unique();
 
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .order("asc")
       .collect();
 
-    // ── FIX: Hamesha purane messages ko filter karo ──
-    const filteredMessages = deletion 
+    const filteredMessages = deletion
       ? messages.filter((m) => m.sentAt > deletion.deletedAt)
       : messages;
 
@@ -56,7 +55,6 @@ export const getMessages = query({
   },
 });
 
-// ── SEND MESSAGE ──
 export const sendMessage = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -68,7 +66,7 @@ export const sendMessage = mutation({
       v.literal("image"),
       v.literal("video"),
       v.literal("audio"),
-      v.literal("file")
+      v.literal("file"),
     ),
     mediaStorageId: v.optional(v.id("_storage")),
     mediaIv: v.optional(v.string()),
@@ -91,7 +89,7 @@ export const sendMessage = mutation({
       replyToMessageId: args.replyToMessageId,
       disappearsAt: args.disappearsAt,
       sentAt: now,
-      // ── UPDATED: Naye object format ke mutabiq ──
+
       readBy: [{ userId: args.senderId, time: now }],
       deliveredTo: [{ userId: args.senderId, time: now }],
     });
@@ -99,12 +97,9 @@ export const sendMessage = mutation({
     await ctx.db.patch(args.conversationId, {
       lastMessageAt: now,
     });
-    
-    // ── FIX: Yahan se deletion record ko modify karne ka logic hata diya gaya hai ──
   },
 });
 
-// ── MARK MESSAGES AS READ ──
 export const markMessagesAsRead = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -114,7 +109,7 @@ export const markMessagesAsRead = mutation({
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .collect();
 
@@ -122,22 +117,19 @@ export const markMessagesAsRead = mutation({
     const unread = messages.filter(
       (m) =>
         m.senderId !== args.userId &&
-        // ── UPDATED: Check if user already read it ──
-        (!m.readBy || !m.readBy.some((r) => r.userId === args.userId))
+        (!m.readBy || !m.readBy.some((r) => r.userId === args.userId)),
     );
 
     await Promise.all(
       unread.map((m) =>
         ctx.db.patch(m._id, {
-          // ── UPDATED: Save user ID with current time ──
           readBy: [...(m.readBy ?? []), { userId: args.userId, time: now }],
-        })
-      )
+        }),
+      ),
     );
   },
 });
 
-// ── DELETE MESSAGE FOR ME ──
 export const deleteMessageForMe = mutation({
   args: {
     messageId: v.id("messages"),
@@ -153,7 +145,6 @@ export const deleteMessageForMe = mutation({
   },
 });
 
-// ── DELETE MESSAGE FOR EVERYONE ──
 export const deleteMessageForEveryone = mutation({
   args: {
     messageId: v.id("messages"),
@@ -173,7 +164,6 @@ export const deleteMessageForEveryone = mutation({
   },
 });
 
-// ── ADD REACTION ──
 export const addReaction = mutation({
   args: {
     messageId: v.id("messages"),
@@ -193,7 +183,6 @@ export const addReaction = mutation({
   },
 });
 
-// ── REMOVE REACTION ──
 export const removeReaction = mutation({
   args: {
     messageId: v.id("messages"),
@@ -204,14 +193,13 @@ export const removeReaction = mutation({
     if (!message) throw new Error("Message not found");
 
     const reactions = (message.reactions ?? []).filter(
-      (r) => r.userId !== args.userId
+      (r) => r.userId !== args.userId,
     );
 
     await ctx.db.patch(args.messageId, { reactions });
   },
 });
 
-// ── EDIT MESSAGE ──
 export const editMessage = mutation({
   args: {
     messageId: v.id("messages"),
@@ -233,7 +221,6 @@ export const editMessage = mutation({
   },
 });
 
-// ── GET MESSAGE BY ID (for reply preview) ──
 export const getMessageById = query({
   args: { messageId: v.id("messages") },
   handler: async (ctx, args) => {
@@ -241,7 +228,6 @@ export const getMessageById = query({
   },
 });
 
-// ── MARK AS DELIVERED ──
 export const markAsDelivered = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -251,7 +237,7 @@ export const markAsDelivered = mutation({
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
-        q.eq("conversationId", args.conversationId)
+        q.eq("conversationId", args.conversationId),
       )
       .collect();
 
@@ -259,17 +245,19 @@ export const markAsDelivered = mutation({
     const undelivered = messages.filter(
       (m) =>
         m.senderId !== args.userId &&
-        // ── UPDATED: Check if already delivered to this user ──
-        (!m.deliveredTo || !m.deliveredTo.some((d) => d.userId === args.userId))
+        (!m.deliveredTo ||
+          !m.deliveredTo.some((d) => d.userId === args.userId)),
     );
 
     await Promise.all(
       undelivered.map((m) =>
         ctx.db.patch(m._id, {
-          // ── UPDATED: Save user ID with current time ──
-          deliveredTo: [...(m.deliveredTo ?? []), { userId: args.userId, time: now }],
-        })
-      )
+          deliveredTo: [
+            ...(m.deliveredTo ?? []),
+            { userId: args.userId, time: now },
+          ],
+        }),
+      ),
     );
   },
 });

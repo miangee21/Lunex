@@ -1,3 +1,4 @@
+//src/store/chatStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuthStore } from "@/store/authStore";
@@ -37,9 +38,8 @@ type ThemeOptions = Partial<
   >
 >;
 
-// ── NEW: Background Upload Tracking Interface ──
 export interface PendingUpload {
-  id: string; // local temp id
+  id: string;
   file: File;
   type: AllowedFileType;
   progress: number;
@@ -48,14 +48,12 @@ export interface PendingUpload {
 }
 
 interface ChatState {
-  // Sidebar
   sidebarOpen: boolean;
   sidebarView: SidebarView;
   toggleSidebar: () => void;
   setSidebarView: (view: SidebarView) => void;
   setSidebarOpen: (open: boolean) => void;
 
-  // Active chat
   activeChat: ActiveChat | null;
   localThemes: Record<string, Record<string, ThemeOptions>>;
 
@@ -82,35 +80,39 @@ interface ChatState {
       type: string;
     },
   ) => void;
-  
+
   readByCache: Record<string, { userId: string; time: number }[]>;
-  updateReadByCache: (conversationId: string, readBy: { userId: string; time: number }[]) => void;
-  
+  updateReadByCache: (
+    conversationId: string,
+    readBy: { userId: string; time: number }[],
+  ) => void;
+
   deliveredToCache: Record<string, { userId: string; time: number }[]>;
   updateDeliveredToCache: (
     conversationId: string,
     deliveredTo: { userId: string; time: number }[],
   ) => void;
 
-  // ── FIX: Media fields add kiye taake Info Panel me thumbnail show ho sakay ──
-  selectedMessageForInfo: { 
-    id: string; 
+  selectedMessageForInfo: {
+    id: string;
     text: string;
     type?: string;
     mediaStorageId?: string | null;
     mediaIv?: string | null;
     mediaOriginalName?: string | null;
-    cameFromPreview?: boolean; // ── FIX: Nishani add ki ──
+    cameFromPreview?: boolean;
   } | null;
-  setSelectedMessageForInfo: (data: { 
-    id: string; 
-    text: string;
-    type?: string;
-    mediaStorageId?: string | null;
-    mediaIv?: string | null;
-    mediaOriginalName?: string | null;
-    cameFromPreview?: boolean; // ── FIX: Nishani add ki ──
-  } | null) => void;
+  setSelectedMessageForInfo: (
+    data: {
+      id: string;
+      text: string;
+      type?: string;
+      mediaStorageId?: string | null;
+      mediaIv?: string | null;
+      mediaOriginalName?: string | null;
+      cameFromPreview?: boolean;
+    } | null,
+  ) => void;
 
   syncChatTheme: (
     myUserId: string,
@@ -122,15 +124,21 @@ interface ChatState {
   toggleProfilePanel: () => void;
   setProfilePanelOpen: (open: boolean) => void;
 
-  // ── INSTANT THUMBNAIL CACHE ──
   localMediaCache: Record<string, string>;
   addLocalMediaCache: (storageId: string, url: string) => void;
 
-  // ── NEW: Background Upload State Actions ──
   pendingUploads: Record<string, PendingUpload[]>;
   addPendingUploads: (conversationId: string, uploads: PendingUpload[]) => void;
-  updateUploadProgress: (conversationId: string, id: string, progress: number) => void;
-  updateUploadStatus: (conversationId: string, id: string, status: "uploading" | "error") => void;
+  updateUploadProgress: (
+    conversationId: string,
+    id: string,
+    progress: number,
+  ) => void;
+  updateUploadStatus: (
+    conversationId: string,
+    id: string,
+    status: "uploading" | "error",
+  ) => void;
   removePendingUpload: (conversationId: string, id: string) => void;
 }
 
@@ -212,7 +220,7 @@ export const useChatStore = create<ChatState>()(
             [conversationId]: data,
           },
         })),
-        
+
       readByCache: {},
       updateReadByCache: (conversationId, readBy) =>
         set((s) => ({
@@ -221,7 +229,7 @@ export const useChatStore = create<ChatState>()(
             [conversationId]: readBy,
           },
         })),
-        
+
       deliveredToCache: {},
       updateDeliveredToCache: (conversationId, deliveredTo) =>
         set((s) => ({
@@ -231,7 +239,6 @@ export const useChatStore = create<ChatState>()(
           },
         })),
 
-      // ── INSTANT THUMBNAIL CACHE IMPLEMENTATION ──
       localMediaCache: {},
       addLocalMediaCache: (storageId, url) =>
         set((s) => ({
@@ -292,21 +299,23 @@ export const useChatStore = create<ChatState>()(
           };
         }),
 
-      // ── NEW: Background Upload Methods Implementation ──
       pendingUploads: {},
       addPendingUploads: (conversationId, uploads) =>
         set((s) => ({
           pendingUploads: {
             ...s.pendingUploads,
-            [conversationId]: [...(s.pendingUploads[conversationId] || []), ...uploads],
+            [conversationId]: [
+              ...(s.pendingUploads[conversationId] || []),
+              ...uploads,
+            ],
           },
         })),
       updateUploadProgress: (conversationId, id, progress) =>
         set((s) => ({
           pendingUploads: {
             ...s.pendingUploads,
-            [conversationId]: (s.pendingUploads[conversationId] || []).map((u) =>
-              u.id === id ? { ...u, progress } : u
+            [conversationId]: (s.pendingUploads[conversationId] || []).map(
+              (u) => (u.id === id ? { ...u, progress } : u),
             ),
           },
         })),
@@ -314,8 +323,8 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({
           pendingUploads: {
             ...s.pendingUploads,
-            [conversationId]: (s.pendingUploads[conversationId] || []).map((u) =>
-              u.id === id ? { ...u, status } : u
+            [conversationId]: (s.pendingUploads[conversationId] || []).map(
+              (u) => (u.id === id ? { ...u, status } : u),
             ),
           },
         })),
@@ -324,7 +333,7 @@ export const useChatStore = create<ChatState>()(
           pendingUploads: {
             ...s.pendingUploads,
             [conversationId]: (s.pendingUploads[conversationId] || []).filter(
-              (u) => u.id !== id
+              (u) => u.id !== id,
             ),
           },
         })),

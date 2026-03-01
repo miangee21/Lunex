@@ -1,3 +1,4 @@
+//src/pages/SplashPage.tsx
 import SplashScreen from "@/components/shared/SplashScreen";
 
 interface SplashPageProps {

@@ -1,7 +1,7 @@
+// convex/users.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// Check if a username is available (returns true if available)
 export const isUsernameAvailable = query({
   args: { username: v.string() },
   handler: async (ctx, args) => {
@@ -13,7 +13,6 @@ export const isUsernameAvailable = query({
   },
 });
 
-// Get user by their public key (used during login)
 export const getUserByPublicKey = query({
   args: { publicKey: v.string() },
   handler: async (ctx, args) => {
@@ -24,14 +23,12 @@ export const getUserByPublicKey = query({
   },
 });
 
-// Create a new user after signup
 export const createUser = mutation({
   args: {
     username: v.string(),
     publicKey: v.string(),
   },
   handler: async (ctx, args) => {
-    // Double check username is still available
     const existing = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
@@ -41,7 +38,6 @@ export const createUser = mutation({
       throw new Error("Username already taken");
     }
 
-    // Validate username format
     const usernameRegex = /^[a-z0-9]{3,10}$/;
     const hasNumber = /[0-9]/.test(args.username);
 
@@ -58,7 +54,6 @@ export const createUser = mutation({
   },
 });
 
-// Update user profile (pic and bio) — called from MyProfilePanel
 export const updateUserProfile = mutation({
   args: {
     userId: v.id("users"),
@@ -67,13 +62,13 @@ export const updateUserProfile = mutation({
   },
   handler: async (ctx, args) => {
     const patch: Record<string, unknown> = {};
-    if (args.profilePicStorageId !== undefined) patch.profilePicStorageId = args.profilePicStorageId;
+    if (args.profilePicStorageId !== undefined)
+      patch.profilePicStorageId = args.profilePicStorageId;
     if (args.bio !== undefined) patch.bio = args.bio;
     await ctx.db.patch(args.userId, patch);
   },
 });
 
-// ── NEW: Update Global Theme Settings ──
 export const updateThemeSettings = mutation({
   args: {
     userId: v.id("users"),
@@ -84,8 +79,7 @@ export const updateThemeSettings = mutation({
     const patch: Record<string, unknown> = {};
     if (args.theme !== undefined) patch.theme = args.theme;
     if (args.globalPreset !== undefined) patch.globalPreset = args.globalPreset;
-    
-    // Only patch if there is something to update
+
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(args.userId, patch);
     }

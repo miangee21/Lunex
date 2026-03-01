@@ -1,16 +1,27 @@
+//src/components/profile/MyProfilePanel.tsx
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { ArrowLeft, Search, MoreVertical, UserX, Shield, ShieldOff, Users, Ban, Palette } from "lucide-react";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import GlobalThemeCustomizer from "@/components/profile/GlobalThemeCustomizer";
+import {
+  ArrowLeft,
+  Search,
+  MoreVertical,
+  UserX,
+  Shield,
+  ShieldOff,
+  Users,
+  Ban,
+  Palette,
+} from "lucide-react";
 
-type ProfileView = "main" | "friends" | "blocked" | "theme"; // ── ADDED "theme"
+type ProfileView = "main" | "friends" | "blocked" | "theme";
 
 export default function MyProfilePanel() {
   const { setSidebarView } = useChatStore();
@@ -26,15 +37,15 @@ export default function MyProfilePanel() {
 
   const friends = useQuery(
     api.friends.getFriends,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
   const blockedUsers = useQuery(
     api.friends.getBlockedUsers,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const updateProfile = useMutation(api.users.updateUserProfile);
@@ -92,19 +103,17 @@ export default function MyProfilePanel() {
 
   const actualFriends = (friends ?? []).filter((f) => f && !f.iBlockedThem);
   const filteredFriends = actualFriends.filter((f) =>
-    f!.username.toLowerCase().includes(friendSearch.toLowerCase())
+    f!.username.toLowerCase().includes(friendSearch.toLowerCase()),
   );
 
   const filteredBlocked = (blockedUsers ?? []).filter((b) =>
-    b.username.toLowerCase().includes(blockedSearch.toLowerCase())
+    b.username.toLowerCase().includes(blockedSearch.toLowerCase()),
   );
 
-  // ── THEME CUSTOMIZER VIEW ──
   if (view === "theme") {
     return <GlobalThemeCustomizer onBack={() => setView("main")} />;
   }
 
-  // ── FRIENDS VIEW ──
   if (view === "friends") {
     return (
       <div className="flex flex-col h-full">
@@ -151,16 +160,20 @@ export default function MyProfilePanel() {
                 >
                   <UserAvatar
                     username={friend.username}
-                    profilePicStorageId={friend.profilePicStorageId as Id<"_storage"> | null}
+                    profilePicStorageId={
+                      friend.profilePicStorageId as Id<"_storage"> | null
+                    }
                     isGrayedOut={friend.hasBlockedMe || friend.iBlockedThem}
                   />
 
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className={`text-sm font-semibold truncate ${
-                      friend.hasBlockedMe || friend.iBlockedThem
-                        ? "text-muted-foreground"
-                        : "text-foreground"
-                    }`}>
+                    <span
+                      className={`text-sm font-semibold truncate ${
+                        friend.hasBlockedMe || friend.iBlockedThem
+                          ? "text-muted-foreground"
+                          : "text-foreground"
+                      }`}
+                    >
                       {friend.username}
                     </span>
                     {friend.hasBlockedMe && (
@@ -172,17 +185,29 @@ export default function MyProfilePanel() {
 
                   <div className="relative">
                     <button
-                      onClick={() => setMenuOpen(menuOpen === friend.userId ? null : friend.userId)}
+                      onClick={() =>
+                        setMenuOpen(
+                          menuOpen === friend.userId ? null : friend.userId,
+                        )
+                      }
                       className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
                     >
                       <MoreVertical size={15} />
                     </button>
                     {menuOpen === friend.userId && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setMenuOpen(null)}
+                        />
                         <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
                           <button
-                            onClick={() => handleUnfriend(friend.friendshipId, friend.username)}
+                            onClick={() =>
+                              handleUnfriend(
+                                friend.friendshipId,
+                                friend.username,
+                              )
+                            }
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                           >
                             <UserX size={14} />
@@ -190,7 +215,9 @@ export default function MyProfilePanel() {
                           </button>
                           {!friend.iBlockedThem && (
                             <button
-                              onClick={() => handleBlock(friend.userId, friend.username)}
+                              onClick={() =>
+                                handleBlock(friend.userId, friend.username)
+                              }
                               className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                             >
                               <Shield size={14} />
@@ -202,7 +229,7 @@ export default function MyProfilePanel() {
                     )}
                   </div>
                 </div>
-              ) : null
+              ) : null,
             )
           )}
         </div>
@@ -210,7 +237,6 @@ export default function MyProfilePanel() {
     );
   }
 
-  // ── BLOCKED VIEW ──
   if (view === "blocked") {
     return (
       <div className="flex flex-col h-full">
@@ -256,7 +282,9 @@ export default function MyProfilePanel() {
               >
                 <UserAvatar
                   username={user.username}
-                  profilePicStorageId={user.profilePicStorageId as Id<"_storage"> | null}
+                  profilePicStorageId={
+                    user.profilePicStorageId as Id<"_storage"> | null
+                  }
                   isGrayedOut
                 />
                 <span className="text-muted-foreground text-sm font-semibold flex-1 truncate">
@@ -264,17 +292,24 @@ export default function MyProfilePanel() {
                 </span>
                 <div className="relative">
                   <button
-                    onClick={() => setMenuOpen(menuOpen === user.userId ? null : user.userId)}
+                    onClick={() =>
+                      setMenuOpen(menuOpen === user.userId ? null : user.userId)
+                    }
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
                   >
                     <MoreVertical size={15} />
                   </button>
                   {menuOpen === user.userId && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(null)} />
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setMenuOpen(null)}
+                      />
                       <div className="absolute right-0 top-9 w-40 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
                         <button
-                          onClick={() => handleUnblock(user.recordId, user.username)}
+                          onClick={() =>
+                            handleUnblock(user.recordId, user.username)
+                          }
                           className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent transition-colors"
                         >
                           <ShieldOff size={14} />
@@ -292,7 +327,6 @@ export default function MyProfilePanel() {
     );
   }
 
-  // ── MAIN PROFILE VIEW ──
   return (
     <div className="flex flex-col h-full animate-in slide-in-from-left-4 duration-300">
       <div className="flex items-center gap-3 px-4 pt-4 pb-3 border-b border-border">
@@ -316,9 +350,10 @@ export default function MyProfilePanel() {
 
         <div className="h-px bg-border mb-4" />
 
-        {/* Bio */}
         <div className="mb-6">
-          <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider mb-2">Bio</p>
+          <p className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider mb-2">
+            Bio
+          </p>
           {editingBio ? (
             <>
               <textarea
@@ -330,11 +365,16 @@ export default function MyProfilePanel() {
                 rows={3}
                 className="w-full bg-accent rounded-xl px-3 py-2 text-sm text-foreground outline-none resize-none border border-primary transition-colors"
               />
-              <p className="text-muted-foreground text-xs mt-1 text-right">{bioValue.length}/120</p>
+              <p className="text-muted-foreground text-xs mt-1 text-right">
+                {bioValue.length}/120
+              </p>
             </>
           ) : (
             <p
-              onClick={() => { setEditingBio(true); setBioValue(bio); }}
+              onClick={() => {
+                setEditingBio(true);
+                setBioValue(bio);
+              }}
               className="text-foreground text-sm leading-relaxed cursor-pointer hover:bg-accent rounded-xl px-3 py-2 transition-colors -mx-3"
             >
               {bio || "Click to add a bio..."}
@@ -344,10 +384,7 @@ export default function MyProfilePanel() {
 
         <div className="h-px bg-border mb-4" />
 
-        {/* Actions Buttons */}
         <div className="flex flex-col gap-2 pb-6">
-          
-          {/* ── NEW: Customize Global Theme Button ── */}
           <button
             onClick={() => setView("theme")}
             className="flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group mb-2"
@@ -356,7 +393,9 @@ export default function MyProfilePanel() {
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Palette size={16} className="text-primary" />
               </div>
-              <span className="text-foreground font-semibold text-sm">Customize Global Theme</span>
+              <span className="text-foreground font-semibold text-sm">
+                Customize Global Theme
+              </span>
             </div>
           </button>
 
@@ -368,7 +407,9 @@ export default function MyProfilePanel() {
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Users size={16} className="text-primary" />
               </div>
-              <span className="text-foreground font-semibold text-sm">Friends</span>
+              <span className="text-foreground font-semibold text-sm">
+                Friends
+              </span>
             </div>
             <span className="bg-primary text-primary-foreground text-xs font-bold px-2.5 py-0.5 rounded-full">
               {actualFriends.length}
@@ -383,7 +424,9 @@ export default function MyProfilePanel() {
               <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/20 transition-colors">
                 <Ban size={16} className="text-destructive" />
               </div>
-              <span className="text-foreground font-semibold text-sm">Blocked</span>
+              <span className="text-foreground font-semibold text-sm">
+                Blocked
+              </span>
             </div>
             <span className="bg-destructive text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
               {blockedUsers?.length ?? 0}

@@ -1,12 +1,17 @@
+//src/pages/LoginPage.tsx
 import { useNavigate, Link } from "react-router-dom";
 import { useConvex } from "convex/react";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
-import { validateMnemonic, deriveKeyPairFromMnemonic, keyToBase64 } from "@/crypto";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
+import {
+  validateMnemonic,
+  deriveKeyPairFromMnemonic,
+  keyToBase64,
+} from "@/crypto";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -26,7 +31,10 @@ export default function LoginPage() {
     setWords(updated);
   }
 
-  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>, index: number) {
+  function handlePaste(
+    e: React.ClipboardEvent<HTMLInputElement>,
+    index: number,
+  ) {
     const pasted = e.clipboardData.getData("text").trim();
     const pastedWords = pasted.split(/\s+/);
     if (pastedWords.length === 12) {
@@ -42,7 +50,10 @@ export default function LoginPage() {
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>, index: number) {
+  function handleKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) {
     if (e.key === "Tab" || e.key === "Enter") {
       e.preventDefault();
       const next = document.getElementById(`word-${index + 1}`);
@@ -83,9 +94,10 @@ export default function LoginPage() {
 
       toast.success("Welcome back, " + user.username + "!");
       setTimeout(() => navigate("/chat"), 1000);
-
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Login failed. Please try again.");
+      toast.error(
+        err instanceof Error ? err.message : "Login failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -93,19 +105,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center px-6 relative overflow-hidden bg-slate-50 dark:bg-[#09090b]">
-
-      {/* Ambient glows */}
       <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-lg z-10 flex flex-col items-center gap-8">
-
-        {/* Label */}
         <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide uppercase self-start">
           Enter Recovery Phrase
         </label>
 
-        {/* 12 word input boxes */}
         <div className="w-full grid grid-cols-3 gap-3">
           {words.map((word, i) => (
             <div
@@ -130,7 +137,6 @@ export default function LoginPage() {
           ))}
         </div>
 
-        {/* Login button */}
         <button
           onClick={handleLogin}
           disabled={!allFilled || isLoading}
@@ -146,7 +152,6 @@ export default function LoginPage() {
           )}
         </button>
 
-        {/* Signup link */}
         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
           Not a user?{" "}
           <Link
@@ -156,7 +161,6 @@ export default function LoginPage() {
             Create Account
           </Link>
         </p>
-
       </div>
     </div>
   );

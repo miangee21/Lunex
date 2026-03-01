@@ -1,3 +1,4 @@
+//src/components/friends/RequestItem.tsx
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -17,13 +18,10 @@ export default function SearchUsers() {
     api.friends.searchUsers,
     search.length >= 2 && userId
       ? { username: search.toLowerCase(), currentUserId: userId }
-      : "skip"
+      : "skip",
   );
 
-  const relationships = useQuery(
-    api.friends.getRelationshipStatus,
-    "skip"
-  );
+  const relationships = useQuery(api.friends.getRelationshipStatus, "skip");
 
   async function handleSendRequest(toUserId: string) {
     if (!userId) return;
@@ -34,14 +32,14 @@ export default function SearchUsers() {
       });
       toast.success("Friend request sent!");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to send request.");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send request.",
+      );
     }
   }
 
   return (
     <div className="flex flex-col h-full">
-
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <button
           onClick={() => setSidebarView("chats")}
@@ -52,7 +50,6 @@ export default function SearchUsers() {
         <h2 className="text-foreground font-bold text-lg">Find People</h2>
       </div>
 
-      {/* Search input */}
       <div className="px-3 pb-3">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary border border-transparent transition-all">
           <Search size={15} className="text-muted-foreground flex-shrink-0" />
@@ -65,19 +62,22 @@ export default function SearchUsers() {
           />
           {search && (
             <button onClick={() => setSearch("")}>
-              <X size={15} className="text-muted-foreground hover:text-foreground transition-colors" />
+              <X
+                size={15}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              />
             </button>
           )}
         </div>
       </div>
 
-      {/* Results */}
       <div className="flex-1 overflow-y-auto">
-
         {search.length < 2 && (
           <div className="flex flex-col items-center justify-center h-32 gap-2">
             <Users size={24} className="text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm">Type at least 2 characters</p>
+            <p className="text-muted-foreground text-sm">
+              Type at least 2 characters
+            </p>
           </div>
         )}
 
@@ -102,13 +102,11 @@ export default function SearchUsers() {
             onSendRequest={handleSendRequest}
           />
         ))}
-
       </div>
     </div>
   );
 }
 
-// ── Single search result row ──
 function SearchUserItem({
   userId,
   username,
@@ -127,7 +125,9 @@ function SearchUserItem({
 
   function renderAction() {
     if (relationship === undefined) {
-      return <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />;
+      return (
+        <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      );
     }
 
     if (!relationship) {
@@ -151,7 +151,10 @@ function SearchUserItem({
       );
     }
 
-    if (relationship.status === "pending" && relationship.direction === "sent") {
+    if (
+      relationship.status === "pending" &&
+      relationship.direction === "sent"
+    ) {
       return (
         <span className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium">
           <Clock size={13} />
@@ -160,7 +163,10 @@ function SearchUserItem({
       );
     }
 
-    if (relationship.status === "pending" && relationship.direction === "received") {
+    if (
+      relationship.status === "pending" &&
+      relationship.direction === "received"
+    ) {
       return (
         <span className="flex items-center gap-1.5 text-primary text-xs font-bold">
           <Clock size={13} />

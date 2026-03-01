@@ -1,3 +1,4 @@
+//src/components/chat/ChatHeader.tsx
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -14,29 +15,28 @@ export default function ChatHeader() {
       onClick={toggleProfilePanel}
       title={profilePanelOpen ? "Close profile" : "View profile"}
     >
-      {/* Avatar + online */}
       <UserAvatar
         username={activeChat.username}
-        profilePicStorageId={activeChat.profilePicStorageId as Id<"_storage"> | null}
+        profilePicStorageId={
+          activeChat.profilePicStorageId as Id<"_storage"> | null
+        }
         isOnline={activeChat.isOnline}
         size="md"
       />
 
-      {/* Name + status */}
       <div className="flex-1 min-w-0">
         <p className="text-foreground font-bold text-sm truncate">
           {activeChat.username}
         </p>
-        <p className={`text-xs font-medium ${
-          activeChat.isOnline
-            ? "text-emerald-500"
-            : "text-muted-foreground"
-        }`}>
+        <p
+          className={`text-xs font-medium ${
+            activeChat.isOnline ? "text-emerald-500" : "text-muted-foreground"
+          }`}
+        >
           {activeChat.isOnline ? "Online" : "Offline"}
         </p>
       </div>
 
-      {/* Action buttons */}
       <div className="flex items-center gap-1">
         <button
           className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"

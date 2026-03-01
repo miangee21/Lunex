@@ -1,7 +1,7 @@
+// convex/conversations.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// ── GET OR CREATE CONVERSATION ──
 export const getOrCreateConversation = mutation({
   args: {
     myUserId: v.id("users"),
@@ -14,7 +14,7 @@ export const getOrCreateConversation = mutation({
       (c) =>
         c.participantIds.includes(args.myUserId) &&
         c.participantIds.includes(args.otherUserId) &&
-        c.participantIds.length === 2
+        c.participantIds.length === 2,
     );
 
     if (found) return found._id;
@@ -29,7 +29,6 @@ export const getOrCreateConversation = mutation({
   },
 });
 
-// ── GET CONVERSATIONS LIST ──
 export const getConversationsList = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -39,13 +38,13 @@ export const getConversationsList = query({
       .collect();
 
     const myConversations = allConversations.filter((c) =>
-      c.participantIds.includes(args.userId)
+      c.participantIds.includes(args.userId),
     );
 
     const result = await Promise.all(
       myConversations.map(async (conv) => {
         const otherUserId = conv.participantIds.find(
-          (id) => id !== args.userId
+          (id) => id !== args.userId,
         );
         if (!otherUserId) return null;
 
@@ -54,37 +53,34 @@ export const getConversationsList = query({
 
         const lastMessage = await ctx.db
           .query("messages")
-          .withIndex("by_conversation", (q) =>
-            q.eq("conversationId", conv._id)
-          )
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
           .order("desc")
           .first();
 
         const deletion = await ctx.db
           .query("chatDeletions")
           .withIndex("by_user_conversation", (q) =>
-            q.eq("userId", args.userId).eq("conversationId", conv._id)
+            q.eq("userId", args.userId).eq("conversationId", conv._id),
           )
           .unique();
 
-        if (deletion && (!lastMessage || lastMessage.sentAt <= deletion.deletedAt)) {
+        if (
+          deletion &&
+          (!lastMessage || lastMessage.sentAt <= deletion.deletedAt)
+        ) {
           return null;
         }
 
         const allMessages = await ctx.db
           .query("messages")
-          .withIndex("by_conversation", (q) =>
-            q.eq("conversationId", conv._id)
-          )
+          .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
           .collect();
 
-        // ── FIX: Unread count mein wo messages count na hon jo delete ho chuke hain ──
         const unreadCount = allMessages.filter(
           (m) =>
             m.senderId !== args.userId &&
-            // ── UPDATED: ab includes ki jagah some() use hoga kyunke readBy ab array of objects hai ──
             (!m.readBy || !m.readBy.some((r) => r.userId === args.userId)) &&
-            (!deletion || m.sentAt > deletion.deletedAt) 
+            (!deletion || m.sentAt > deletion.deletedAt),
         ).length;
 
         return {
@@ -105,7 +101,7 @@ export const getConversationsList = query({
           unreadCount,
           lastMessageAt: conv.lastMessageAt ?? conv.createdAt,
         };
-      })
+      }),
     );
 
     return result
@@ -114,7 +110,6 @@ export const getConversationsList = query({
   },
 });
 
-// ── GET CONVERSATION BY ID ──
 export const getConversationById = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
@@ -122,7 +117,6 @@ export const getConversationById = query({
   },
 });
 
-// ── DELETE CHAT (for current user only) ──
 export const deleteChat = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -132,7 +126,7 @@ export const deleteChat = mutation({
     const existing = await ctx.db
       .query("chatDeletions")
       .withIndex("by_user_conversation", (q) =>
-        q.eq("userId", args.userId).eq("conversationId", args.conversationId)
+        q.eq("userId", args.userId).eq("conversationId", args.conversationId),
       )
       .unique();
 
@@ -154,33 +148,33 @@ export const deleteChat = mutation({
         ctx.db
           .query("chatDeletions")
           .withIndex("by_user_conversation", (q) =>
-            q.eq("userId", participantId).eq("conversationId", args.conversationId)
+            q
+              .eq("userId", participantId)
+              .eq("conversationId", args.conversationId),
           )
-          .unique()
-      )
+          .unique(),
+      ),
     );
 
-    // ── FIX: Chat server se tab hi wipe hogi jab DONO users ne latest message ke baad delete kiya ho ──
     const allDeleted = allDeletions.every(
-      (d) => d !== null && d.deletedAt >= (conversation.lastMessageAt ?? 0)
+      (d) => d !== null && d.deletedAt >= (conversation.lastMessageAt ?? 0),
     );
 
     if (allDeleted) {
       const messages = await ctx.db
         .query("messages")
         .withIndex("by_conversation", (q) =>
-          q.eq("conversationId", args.conversationId)
+          q.eq("conversationId", args.conversationId),
         )
         .collect();
 
-      // ── NEW FIX: Database se message delete karne se pehle, uski Media file Storage se permanently delete karo ──
       await Promise.all(
         messages.map(async (m) => {
           if (m.mediaStorageId) {
             await ctx.storage.delete(m.mediaStorageId);
           }
           await ctx.db.delete(m._id);
-        })
+        }),
       );
 
       await Promise.all(allDeletions.map((d) => d && ctx.db.delete(d._id)));
@@ -189,7 +183,6 @@ export const deleteChat = mutation({
   },
 });
 
-// ── UPDATE LAST MESSAGE AT ──
 export const updateLastMessageAt = mutation({
   args: {
     conversationId: v.id("conversations"),
