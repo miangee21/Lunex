@@ -1,9 +1,91 @@
-import { X, CalendarDays, Clock } from "lucide-react";
+import { X, CalendarDays, Clock, Image as ImageIcon, Play, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { decryptMediaFile, getMimeTypeFromName } from "@/crypto/mediaEncryption";
+import { base64ToKey } from "@/crypto/keyDerivation";
+
+
+// ── FIX: Mini Thumbnail Component for Info Panel ──
+function MiniMediaThumbnail({ msg }: { msg: any }) {
+  const localMediaCache = useChatStore((s) => s.localMediaCache);
+  const secretKey = useAuthStore((s) => s.secretKey);
+  const { activeChat } = useChatStore();
+  
+  const otherUser = useQuery(
+    api.users.getUserById,
+    activeChat?.userId ? { userId: activeChat.userId as never } : "skip"
+  );
+
+  const instantUrl = msg.mediaStorageId ? localMediaCache[msg.mediaStorageId] : null;
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(instantUrl || null);
+
+  const encryptedFileUrl = useQuery(
+    api.media.getFileUrl,
+    !instantUrl && msg.mediaStorageId ? { storageId: msg.mediaStorageId as Id<"_storage"> } : "skip"
+  );
+
+  useEffect(() => {
+    if (instantUrl) return;
+    if (!encryptedFileUrl || !msg.mediaIv || !secretKey || !otherUser?.publicKey) return;
+    if (decryptedUrl) return;
+
+    let isMounted = true;
+    async function decrypt() {
+      try {
+        const mimeType = getMimeTypeFromName(msg.mediaOriginalName ?? "");
+        const url = await decryptMediaFile(
+          encryptedFileUrl!,
+          msg.mediaIv!,
+          secretKey!, 
+          base64ToKey(otherUser!.publicKey), 
+          mimeType
+        );
+        if (isMounted) setDecryptedUrl(url);
+      } catch (err) {
+        console.error("Info panel thumbnail decryption failed", err);
+      }
+    }
+    decrypt();
+
+    return () => { isMounted = false; };
+  }, [encryptedFileUrl, msg.mediaIv, secretKey, otherUser?.publicKey, instantUrl]);
+
+  if (msg.type === "file") {
+    return (
+      <div className="flex items-center gap-2 p-2.5 bg-black/10 dark:bg-white/10 rounded-xl mb-1.5 min-w-[150px]">
+        <FileText size={18} className="opacity-80" />
+        <span className="text-[13px] font-medium truncate max-w-[150px]">{msg.mediaOriginalName || "Document"}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-[160px] h-[100px] mb-1.5 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center border border-white/5">
+      {decryptedUrl ? (
+        msg.type === "video" ? (
+          <>
+            <video src={decryptedUrl} className="w-full h-full object-cover opacity-90" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center backdrop-blur-sm shadow-lg">
+                <Play size={14} className="text-white ml-0.5" fill="white" />
+              </div>
+            </div>
+          </>
+        ) : (
+          <img src={decryptedUrl} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" alt="thumbnail" />
+        )
+      ) : (
+        <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
+      )}
+    </div>
+  );
+}
+
+// ── Uske baad aapka purana interface aayega: ──
 
 interface MessageInfoPanelProps {
   messageId: string;
@@ -11,7 +93,7 @@ interface MessageInfoPanelProps {
 }
 
 export default function MessageInfoPanel({ messageId, messageText }: MessageInfoPanelProps) {
-  const { activeChat, setSelectedMessageForInfo } = useChatStore();
+  const { activeChat, setSelectedMessageForInfo, selectedMessageForInfo } = useChatStore(); // ── FIX: State access ki ──
   const currentUserId = useAuthStore((s) => s.userId);
   
   const messages = useQuery(
@@ -91,7 +173,13 @@ export default function MessageInfoPanel({ messageId, messageText }: MessageInfo
       <div className="h-16 flex items-center justify-between px-4 border-b border-border/50 bg-card/30">
         <h2 className="font-semibold text-foreground tracking-wide">Message Info</h2>
         <button
-          onClick={() => setSelectedMessageForInfo(null)}
+          onClick={() => {
+            // ── FIX: Agar preview se aaye thay, tou wapas Preview kholnay ka Event fire karo! ──
+            if (selectedMessageForInfo?.cameFromPreview) {
+              window.dispatchEvent(new CustomEvent("reopen-preview", { detail: { id: messageId } }));
+            }
+            setSelectedMessageForInfo(null);
+          }}
           className="p-2 text-muted-foreground hover:text-foreground hover:bg-foreground/10 rounded-full transition-colors"
         >
           <X className="w-5 h-5" />
@@ -101,17 +189,24 @@ export default function MessageInfoPanel({ messageId, messageText }: MessageInfo
       <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
         
         {/* ── ACTUAL DECRYPTED BUBBLE ── */}
+        
         <div className="flex flex-col items-end mb-10">
           <div 
             className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-md relative bg-primary text-primary-foreground"
           >
-            <p className="text-[15px] leading-relaxed break-words">
-              {/* ── FIX: Newlines remove kiye aur 40 characters ki limit laga di ── */}
-              {messageText.replace(/\n/g, " ").length > 40 
-                ? messageText.replace(/\n/g, " ").substring(0, 40) + "..." 
-                : messageText.replace(/\n/g, " ")
-              }
-            </p>
+            {/* ── FIX: Mini Thumbnail Render ── */}
+            {msg.type && msg.type !== "text" && <MiniMediaThumbnail msg={msg} />}
+
+            {/* ── FIX: Sirf text show karo agar zaroorat ho ── */}
+            {(!msg.type || msg.type === "text" || (msg.type !== "file" && messageText !== msg.mediaOriginalName)) && (
+              <p className="text-[15px] leading-relaxed break-words">
+                {messageText.replace(/\n/g, " ").length > 40 
+                  ? messageText.replace(/\n/g, " ").substring(0, 40) + "..." 
+                  : messageText.replace(/\n/g, " ")
+                }
+              </p>
+            )}
+
             <div className="flex items-center justify-end gap-1 mt-1 opacity-80">
               <span className="text-[11px] font-medium">{formatTime(msg.sentAt)}</span>
             </div>

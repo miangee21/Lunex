@@ -35,3 +35,11 @@ export const getFileUrls = query({
     return urls;
   },
 });
+
+// ── FIX: Ghost file ko delete karne ke liye naya mutation ──
+export const deleteMedia = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId);
+  },
+});

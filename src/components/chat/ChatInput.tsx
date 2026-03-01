@@ -1,16 +1,25 @@
 import { useState, useRef, useEffect } from "react";
-import { Smile, Paperclip, Send, UserX, ShieldOff, Shield, X, FileText, ImageIcon, Video } from "lucide-react";
+import {
+  Smile,
+  Paperclip,
+  Send,
+  UserX,
+  ShieldOff,
+  Shield,
+  CheckSquare,
+  X,
+} from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import { useChatStore } from "@/store/chatStore";
+import { useChatStore, type PendingUpload } from "@/store/chatStore";
 import { Id } from "../../../convex/_generated/dataModel";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import { encryptMediaFile } from "@/crypto/mediaEncryption";
 import { toast } from "sonner";
-import { validateFile, formatFileSize, type AllowedFileType } from "@/lib/fileValidation";
-import MediaUploadProgress from "@/components/chat/MediaUploadProgress";
+import { validateFile, type AllowedFileType } from "@/lib/fileValidation";
+import PreSendMediaPreview from "@/components/chat/PreSendMediaPreview";
 
 interface ChatInputProps {
   selectMode?: boolean;
@@ -29,36 +38,46 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedFiles, setSelectedFiles] = useState<Array<{ file: File; type: AllowedFileType }>>([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<
+    Array<{ file: File; type: AllowedFileType }>
+  >([]);
 
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
-  const { activeChat, updateLastMessageCache, updateReadByCache } = useChatStore();
+  const {
+    activeChat,
+    updateLastMessageCache,
+    updateReadByCache,
+    addPendingUploads,
+    updateUploadProgress,
+    updateUploadStatus,
+    removePendingUpload,
+    addLocalMediaCache, 
+  } = useChatStore();
 
   const sendMessage = useMutation(api.messages.sendMessage);
   const setTyping = useMutation(api.typing.setTyping);
   const clearTyping = useMutation(api.typing.clearTyping);
   const generateUploadUrl = useMutation(api.media.generateUploadUrl);
+  const deleteMedia = useMutation(api.media.deleteMedia); 
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId ? { userId: activeChat.userId as never } : "skip"
+    activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
   );
-
   const friends = useQuery(
     api.friends.getFriends,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
   const blockedUsers = useQuery(
     api.friends.getBlockedUsers,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const friendship = friends?.find((f) => f?.userId === activeChat?.userId);
-  const iBlockedThem = blockedUsers?.find((b) => b.userId === activeChat?.userId);
+  const iBlockedThem = blockedUsers?.find(
+    (b) => b.userId === activeChat?.userId,
+  );
   const hasBlockedMe = friendship?.hasBlockedMe ?? false;
   const areFriends = !!friendship && !iBlockedThem && !hasBlockedMe;
 
@@ -83,13 +102,35 @@ export default function ChatInput({
     };
   }, [activeChat?.conversationId]);
 
+  useEffect(() => {
+    const handleRetryEvent = (e: any) => {
+      const itemId = e.detail.id;
+      const conversationId = activeChat?.conversationId;
+      if (!conversationId || !otherUser?.publicKey || !secretKey) return;
+
+      const pendingItems = useChatStore.getState().pendingUploads[conversationId] || [];
+      const itemToRetry = pendingItems.find((p) => p.id === itemId);
+
+      if (itemToRetry) {
+        updateUploadProgress(conversationId, itemId, 0); 
+        updateUploadStatus(conversationId, itemId, "uploading");
+        processBackgroundUploads([itemToRetry], conversationId, base64ToKey(otherUser.publicKey));
+      }
+    };
+
+    window.addEventListener("retry-upload", handleRetryEvent);
+    return () => window.removeEventListener("retry-upload", handleRetryEvent);
+  }, [activeChat?.conversationId, otherUser?.publicKey, secretKey]);
+
   async function handleTyping() {
     if (!activeChat?.conversationId || !userId) return;
+
     await setTyping({
       conversationId: activeChat.conversationId as Id<"conversations">,
       userId: userId as Id<"users">,
       isTyping: true,
     });
+
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(async () => {
       await clearTyping({
@@ -103,49 +144,55 @@ export default function ChatInput({
     fileInputRef.current?.click();
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
-
-    if (files.length > 10) {
-      toast.error("Maximum 10 files at a time.");
-      e.target.value = "";
-      return;
-    }
-
+  function handleAddMoreFiles(newFiles: File[]) {
     const valid: Array<{ file: File; type: AllowedFileType }> = [];
-    files.forEach((file) => {
+
+    newFiles.forEach((file) => {
       const result = validateFile(file);
       if (!result.valid) {
         toast.error(`${file.name}: ${result.error}`);
       } else {
-        valid.push({ file, type: result.type! });
+        const isDuplicate = selectedFiles.some(
+          (existing) =>
+            existing.file.name === file.name &&
+            existing.file.size === file.size,
+        );
+        if (!isDuplicate) {
+          valid.push({ file, type: result.type! });
+        }
       }
     });
 
-    if (valid.length > 0) setSelectedFiles(valid);
+    if (valid.length > 0) {
+      setSelectedFiles((prev) => {
+        const combined = [...prev, ...valid];
+        if (combined.length > 10) {
+          toast.error("Maximum 10 files allowed at a time.");
+          return combined.slice(0, 10);
+        }
+        return combined;
+      });
+    }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    handleAddMoreFiles(files);
     e.target.value = "";
   }
 
   function handleCancelFile() {
     setSelectedFiles([]);
-    setUploadProgress(0);
-    setIsUploading(false);
-    setCurrentUploadIndex(0);
   }
 
   function handleRemoveFile(index: number) {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function FilePreviewIcon({ type }: { type: AllowedFileType }) {
-    if (type === "image") return <ImageIcon size={18} className="text-primary" />;
-    if (type === "video") return <Video size={18} className="text-primary" />;
-    return <FileText size={18} className="text-primary" />;
-  }
-
-  async function handleSendMedia() {
+  const handleSendMedia = () => {
     if (!selectedFiles.length) return;
+
     if (!userId || !secretKey || !activeChat?.conversationId) {
       toast.error("Cannot send — missing required data.");
       return;
@@ -155,28 +202,53 @@ export default function ChatInput({
       return;
     }
 
-    setIsUploading(true);
+    const conversationId = activeChat.conversationId;
     const theirPublicKey = base64ToKey(otherUser.publicKey);
 
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const { file, type } = selectedFiles[i];
-      setCurrentUploadIndex(i);
-      setUploadProgress(10);
+    const pendingItems: PendingUpload[] = selectedFiles.map((item) => ({
+      id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      file: item.file,
+      type: item.type,
+      progress: 0,
+      previewUrl: URL.createObjectURL(item.file),
+      status: "uploading",
+    }));
+
+    addPendingUploads(conversationId, pendingItems);
+    setSelectedFiles([]);
+    processBackgroundUploads(pendingItems, conversationId, theirPublicKey);
+  };
+
+  const processBackgroundUploads = async (
+    items: PendingUpload[],
+    conversationId: string,
+    theirPublicKey: Uint8Array,
+  ) => {
+    const readyToSend: any[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
 
       try {
-        // 1 — Get upload URL
+        let currentStore = useChatStore.getState().pendingUploads[conversationId] || [];
+        let storeItem = currentStore.find((p) => p.id === item.id);
+        if (!storeItem || storeItem.status === "error") continue; 
+
+        updateUploadProgress(conversationId, item.id, 10);
         const uploadUrl = await generateUploadUrl();
-        setUploadProgress(20);
 
-        // 2 — Encrypt file
+        currentStore = useChatStore.getState().pendingUploads[conversationId] || [];
+        storeItem = currentStore.find((p) => p.id === item.id);
+        if (!storeItem || storeItem.status === "error") continue;
+
+        updateUploadProgress(conversationId, item.id, 20);
         const { encryptedBlob, iv: mediaIv } = await encryptMediaFile(
-          file,
-          secretKey,
-          theirPublicKey
+          item.file,
+          secretKey!,
+          theirPublicKey,
         );
-        setUploadProgress(50);
 
-        // 3 — Upload encrypted blob
+        updateUploadProgress(conversationId, item.id, 50);
         const uploadRes = await fetch(uploadUrl, {
           method: "POST",
           headers: { "Content-Type": "application/octet-stream" },
@@ -184,60 +256,81 @@ export default function ChatInput({
         });
 
         if (!uploadRes.ok) throw new Error("Upload failed");
-        setUploadProgress(70);
 
+        updateUploadProgress(conversationId, item.id, 80);
         const { storageId } = await uploadRes.json();
 
-        // 4 — Encrypt filename
+        addLocalMediaCache(storageId, item.previewUrl);
+
         const { encryptedContent, iv } = encryptMessage(
-          file.name,
-          secretKey,
+          item.file.name,
+          secretKey!,
           theirPublicKey
         );
 
-        setUploadProgress(90);
+        updateUploadProgress(conversationId, item.id, 100);
 
-        // 5 — Send message
-        await sendMessage({
-          conversationId: activeChat.conversationId as Id<"conversations">,
-          senderId: userId as Id<"users">,
-          encryptedContent,
-          iv,
-          type,
-          mediaStorageId: storageId as Id<"_storage">,
-          mediaIv,
-          mediaOriginalName: file.name,
-        });
-
-        setUploadProgress(100);
-
-        // Last file ka cache update
-        if (i === selectedFiles.length - 1) {
-          const now = Date.now();
-          updateLastMessageCache(activeChat.conversationId, {
-            text: file.name,
-            senderId: userId,
-            sentAt: now,
-            type,
-          });
-          updateReadByCache(activeChat.conversationId, [{ userId: userId, time: now }]);
+        currentStore = useChatStore.getState().pendingUploads[conversationId] || [];
+        storeItem = currentStore.find((p) => p.id === item.id);
+        
+        if (!storeItem || storeItem.status === "error") {
+             try {
+                await deleteMedia({ storageId: storageId as Id<"_storage"> });
+             } catch (e) {
+                console.error("Ghost fix failed", e);
+             }
+             continue;
         }
 
+        readyToSend.push({
+          itemId: item.id,
+          previewUrl: item.previewUrl,
+          messageData: {
+            conversationId: conversationId as Id<"conversations">,
+            senderId: userId as Id<"users">,
+            encryptedContent,
+            iv,
+            type: item.type,
+            mediaStorageId: storageId as Id<"_storage">,
+            mediaIv,
+            mediaOriginalName: item.file.name,
+          },
+        });
       } catch (err) {
-        toast.error(`Failed to send ${file.name}`);
+        toast.error(`Failed to upload ${item.file.name}`);
+        updateUploadStatus(conversationId, item.id, "error");
       }
     }
 
-    setTimeout(() => {
-      setSelectedFiles([]);
-      setUploadProgress(0);
-      setIsUploading(false);
-      setCurrentUploadIndex(0);
-    }, 500);
-  }
+    if (readyToSend.length > 0) {
+      await Promise.all(
+        readyToSend.map((readyItem) => sendMessage(readyItem.messageData)),
+      );
+
+      // ── FIX: 500ms ka delay restore kiya! ──
+      // Kyunke ChatArea ab Real Bubble ko tab tak chupayega jab tak Fake Bubble screen par hai.
+      // Is liye 500ms delay perfectly smooth swap create karega!
+      setTimeout(() => {
+        readyToSend.forEach((readyItem) => {
+          removePendingUpload(conversationId, readyItem.itemId);
+        });
+      }, 500);
+
+      const lastItem = readyToSend[readyToSend.length - 1].messageData;
+      const now = Date.now();
+      updateLastMessageCache(conversationId, {
+        text: lastItem.mediaOriginalName,
+        senderId: userId!,
+        sentAt: now,
+        type: lastItem.type,
+      });
+      updateReadByCache(conversationId, [{ userId: userId!, time: now }]);
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
+
     if (!userId || !secretKey || !activeChat?.conversationId) {
       toast.error("Cannot send message — missing required data.");
       return;
@@ -260,7 +353,11 @@ export default function ChatInput({
         return;
       }
       const theirPublicKey = base64ToKey(otherUser.publicKey);
-      const { encryptedContent, iv } = encryptMessage(text, secretKey, theirPublicKey);
+      const { encryptedContent, iv } = encryptMessage(
+        text,
+        secretKey,
+        theirPublicKey,
+      );
 
       await sendMessage({
         conversationId: activeChat.conversationId as Id<"conversations">,
@@ -277,14 +374,15 @@ export default function ChatInput({
         sentAt: now,
         type: "text",
       });
-      updateReadByCache(activeChat.conversationId, [{ userId: userId, time: Date.now() }]);
+      updateReadByCache(activeChat.conversationId, [
+        { userId: userId, time: Date.now() },
+      ]);
     } catch (err) {
       toast.error("Failed to send message.");
       setMessage(text);
     }
   };
 
-  // ── SELECT MODE ──
   if (selectMode) {
     return (
       <div className="px-4 py-3 bg-sidebar border-t border-border transition-colors duration-300">
@@ -311,7 +409,6 @@ export default function ChatInput({
     );
   }
 
-  // ── BLOCKED BY THEM ──
   if (hasBlockedMe) {
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
@@ -320,14 +417,16 @@ export default function ChatInput({
             <Shield size={16} className="text-destructive" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
-            <span className="text-foreground font-semibold">{activeChat?.username}</span> has blocked you
+            <span className="text-foreground font-semibold">
+              {activeChat?.username}
+            </span>{" "}
+            has blocked you
           </p>
         </div>
       </div>
     );
   }
 
-  // ── I BLOCKED THEM ──
   if (iBlockedThem) {
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
@@ -336,14 +435,16 @@ export default function ChatInput({
             <ShieldOff size={16} className="text-destructive" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
-            You blocked <span className="text-foreground font-semibold">{activeChat?.username}</span>
+            You blocked{" "}
+            <span className="text-foreground font-semibold">
+              {activeChat?.username}
+            </span>
           </p>
         </div>
       </div>
     );
   }
 
-  // ── LOADING ──
   if (friends === undefined || blockedUsers === undefined) {
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
@@ -354,7 +455,6 @@ export default function ChatInput({
     );
   }
 
-  // ── NOT FRIENDS ──
   if (!areFriends) {
     return (
       <div className="px-4 py-4 bg-sidebar border-t border-border">
@@ -363,77 +463,39 @@ export default function ChatInput({
             <UserX size={16} className="text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
-            You and <span className="text-foreground font-semibold">{activeChat?.username}</span> are no longer friends
+            You and{" "}
+            <span className="text-foreground font-semibold">
+              {activeChat?.username}
+            </span>{" "}
+            are no longer friends
           </p>
         </div>
       </div>
     );
   }
 
-  // ── UPLOADING ──
-  if (isUploading) {
-    return (
-      <MediaUploadProgress
-        fileName={selectedFiles[currentUploadIndex]?.file.name ?? ""}
-        progress={uploadProgress}
-        type={selectedFiles[currentUploadIndex]?.type ?? "file"}
-        uploadIndex={currentUploadIndex + 1}
-        uploadTotal={selectedFiles.length}
-      />
-    );
-  }
-
-  // ── FILES SELECTED PREVIEW ──
   if (selectedFiles.length > 0) {
     return (
-      <div className="px-4 py-3 bg-sidebar border-t border-border">
-        <div className="flex flex-col gap-2 mb-3 max-h-[200px] overflow-y-auto">
-          {selectedFiles.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-3 bg-accent rounded-xl px-3 py-2.5"
-            >
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <FilePreviewIcon type={item.type} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {item.file.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {formatFileSize(item.file.size)}
-                </p>
-              </div>
-              <button
-                onClick={() => handleRemoveFile(index)}
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCancelFile}
-            className="px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent rounded-xl transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSendMedia}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm hover:opacity-90 transition-opacity"
-          >
-            <Send size={16} />
-            Send {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"}
-          </button>
-        </div>
+      <div className="relative">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt,.csv"
+          onChange={handleFileChange}
+        />
+        <PreSendMediaPreview
+          files={selectedFiles}
+          onSend={handleSendMedia}
+          onCancel={handleCancelFile}
+          onRemove={handleRemoveFile}
+          onAddMore={handleAddMoreFiles}
+        />
       </div>
     );
   }
 
-  // ── NORMAL INPUT ──
   return (
     <div className="px-4 py-3 bg-sidebar border-t border-border transition-colors duration-300">
       <input
@@ -446,7 +508,6 @@ export default function ChatInput({
       />
 
       <div className="flex items-end gap-2 bg-background border border-border/50 rounded-2xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
-
         <button
           onClick={handleFileClick}
           className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
@@ -471,7 +532,8 @@ export default function ChatInput({
           onBlur={() => {
             if (activeChat?.conversationId && userId) {
               clearTyping({
-                conversationId: activeChat.conversationId as Id<"conversations">,
+                conversationId:
+                  activeChat.conversationId as Id<"conversations">,
                 userId: userId as Id<"users">,
               });
             }
@@ -500,7 +562,6 @@ export default function ChatInput({
         >
           <Send size={18} className={message.trim() ? "translate-x-0.5" : ""} />
         </button>
-
       </div>
     </div>
   );

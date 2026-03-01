@@ -9,6 +9,9 @@ import {
   FileText,
   Download,
   Play,
+  X,
+  Image as ImageIcon, 
+  Film,    
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
@@ -72,6 +75,17 @@ export default function MessageBubble({
     (s) => s.setSelectedMessageForInfo,
   );
 
+  // ── FIX: Event Listener for Single Bubbles ──
+  useEffect(() => {
+    const handleReopen = (e: any) => {
+      if (e.detail.id === messageId && type !== "text") {
+        setPreviewOpen(true);
+      }
+    };
+    window.addEventListener("reopen-preview", handleReopen);
+    return () => window.removeEventListener("reopen-preview", handleReopen);
+  }, [messageId, type]);
+
   // ── Media URL (encrypted) ──
   const encryptedFileUrl = useQuery(
     api.media.getFileUrl,
@@ -85,174 +99,141 @@ export default function MessageBubble({
     activeChat?.userId ? { userId: activeChat.userId as never } : "skip"
   );
 
-  // ── Decrypted Object URL ──
+  // ── FIX: Decrypted Object URL & Manual Download States ──
+// ── FIX: Smart Cache Selector (Ye component ko faltu re-render hone se rokega) ──
+  const instantUrl = useChatStore((s) => mediaStorageId ? s.localMediaCache[mediaStorageId] : null);
+
   const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
-  const [isDecrypting, setIsDecrypting] = useState(false);
+  const [isDownloaded, setIsDownloaded] = useState(isOwn || !!instantUrl);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const finalUrl = instantUrl || decryptedUrl;
 
   useEffect(() => {
-    if (!encryptedFileUrl || !mediaIv || !secretKey || !otherUser?.publicKey)
-      return;
-    if (decryptedUrl) return; // already decrypted
+    if (!encryptedFileUrl || !mediaIv || !secretKey || !otherUser?.publicKey) return;
+    if (!isDownloaded) return;
+    if (finalUrl) return;
+
+    let isMounted = true;
+    setIsDownloading(true);
 
     async function decrypt() {
-      setIsDecrypting(true);
       try {
         const mimeType = getMimeTypeFromName(mediaOriginalName ?? "");
         const url = await decryptMediaFile(
-          encryptedFileUrl!,
-          mediaIv!,
-          secretKey!,
-          base64ToKey(otherUser!.publicKey),
-          mimeType,
+          encryptedFileUrl!, mediaIv!, secretKey!, base64ToKey(otherUser!.publicKey), mimeType,
         );
-        setDecryptedUrl(url);
+        if (isMounted) {
+          setDecryptedUrl(url);
+          setIsDownloading(false);
+          if (mediaStorageId) useChatStore.getState().addLocalMediaCache(mediaStorageId, url);
+        }
       } catch {
-        // decrypt fail — silently ignore
-      } finally {
-        setIsDecrypting(false);
+        if (isMounted) {
+          setIsDownloading(false);
+          setIsDownloaded(false); 
+        }
       }
     }
-
     decrypt();
+    return () => { isMounted = false; };
+  }, [encryptedFileUrl, mediaIv, secretKey, otherUser?.publicKey, isDownloaded, finalUrl, mediaStorageId]);
 
-    // Cleanup object URL on unmount
-    return () => {
-      if (decryptedUrl) URL.revokeObjectURL(decryptedUrl);
-    };
-  }, [encryptedFileUrl, mediaIv, secretKey, otherUser?.publicKey]);
-
-  // Truncation
-  const CHAR_LIMIT = 250;
-  const shouldTruncate = text.length > CHAR_LIMIT;
-  const displayText =
-    shouldTruncate && !isExpanded ? text.slice(0, CHAR_LIMIT) + "..." : text;
-
-  // ── TICKS ──
-  const isSeen = otherUserId
-    ? readBy.some((r) => r.userId === otherUserId)
-    : false;
-  const isDelivered = otherUserId
-    ? deliveredTo.some((d) => d.userId === otherUserId)
-    : false;
-
-  function TickIcon() {
-    if (isSeen) {
-      return (
-        <svg
-          className="w-3.5 h-3.5 ml-1 text-current opacity-100 flex-shrink-0"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-        </svg>
-      );
-    }
-    if (isDelivered) {
-      return (
-        <svg
-          className="w-3.5 h-3.5 ml-1 text-current opacity-70 flex-shrink-0"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8 12.5l2.5 2.5l5 -5"
-          />
-        </svg>
-      );
-    }
-    return (
-      <svg
-        className="w-3.5 h-3.5 ml-1 text-current opacity-70 flex-shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <circle cx="12" cy="12" r="10" />
-      </svg>
-    );
-  }
-
-  // ── MEDIA CONTENT ──
   function MediaContent() {
+    // ── FIX: Inner component ki jagah direct JSX, taake video unmount na ho ──
+    const overlay = (
+      <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-10 transition-all rounded-xl overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+          {type === "image" ? <ImageIcon size={64} className="text-white" /> : type === "video" ? <Film size={64} className="text-white" /> : <FileText size={64} className="text-white" />}
+        </div>
+        <div className="relative z-20 flex flex-col items-center gap-2">
+          {!finalUrl && (
+            !isDownloaded ? (
+              <button onClick={(e) => { e.stopPropagation(); setIsDownloaded(true); }} className="w-12 h-12 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all shadow-xl border border-white/20 hover:scale-105">
+                <Download size={22} />
+              </button>
+            ) : isDownloading ? (
+              <div className="w-12 h-12 rounded-full border-[3.5px] border-white/30 border-t-white animate-spin shadow-xl"></div>
+            ) : null
+          )}
+        </div>
+      </div>
+    );
+
     if (type === "image") {
       return (
-        <div
-          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 max-w-[260px]"
-          onClick={() => decryptedUrl && setPreviewOpen(true)}
-        >
-          {decryptedUrl ? (
-            <img
-              src={decryptedUrl}
-              alt={mediaOriginalName ?? "image"}
-              className="w-full h-auto max-h-[200px] object-cover rounded-xl hover:opacity-90 transition-opacity"
-            />
-          ) : (
-            <div className="w-[200px] h-[140px] bg-black/10 dark:bg-white/10 rounded-xl flex items-center justify-center">
-              <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
-            </div>
-          )}
+        <div className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-[220px] h-[140px] sm:w-[260px] sm:h-[180px] bg-black/10 dark:bg-white/10" onClick={() => finalUrl && setPreviewOpen(true)}>
+          {finalUrl ? <img src={finalUrl} alt="image" className="w-full h-full object-cover rounded-xl hover:opacity-90 transition-opacity" /> : overlay}
         </div>
       );
     }
 
     if (type === "video") {
       return (
-        <div
-          className="relative cursor-pointer rounded-xl overflow-hidden mb-1 max-w-[260px]"
-          onClick={() => decryptedUrl && setPreviewOpen(true)}
-        >
-          {decryptedUrl ? (
-            <div className="relative">
-              <video
-                src={decryptedUrl}
-                className="w-full h-auto max-h-[200px] object-cover rounded-xl"
-                preload="metadata"
-              />
+        <div className="relative cursor-pointer rounded-xl overflow-hidden mb-1 w-[220px] h-[140px] sm:w-[260px] sm:h-[180px] bg-black/10 dark:bg-white/10" onClick={() => finalUrl && setPreviewOpen(true)}>
+          {finalUrl ? (
+            <div className="relative w-full h-full">
+              <video src={finalUrl} className="w-full h-full object-cover rounded-xl" preload="metadata" />
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl hover:bg-black/40 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Play size={20} className="text-white ml-0.5" fill="white" />
-                </div>
+                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"><Play size={20} className="text-white ml-0.5" fill="white" /></div>
               </div>
             </div>
-          ) : (
-            <div className="w-[200px] h-[140px] bg-black/10 dark:bg-white/10 rounded-xl flex items-center justify-center">
-              <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />
-            </div>
-          )}
+          ) : overlay}
         </div>
       );
     }
 
     if (type === "file") {
       return (
-        <div
-          className="flex items-center gap-3 mb-1 p-3 rounded-xl bg-black/10 dark:bg-white/10 cursor-pointer hover:bg-black/15 dark:hover:bg-white/15 transition-colors max-w-[240px]"
-          onClick={() => decryptedUrl && setPreviewOpen(true)}
-        >
-          <div className="w-9 h-9 rounded-lg bg-current/10 flex items-center justify-center flex-shrink-0">
-            <FileText size={18} className="opacity-70" />
+        <div className={`flex items-center gap-3 mb-1 p-3 rounded-xl bg-black/10 dark:bg-white/10 transition-colors max-w-[240px] ${finalUrl || !isDownloaded ? "cursor-pointer hover:bg-black/15 dark:hover:bg-white/15" : ""}`} onClick={() => { if (finalUrl) setPreviewOpen(true); else if (!isDownloaded) setIsDownloaded(true); }}>
+          <div className="w-11 h-11 rounded-lg bg-current/10 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+            {finalUrl ? <FileText size={20} className="opacity-70" /> : !isDownloaded ? <Download size={20} className="opacity-70" /> : isDownloading ? (
+              <div className="w-6 h-6 rounded-full border-[2.5px] border-current/30 border-t-current animate-spin"></div>
+            ) : <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin opacity-50" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate leading-tight">
-              {mediaOriginalName ?? "Document"}
-            </p>
-            <p className="text-[11px] opacity-60 mt-0.5">Tap to open</p>
+            <p className="text-sm font-semibold truncate leading-tight">{mediaOriginalName ?? "Document"}</p>
+            <p className="text-[11px] opacity-60 mt-0.5">{finalUrl ? "Tap to open" : isDownloading ? "Downloading..." : "Tap to download"}</p>
           </div>
-          <Download size={15} className="opacity-50 flex-shrink-0" />
         </div>
       );
     }
-
     return null;
   }
 
   const isMedia = type !== "text";
+
+  // ── FIX: Missing Truncation Variables Restore Kar Diye ──
+  const CHAR_LIMIT = 250;
+  const shouldTruncate = text.length > CHAR_LIMIT;
+  const displayText = shouldTruncate && !isExpanded ? text.slice(0, CHAR_LIMIT) + "..." : text;
+
+  // ── FIX: Missing TickIcon Component Restore Kar Diya ──
+  const isSeen = otherUserId ? readBy?.some((r) => r.userId === otherUserId) : false;
+  const isDelivered = otherUserId ? deliveredTo?.some((d) => d.userId === otherUserId) : false;
+
+  const TickIcon = () => {
+    if (isSeen) {
+      return (
+        <svg className="w-3.5 h-3.5 ml-1 text-current opacity-100 flex-shrink-0 drop-shadow-md" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+      );
+    }
+    if (isDelivered) {
+      return (
+        <svg className="w-3.5 h-3.5 ml-1 text-current opacity-90 flex-shrink-0 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <circle cx="12" cy="12" r="10" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12.5l2.5 2.5l5 -5" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-3.5 h-3.5 ml-1 text-current opacity-90 flex-shrink-0 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <circle cx="12" cy="12" r="10" />
+      </svg>
+    );
+  };
 
   return (
     <>
@@ -260,6 +241,9 @@ export default function MessageBubble({
       {previewOpen && decryptedUrl && (
         <MediaPreview
           storageId={mediaStorageId ?? ""}
+          messageId={messageId} // ── FIX: Added messageId ──
+          text={text}
+          isOwn={isOwn}           // ── FIX: Added isOwn ──
           decryptedUrl={decryptedUrl}
           type={type === "text" ? "file" : type as "image" | "video" | "file"}
           originalName={mediaOriginalName}
@@ -287,7 +271,7 @@ export default function MessageBubble({
             `}
           >
             {/* Media */}
-            {isMedia && <MediaContent />}
+            {isMedia && MediaContent()}
 
             {/* Text — sirf text type ke liye */}
             {type === "text" && (

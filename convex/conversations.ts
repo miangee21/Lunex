@@ -173,7 +173,16 @@ export const deleteChat = mutation({
         )
         .collect();
 
-      await Promise.all(messages.map((m) => ctx.db.delete(m._id)));
+      // ── NEW FIX: Database se message delete karne se pehle, uski Media file Storage se permanently delete karo ──
+      await Promise.all(
+        messages.map(async (m) => {
+          if (m.mediaStorageId) {
+            await ctx.storage.delete(m.mediaStorageId);
+          }
+          await ctx.db.delete(m._id);
+        })
+      );
+
       await Promise.all(allDeletions.map((d) => d && ctx.db.delete(d._id)));
       await ctx.db.delete(args.conversationId);
     }

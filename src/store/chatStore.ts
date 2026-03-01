@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuthStore } from "@/store/authStore";
+import { type AllowedFileType } from "@/lib/fileValidation";
 
 type SidebarView =
   | "chats"
@@ -24,7 +25,6 @@ interface ActiveChat {
   otherTextColor?: string;
 }
 
-// Helper type to make the code cleaner
 type ThemeOptions = Partial<
   Pick<
     ActiveChat,
@@ -37,6 +37,16 @@ type ThemeOptions = Partial<
   >
 >;
 
+// ── NEW: Background Upload Tracking Interface ──
+export interface PendingUpload {
+  id: string; // local temp id
+  file: File;
+  type: AllowedFileType;
+  progress: number;
+  previewUrl: string;
+  status: "uploading" | "error";
+}
+
 interface ChatState {
   // Sidebar
   sidebarOpen: boolean;
@@ -47,8 +57,6 @@ interface ChatState {
 
   // Active chat
   activeChat: ActiveChat | null;
-
-  // Nested Multi-User Cache -> { [myUserId]: { [friendId]: ThemeOptions } }
   localThemes: Record<string, Record<string, ThemeOptions>>;
 
   setActiveChat: (chat: ActiveChat) => void;
@@ -74,53 +82,74 @@ interface ChatState {
       type: string;
     },
   ) => void;
-  // ── UPDATED: Caches ab time bhi store karenge ──
+  
   readByCache: Record<string, { userId: string; time: number }[]>;
   updateReadByCache: (conversationId: string, readBy: { userId: string; time: number }[]) => void;
+  
   deliveredToCache: Record<string, { userId: string; time: number }[]>;
   updateDeliveredToCache: (
     conversationId: string,
     deliveredTo: { userId: string; time: number }[],
   ) => void;
 
-  // ── NEW: Message Info Panel tracking ──
-  selectedMessageForInfo: { id: string; text: string } | null;
-  setSelectedMessageForInfo: (data: { id: string; text: string } | null) => void;
+  // ── FIX: Media fields add kiye taake Info Panel me thumbnail show ho sakay ──
+  selectedMessageForInfo: { 
+    id: string; 
+    text: string;
+    type?: string;
+    mediaStorageId?: string | null;
+    mediaIv?: string | null;
+    mediaOriginalName?: string | null;
+    cameFromPreview?: boolean; // ── FIX: Nishani add ki ──
+  } | null;
+  setSelectedMessageForInfo: (data: { 
+    id: string; 
+    text: string;
+    type?: string;
+    mediaStorageId?: string | null;
+    mediaIv?: string | null;
+    mediaOriginalName?: string | null;
+    cameFromPreview?: boolean; // ── FIX: Nishani add ki ──
+  } | null) => void;
 
-  // ── Cloud Sync Method ──
   syncChatTheme: (
     myUserId: string,
     friendId: string,
     themeData: ThemeOptions,
   ) => void;
 
-  // Right profile panel
   profilePanelOpen: boolean;
   toggleProfilePanel: () => void;
   setProfilePanelOpen: (open: boolean) => void;
+
+  // ── INSTANT THUMBNAIL CACHE ──
+  localMediaCache: Record<string, string>;
+  addLocalMediaCache: (storageId: string, url: string) => void;
+
+  // ── NEW: Background Upload State Actions ──
+  pendingUploads: Record<string, PendingUpload[]>;
+  addPendingUploads: (conversationId: string, uploads: PendingUpload[]) => void;
+  updateUploadProgress: (conversationId: string, id: string, progress: number) => void;
+  updateUploadStatus: (conversationId: string, id: string, status: "uploading" | "error") => void;
+  removePendingUpload: (conversationId: string, id: string) => void;
 }
 
 export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
-      // Sidebar
       sidebarOpen: true,
       sidebarView: "chats",
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-      // ── LOCAL THEMES CACHE ──
       localThemes: {},
-
-      // Active chat
       activeChat: null,
 
       setActiveChat: (chat) =>
         set((s) => {
           const myUserId = useAuthStore.getState().userId;
           const myThemes = myUserId ? s.localThemes[myUserId] || {} : {};
-
           return {
             activeChat: {
               ...chat,
@@ -135,13 +164,10 @@ export const useChatStore = create<ChatState>()(
       updateActiveChatTheme: (themeData) =>
         set((s) => {
           if (!s.activeChat) return s;
-
           const myUserId = useAuthStore.getState().userId;
           if (!myUserId) return s;
-
           const friendId = s.activeChat.userId;
           const myThemes = s.localThemes[myUserId] || {};
-
           return {
             activeChat: { ...s.activeChat, ...themeData },
             localThemes: {
@@ -154,12 +180,10 @@ export const useChatStore = create<ChatState>()(
           };
         }),
 
-      // ── SYNC FROM CLOUD ──
       syncChatTheme: (myUserId, friendId, themeData) =>
         set((s) => {
           const myThemes = s.localThemes[myUserId] || {};
           const isCurrentlyActive = s.activeChat?.userId === friendId;
-
           return {
             ...(isCurrentlyActive &&
               s.activeChat && {
@@ -175,11 +199,11 @@ export const useChatStore = create<ChatState>()(
           };
         }),
 
-      // ── SET CONVERSATION ID ──
       setConversationId: (conversationId) =>
         set((s) => ({
           activeChat: s.activeChat ? { ...s.activeChat, conversationId } : null,
         })),
+
       lastMessageCache: {},
       updateLastMessageCache: (conversationId, data) =>
         set((s) => ({
@@ -188,6 +212,7 @@ export const useChatStore = create<ChatState>()(
             [conversationId]: data,
           },
         })),
+        
       readByCache: {},
       updateReadByCache: (conversationId, readBy) =>
         set((s) => ({
@@ -196,6 +221,7 @@ export const useChatStore = create<ChatState>()(
             [conversationId]: readBy,
           },
         })),
+        
       deliveredToCache: {},
       updateDeliveredToCache: (conversationId, deliveredTo) =>
         set((s) => ({
@@ -205,61 +231,49 @@ export const useChatStore = create<ChatState>()(
           },
         })),
 
-     // ── NEW: Message Info State Implementation ──
+      // ── INSTANT THUMBNAIL CACHE IMPLEMENTATION ──
+      localMediaCache: {},
+      addLocalMediaCache: (storageId, url) =>
+        set((s) => ({
+          localMediaCache: { ...s.localMediaCache, [storageId]: url },
+        })),
+
       selectedMessageForInfo: null,
       setSelectedMessageForInfo: (data) =>
         set((s) => {
-          // ── FIX 3 & 4: Sirf Width (Chorayi) check kar raha hai, Height nahi! ──
           const width = window.innerWidth;
           let newSidebarState = s.sidebarOpen;
-
           if (data) {
-            // OPENING INFO PANEL: Agar screen choti hai toh Left Sidebar band kar do
-            if (width < 1100) {
-              newSidebarState = false;
-            }
+            if (width < 1100) newSidebarState = false;
             return {
               selectedMessageForInfo: data,
               profilePanelOpen: true,
               sidebarOpen: newSidebarState,
             };
           } else {
-            // CLOSING INFO PANEL: Right panel poora band karo aur Left Sidebar wapas khol do
-            if (width >= 900) {
-              newSidebarState = true;
-            }
+            if (width >= 900) newSidebarState = true;
             return {
               selectedMessageForInfo: null,
-              profilePanelOpen: false, // ── FIX 2: Ab Info band karne par Other Profile wapas nahi aayegi ──
+              profilePanelOpen: false,
               sidebarOpen: newSidebarState,
             };
           }
         }),
 
-      // Right profile panel
       profilePanelOpen: false,
-
       toggleProfilePanel: () =>
         set((s) => {
-          // ── FIX 1: Agar Info Panel open hai, toh header dabane par usay band kar ke Other Profile dikhao ──
           if (s.selectedMessageForInfo) {
             return {
-              selectedMessageForInfo: null, // Info ko hataya
-              profilePanelOpen: true,       // Right panel open rakha (taake Other Profile nazar aaye)
+              selectedMessageForInfo: null,
+              profilePanelOpen: true,
             };
           }
-
-          // ── NORMAL TOGGLE LOGIC ──
           const willOpen = !s.profilePanelOpen;
           const width = window.innerWidth;
           let newSidebarState = s.sidebarOpen;
-
-          if (willOpen && width < 1100) {
-            newSidebarState = false;
-          } else if (!willOpen && width >= 900) {
-            newSidebarState = true;
-          }
-
+          if (willOpen && width < 1100) newSidebarState = false;
+          else if (!willOpen && width >= 900) newSidebarState = true;
           return {
             profilePanelOpen: willOpen,
             sidebarOpen: newSidebarState,
@@ -270,18 +284,50 @@ export const useChatStore = create<ChatState>()(
         set((s) => {
           const width = window.innerWidth;
           let newSidebarState = s.sidebarOpen;
-
-          if (open && width < 1100) {
-            newSidebarState = false;
-          } else if (!open && width >= 900) {
-            newSidebarState = true;
-          }
-
+          if (open && width < 1100) newSidebarState = false;
+          else if (!open && width >= 900) newSidebarState = true;
           return {
             profilePanelOpen: open,
             sidebarOpen: newSidebarState,
           };
         }),
+
+      // ── NEW: Background Upload Methods Implementation ──
+      pendingUploads: {},
+      addPendingUploads: (conversationId, uploads) =>
+        set((s) => ({
+          pendingUploads: {
+            ...s.pendingUploads,
+            [conversationId]: [...(s.pendingUploads[conversationId] || []), ...uploads],
+          },
+        })),
+      updateUploadProgress: (conversationId, id, progress) =>
+        set((s) => ({
+          pendingUploads: {
+            ...s.pendingUploads,
+            [conversationId]: (s.pendingUploads[conversationId] || []).map((u) =>
+              u.id === id ? { ...u, progress } : u
+            ),
+          },
+        })),
+      updateUploadStatus: (conversationId, id, status) =>
+        set((s) => ({
+          pendingUploads: {
+            ...s.pendingUploads,
+            [conversationId]: (s.pendingUploads[conversationId] || []).map((u) =>
+              u.id === id ? { ...u, status } : u
+            ),
+          },
+        })),
+      removePendingUpload: (conversationId, id) =>
+        set((s) => ({
+          pendingUploads: {
+            ...s.pendingUploads,
+            [conversationId]: (s.pendingUploads[conversationId] || []).filter(
+              (u) => u.id !== id
+            ),
+          },
+        })),
     }),
     {
       name: "lunex-chat-themes-cloud-sync",
