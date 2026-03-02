@@ -192,40 +192,40 @@ export default function MediaPreview({
   async function handleDownload() {
     if (!fileUrl) return;
 
-    // 1. Privacy ke liye Random Filename generate karna
     const originalName = currentItem.originalName || "media";
     const extMatch = originalName.match(/\.([^.]+)$/);
-    const ext = extMatch ? extMatch[1] : (currentItem.type === "image" ? "jpg" : currentItem.type === "video" ? "mp4" : "bin");
-    
+    const ext = extMatch
+      ? extMatch[1]
+      : currentItem.type === "image"
+        ? "jpg"
+        : currentItem.type === "video"
+          ? "mp4"
+          : "bin";
+
     const randomStr = Math.random().toString(36).substring(2, 8);
     const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
 
     try {
-      // 2. Native "Save As" Dialog (Tauri API)
       const filePath = await save({
         defaultPath: fileName,
         title: "Save Media File",
       });
 
-      // Agar user cancel kar de
       if (!filePath) return;
 
       const toastId = toast.loading("Saving file...");
-      
-      // 3. File data ko hard drive pe native tareeqe se likhna
+
       const response = await fetch(fileUrl);
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
 
       await writeFile(filePath, uint8Array);
-      
-      toast.success("File saved successfully!", { id: toastId });
 
+      toast.success("File saved successfully!", { id: toastId });
     } catch (error: any) {
       console.error("Native save failed:", error);
       toast.error(`Save Failed: ${error.message || error}`);
 
-      // ── FALLBACK ── (Agar Tauri permissions ka masla ho)
       const a = document.createElement("a");
       a.href = fileUrl;
       a.download = fileName;
@@ -261,9 +261,9 @@ export default function MediaPreview({
       setReplyingTo({
         id: currentItem.messageId,
         text: currentItem.originalName || "Media",
-        senderName: currentItem.isOwn ? "You" : (activeChat?.username || "User"),
+        senderName: currentItem.isOwn ? "You" : activeChat?.username || "User",
         type: currentItem.type,
-        mediaStorageId: currentItem.storageId // ── FIX: Thumbnail ke liye save kar rahe hain ──
+        mediaStorageId: currentItem.storageId,
       });
       onClose();
     }
@@ -271,8 +271,11 @@ export default function MediaPreview({
 
   function handleDelete() {
     if (currentItem.messageId) {
-      // ── FIX: ChatArea ko signal bhejta hai ke modal open karo ──
-      window.dispatchEvent(new CustomEvent("open-delete-modal-for-single", { detail: { id: currentItem.messageId } }));
+      window.dispatchEvent(
+        new CustomEvent("open-delete-modal-for-single", {
+          detail: { id: currentItem.messageId },
+        }),
+      );
       onClose();
     }
   }
@@ -282,7 +285,6 @@ export default function MediaPreview({
       className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col animate-in fade-in duration-200"
       onClick={onClose}
     >
-      {/* ── HEADER ── */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 bg-linear-to-b from-black/80 to-transparent z-20 shrink-0"
         onClick={(e) => e.stopPropagation()}

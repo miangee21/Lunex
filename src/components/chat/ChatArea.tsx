@@ -55,7 +55,7 @@ export default function ChatArea() {
     jumpToMessageId,
     setJumpToMessageId,
     markReactionAsSeen, 
-    scrollToBottomTrigger, // ── FIX: Store se state nikala ──
+    scrollToBottomTrigger, 
   } = useChatStore();
 
   const userId = useAuthStore((s) => s.userId);
@@ -84,7 +84,6 @@ export default function ChatArea() {
       const next = new Set(prev);
       const isAlreadySelected = next.has(id);
 
-      // Agar message kisi batch ka hissa hai, tou poore batch ko ek sath select/deselect karein
       if (msg.uploadBatchId) {
         const batchMsgs = decryptedMessages.filter(m => m.uploadBatchId === msg.uploadBatchId);
         batchMsgs.forEach(bm => {
@@ -92,7 +91,6 @@ export default function ChatArea() {
           else next.add(bm.id);
         });
       } else {
-        // Agar single message hai
         if (isAlreadySelected) next.delete(id);
         else next.add(id);
       }
@@ -104,7 +102,6 @@ export default function ChatArea() {
     setSelectMode(false);
     setSelectedMessages(new Set());
   }
-  // ── FIX: Listen for single media delete from Preview ──
   useEffect(() => {
     const handleSingleDelete = (e: any) => {
       setSelectedMessages(new Set([e.detail.id]));
@@ -169,7 +166,6 @@ export default function ChatArea() {
   const markAsRead = useMutation(api.messages.markMessagesAsRead);
   const markAsDelivered = useMutation(api.messages.markAsDelivered);
   
-  // ── FIX: Delete Mutations & Modal State ──
   const deleteMessageForMe = useMutation(api.messages.deleteMessageForMe);
   const deleteMessageForEveryone = useMutation(api.messages.deleteMessageForEveryone);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -189,7 +185,6 @@ export default function ChatArea() {
         conversationId: activeChat.conversationId as Id<"conversations">,
         userId: userId as Id<"users">,
       });
-      // ── FIX: Mark reaction as seen so badge disappears ──
       markReactionAsSeen(activeChat.conversationId, Date.now());
     }
   }, [activeChat?.conversationId, rawMessages?.length, markReactionAsSeen]);
@@ -220,11 +215,9 @@ export default function ChatArea() {
             text = "🔒 Unable to decrypt message";
           }
 
-         // ── FIX: REACTION DECRYPTION ENGINE ──
-          let decryptedReactions: Array<{ userId: string; emoji: string }> = []; // ── FIX: TypeScript ko type bata di ──
+          let decryptedReactions: Array<{ userId: string; emoji: string }> = []; 
           if (msg.reactions && msg.reactions.length > 0) {
             decryptedReactions = msg.reactions.map((r: any) => {
-              // Agar purana unencrypted reaction hai toh usay chalne do
               if (r.emoji) return { userId: r.userId, emoji: r.emoji }; 
               try {
                 if (!otherUser?.publicKey) return { userId: r.userId, emoji: "🔒" };
@@ -298,12 +291,10 @@ export default function ChatArea() {
     }
   }, [currentPending.length, pendingPreviewIndex]);
 
- // ── FIX: PERFECT AUTO-SCROLL ENGINE ──
   const prevMsgCount = useRef(0);
-  const prevScrollTrigger = useRef(scrollToBottomTrigger); // ── FIX: Trigger memory ──
+  const prevScrollTrigger = useRef(scrollToBottomTrigger); 
 
   useEffect(() => {
-    // SCENARIO 1: Jump karna ha (Sidebar se click)
     if (jumpToMessageId && decryptedMessages.length > 0) {
       setTimeout(() => {
         const element = document.getElementById(`message-${jumpToMessageId}`);
@@ -320,19 +311,16 @@ export default function ChatArea() {
       return; 
     } 
     
-    // SCENARIO 2: Normal Scrolling
     if (!jumpToMessageId) {
-      const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current; // ── FIX: Pata lagaya k user ne click kia ha ──
-      
-      // Agar naya message aya HA YA user ne chatsidebar pe click kia ha, tu bottom pe le jao
+      const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current; 
       if (decryptedMessages.length > prevMsgCount.current || currentPending.length > 0 || isManualTrigger) {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     }
     
     prevMsgCount.current = decryptedMessages.length;
-    prevScrollTrigger.current = scrollToBottomTrigger; // ── FIX: Memory update ──
-  }, [decryptedMessages.length, currentPending.length, jumpToMessageId, setJumpToMessageId, scrollToBottomTrigger]); // ── FIX: Dependency add ki ── 
+    prevScrollTrigger.current = scrollToBottomTrigger; 
+  }, [decryptedMessages.length, currentPending.length, jumpToMessageId, setJumpToMessageId, scrollToBottomTrigger]); 
 
   if (!activeChat) return null;
 
@@ -384,7 +372,7 @@ export default function ChatArea() {
     while (i < visibleMessages.length) {
       const msg = visibleMessages[i];
 
-      if (msg.type !== "text") { // ── FIX: Removed !selectMode taake grid divide na ho ──
+      if (msg.type !== "text") { 
         const group: typeof visibleMessages = [];
         let j = i;
         while (
@@ -401,11 +389,10 @@ export default function ChatArea() {
           const displayGroup = group.slice(0, 4);
           const extraCount = group.length > 4 ? group.length - 4 : 0;
           
-          // ── FIX: Grid ko selectable wrapper me daal diya checkbox ke sath ──
           elements.push(
             <div
               key={`wrap-${msg.id}`}
-              id={`wrap-${msg.id}`} // ── FIX: Scroll ke liye id add ki ──
+              id={`wrap-${msg.id}`} 
               onClick={() => selectMode && toggleSelectMessage(msg.id)}
               className={selectMode ? "cursor-pointer" : ""}
             >
@@ -436,7 +423,6 @@ export default function ChatArea() {
                   setSelectMode={setSelectMode}
                   selectedMessages={selectedMessages}
                   onDeleteClick={() => {
-                    // ── FIX: Direct select grid and open modal ──
                     const batchIds = group.map((m: any) => m.id);
                     setSelectedMessages(new Set(batchIds));
                     setIsDeleteDialogOpen(true);
@@ -495,17 +481,14 @@ export default function ChatArea() {
             readBy={msg.readBy}
             deliveredTo={msg.deliveredTo}
             otherUserId={activeChat?.userId}
-            // ── FIX: ACTUAL TIMESTAMP AUR QUOTED BUBBLE DATA ──
             sentAt={msg.timestamp} 
-            secretKey={secretKey} // ── FIX: Keys pass ki encryption k lea ──
+            secretKey={secretKey} 
             otherUserPublicKey={otherUser?.publicKey}
             replyToMessage={(() => {
               if (!msg.replyToMessageId) return null;
-              // Message list mein original message dhoondo
               const originalMsg = decryptedMessages.find(m => m.id === msg.replyToMessageId);
               if (!originalMsg) return null;
               
-              // Sender name nikalo (Agar apna hai toh "You", warna doosre ka username)
               const senderName = originalMsg.isOwn ? "You" : (activeChat?.username || "User");
               
               return {
@@ -513,7 +496,7 @@ export default function ChatArea() {
                 text: originalMsg.text,
                 senderName,
                 type: originalMsg.type,
-                mediaStorageId: originalMsg.mediaStorageId, // ── FIX: Thumbnail k lea ID bheji ──
+                mediaStorageId: originalMsg.mediaStorageId, 
               };
             })()}
             onSelect={() => {
@@ -537,7 +520,6 @@ export default function ChatArea() {
     activeChat,
   ]);
 
-  // ── FIX: Delete Logic (1 Hour Check & Ownership) ──
   const selectedArray = Array.from(selectedMessages);
   let canDeleteForEveryone = false;
 
@@ -661,7 +643,6 @@ export default function ChatArea() {
         onDeleteSelected={() => setIsDeleteDialogOpen(true)}
       />
 
-      {/* ── PROFESSIONAL DELETE MODAL (SELECT MODE) ── */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-100">
           <AlertDialogHeader>

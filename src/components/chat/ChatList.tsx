@@ -21,11 +21,11 @@ export default function ChatList() {
     lastMessageCache,
     readByCache,
     deliveredToCache,
-    activeChat, 
-    setJumpToMessageId, 
-    seenReactions, 
-    triggerScrollToBottom, 
-    markReactionAsSeen, // ── FIX: Store se read mark karne wala function nikala ──
+    activeChat,
+    setJumpToMessageId,
+    seenReactions,
+    triggerScrollToBottom,
+    markReactionAsSeen,
   } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
@@ -258,154 +258,171 @@ export default function ChatList() {
           filteredConversations.map((conv) => {
             if (!conv) return null;
 
-            // ── FIX: Check if reaction is the latest action ──
-            const cached = conv.conversationId ? lastMessageCache[conv.conversationId] : null;
+            const cached = conv.conversationId
+              ? lastMessageCache[conv.conversationId]
+              : null;
             const msgSentAt = cached?.sentAt ?? conv.lastMessage?.sentAt ?? 0;
-            const isReactionLatest = conv.lastReaction && conv.lastReaction.timestamp >= msgSentAt;
+            const isReactionLatest =
+              conv.lastReaction && conv.lastReaction.timestamp >= msgSentAt;
 
-            // ── FIX: JUMP AUR BADGE KI LOGIC KO UPAR NIKALA ──
-            const seenReactTs = conv.conversationId ? seenReactions[conv.conversationId] || 0 : 0;
-            const isReactionUnread = isReactionLatest && conv.lastReaction && conv.lastReaction.userId !== userId && conv.lastReaction.timestamp > seenReactTs;
+            const seenReactTs = conv.conversationId
+              ? seenReactions[conv.conversationId] || 0
+              : 0;
+            const isReactionUnread =
+              isReactionLatest &&
+              conv.lastReaction &&
+              conv.lastReaction.userId !== userId &&
+              conv.lastReaction.timestamp > seenReactTs;
 
             return (
-              <div 
-                key={conv.conversationId} 
+              <div
+                key={conv.conversationId}
                 onClickCapture={() => {
                   if (isReactionUnread && conv.lastReaction) {
-                    setJumpToMessageId(conv.lastReaction.messageId); 
-                    // ── BUG FIX: Fauran read mark kardo taake agla click bottom pe le jaye! ──
-                    markReactionAsSeen(conv.conversationId, Date.now()); 
+                    setJumpToMessageId(conv.lastReaction.messageId);
+
+                    markReactionAsSeen(conv.conversationId, Date.now());
                   } else {
                     setJumpToMessageId(null);
-                    // ── FIX: Agar chat already khuli ha, tu zabardasti bottom pe bhejo ──
+
                     if (activeChat?.conversationId === conv.conversationId) {
                       triggerScrollToBottom();
                     }
                   }
                 }}
               >
-              <ChatListItem
-                id={conv.otherUserId}
-                conversationId={conv.conversationId}
-                username={conv.username}
-                lastMessage={(() => {
-                  // ── FIX: REACTION PREVIEW LOGIC ──
-                  if (isReactionLatest && conv.lastReaction) { // ── FIX: TypeScript Safety ──
-                    let emoji = "👍";
-                    // Agar chat open ha tu foran real emoji decrypt kero!
-                    if (activeChat?.conversationId === conv.conversationId && secretKey && conv.publicKey) {
-                      try {
-                        const theirPublicKey = base64ToKey(conv.publicKey);
-                        emoji = decryptMessage(
-                          { encryptedContent: conv.lastReaction.encryptedEmoji, iv: conv.lastReaction.iv },
-                          secretKey,
-                          theirPublicKey
-                        );
-                      } catch (e) {}
+                <ChatListItem
+                  id={conv.otherUserId}
+                  conversationId={conv.conversationId}
+                  username={conv.username}
+                  lastMessage={(() => {
+                    if (isReactionLatest && conv.lastReaction) {
+                      let emoji = "👍";
+                      if (
+                        activeChat?.conversationId === conv.conversationId &&
+                        secretKey &&
+                        conv.publicKey
+                      ) {
+                        try {
+                          const theirPublicKey = base64ToKey(conv.publicKey);
+                          emoji = decryptMessage(
+                            {
+                              encryptedContent:
+                                conv.lastReaction.encryptedEmoji,
+                              iv: conv.lastReaction.iv,
+                            },
+                            secretKey,
+                            theirPublicKey,
+                          );
+                        } catch (e) {}
+                      }
+                      return conv.lastReaction.userId === userId
+                        ? `You: Reacted ${emoji} to a message`
+                        : `${emoji} Reacted to a message`;
                     }
-                    return conv.lastReaction.userId === userId
-                      ? `You: Reacted ${emoji} to a message`
-                      : `${emoji} Reacted to a message`;
-                  }
 
-                  const cached = conv.conversationId
-                    ? lastMessageCache[conv.conversationId]
-                    : null;
-                  if (cached) {
-                    if (cached.type === "image")
-                      return cached.senderId === userId
-                        ? "You: 📷 New photo"
-                        : "📷 New photo";
-                    if (cached.type === "video")
-                      return cached.senderId === userId
-                        ? "You: 🎥 New video"
-                        : "🎥 New video";
-                    if (cached.type === "audio")
-                      return cached.senderId === userId
-                        ? "You: 🎵 New audio"
-                        : "🎵 New audio";
-                    if (cached.type === "file")
-                      return cached.senderId === userId
-                        ? "You: 📎 New document"
-                        : "📎 New document";
+                    const cached = conv.conversationId
+                      ? lastMessageCache[conv.conversationId]
+                      : null;
+                    if (cached) {
+                      if (cached.type === "image")
+                        return cached.senderId === userId
+                          ? "You: 📷 New photo"
+                          : "📷 New photo";
+                      if (cached.type === "video")
+                        return cached.senderId === userId
+                          ? "You: 🎥 New video"
+                          : "🎥 New video";
+                      if (cached.type === "audio")
+                        return cached.senderId === userId
+                          ? "You: 🎵 New audio"
+                          : "🎵 New audio";
+                      if (cached.type === "file")
+                        return cached.senderId === userId
+                          ? "You: 📎 New document"
+                          : "📎 New document";
 
-                    const preview =
-                      cached.text.length > 40
-                        ? cached.text.slice(0, 40) + "..."
-                        : cached.text;
-                    return cached.senderId === userId
-                      ? `You: ${preview}`
-                      : preview;
-                  }
-                  if (conv.lastMessage) {
-                    if (conv.lastMessage.type === "image")
+                      const preview =
+                        cached.text.length > 40
+                          ? cached.text.slice(0, 40) + "..."
+                          : cached.text;
+                      return cached.senderId === userId
+                        ? `You: ${preview}`
+                        : preview;
+                    }
+                    if (conv.lastMessage) {
+                      if (conv.lastMessage.type === "image")
+                        return conv.lastMessage.senderId === userId
+                          ? "You: 📷 New photo"
+                          : "📷 New photo";
+                      if (conv.lastMessage.type === "video")
+                        return conv.lastMessage.senderId === userId
+                          ? "You: 🎥 New video"
+                          : "🎥 New video";
+                      if (conv.lastMessage.type === "audio")
+                        return conv.lastMessage.senderId === userId
+                          ? "You: 🎵 New audio"
+                          : "🎵 New audio";
+                      if (conv.lastMessage.type === "file")
+                        return conv.lastMessage.senderId === userId
+                          ? "You: 📎 New document"
+                          : "📎 New document";
                       return conv.lastMessage.senderId === userId
-                        ? "You: 📷 New photo"
-                        : "📷 New photo";
-                    if (conv.lastMessage.type === "video")
-                      return conv.lastMessage.senderId === userId
-                        ? "You: 🎥 New video"
-                        : "🎥 New video";
-                    if (conv.lastMessage.type === "audio")
-                      return conv.lastMessage.senderId === userId
-                        ? "You: 🎵 New audio"
-                        : "🎵 New audio";
-                    if (conv.lastMessage.type === "file")
-                      return conv.lastMessage.senderId === userId
-                        ? "You: 📎 New document"
-                        : "📎 New document";
-                    return conv.lastMessage.senderId === userId
-                      ? "You: New message"
-                      : "New message 📩";
-                  }
-                  return "Say hello! 👋";
-                })()}
-                time={(() => {
-                  if (isReactionLatest && conv.lastReaction) { // ── FIX: TypeScript Safety ──
-                    return new Date(conv.lastReaction.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit", minute: "2-digit", hour12: true,
-                    });
-                  }
-                  const cached = conv.conversationId
-                    ? lastMessageCache[conv.conversationId]
-                    : null;
-                  const sentAt = cached?.sentAt ?? conv.lastMessage?.sentAt;
-                  return sentAt
-                    ? new Date(sentAt).toLocaleTimeString([], {
+                        ? "You: New message"
+                        : "New message 📩";
+                    }
+                    return "Say hello! 👋";
+                  })()}
+                  time={(() => {
+                    if (isReactionLatest && conv.lastReaction) {
+                      return new Date(
+                        conv.lastReaction.timestamp,
+                      ).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                         hour12: true,
-                      })
-                    : "";
-                })()}
-                isRead={(() => {
-                  const cached = conv.conversationId
-                    ? lastMessageCache[conv.conversationId]
-                    : null;
-                  if (!cached || cached.senderId !== userId) return undefined;
-                  const readBy = conv.conversationId
-                    ? readByCache[conv.conversationId]
-                    : [];
-                  const deliveredTo = conv.conversationId
-                    ? deliveredToCache[conv.conversationId]
-                    : [];
-                  const otherUserId = conv.otherUserId;
-                  if (readBy?.some((r) => r.userId === otherUserId))
-                    return "read";
-                  if (deliveredTo?.some((d) => d.userId === otherUserId))
-                    return "delivered";
-                  return "sent";
-                })()}
-                unread={conv.unreadCount + (isReactionUnread ? 1 : 0)} // ── FIX: Logic upar lag gayi ha, yahan sirf add kero ──
-                isOnline={conv.isOnline}
-                profilePicStorageId={conv.profilePicStorageId ?? null}
-                chatPresetName={(conv as any).chatPresetName}
-                chatBgColor={(conv as any).chatBgColor}
-                myBubbleColor={(conv as any).myBubbleColor}
-                otherBubbleColor={(conv as any).otherBubbleColor}
-                myTextColor={(conv as any).myTextColor}
-                otherTextColor={(conv as any).otherTextColor}
-              />
+                      });
+                    }
+                    const cached = conv.conversationId
+                      ? lastMessageCache[conv.conversationId]
+                      : null;
+                    const sentAt = cached?.sentAt ?? conv.lastMessage?.sentAt;
+                    return sentAt
+                      ? new Date(sentAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "";
+                  })()}
+                  isRead={(() => {
+                    const cached = conv.conversationId
+                      ? lastMessageCache[conv.conversationId]
+                      : null;
+                    if (!cached || cached.senderId !== userId) return undefined;
+                    const readBy = conv.conversationId
+                      ? readByCache[conv.conversationId]
+                      : [];
+                    const deliveredTo = conv.conversationId
+                      ? deliveredToCache[conv.conversationId]
+                      : [];
+                    const otherUserId = conv.otherUserId;
+                    if (readBy?.some((r) => r.userId === otherUserId))
+                      return "read";
+                    if (deliveredTo?.some((d) => d.userId === otherUserId))
+                      return "delivered";
+                    return "sent";
+                  })()}
+                  unread={conv.unreadCount + (isReactionUnread ? 1 : 0)}
+                  isOnline={conv.isOnline}
+                  profilePicStorageId={conv.profilePicStorageId ?? null}
+                  chatPresetName={(conv as any).chatPresetName}
+                  chatBgColor={(conv as any).chatBgColor}
+                  myBubbleColor={(conv as any).myBubbleColor}
+                  otherBubbleColor={(conv as any).otherBubbleColor}
+                  myTextColor={(conv as any).myTextColor}
+                  otherTextColor={(conv as any).otherTextColor}
+                />
               </div>
             );
           })

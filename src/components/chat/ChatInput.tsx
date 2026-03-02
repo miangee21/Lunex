@@ -33,18 +33,18 @@ export default function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const emojiPickerRef = useRef<HTMLDivElement>(null); 
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
-  const { 
-    activeChat, 
-    updateLastMessageCache, 
+  const {
+    activeChat,
+    updateLastMessageCache,
     updateReadByCache,
     replyingTo,
     setReplyingTo,
     editingMessage,
-    setEditingMessage
+    setEditingMessage,
   } = useChatStore();
 
   const sendMessage = useMutation(api.messages.sendMessage);
@@ -97,7 +97,6 @@ export default function ChatInput({
     }
   }, [message]);
 
-  // ── EDITING MESSAGE HOOK ──
   useEffect(() => {
     if (editingMessage) {
       setMessage(editingMessage.text);
@@ -109,7 +108,10 @@ export default function ChatInput({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
         setShowEmojiPicker(false);
       }
     }
@@ -196,7 +198,7 @@ export default function ChatInput({
 
     const text = message.trim();
     setMessage("");
-    setShowEmojiPicker(false); 
+    setShowEmojiPicker(false);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -219,7 +221,6 @@ export default function ChatInput({
       );
 
       if (editingMessage) {
-        // ── EDIT MESSAGE LOGIC ──
         await editMessage({
           messageId: editingMessage.id as Id<"messages">,
           userId: userId as Id<"users">,
@@ -228,7 +229,6 @@ export default function ChatInput({
         });
         setEditingMessage(null);
       } else {
-        // ── NORMAL & REPLY MESSAGE LOGIC ──
         await sendMessage({
           conversationId: activeChat.conversationId as Id<"conversations">,
           senderId: userId as Id<"users">,
@@ -303,19 +303,17 @@ export default function ChatInput({
 
   return (
     <div className="px-4 py-3 bg-sidebar border-t border-border transition-colors duration-300 relative">
-      
-      
-      
       {showEmojiPicker && (
-        <div ref={emojiPickerRef} className="absolute bottom-full right-4 mb-2 z-50">
+        <div
+          ref={emojiPickerRef}
+          className="absolute bottom-full right-4 mb-2 z-50"
+        >
           <EmojiPicker onEmojiSelect={handleEmojiSelect} />
         </div>
       )}
 
-      
       <ReplyPreview />
 
-      
       {editingMessage && (
         <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border shadow-sm mb-2 rounded-xl mx-4">
           <div className="flex-1 min-w-0 flex items-center gap-2 text-primary">
@@ -400,7 +398,10 @@ export default function ChatInput({
           {editingMessage ? (
             <Check size={18} strokeWidth={3} />
           ) : (
-            <Send size={18} className={message.trim() ? "translate-x-0.5" : ""} />
+            <Send
+              size={18}
+              className={message.trim() ? "translate-x-0.5" : ""}
+            />
           )}
         </button>
       </div>

@@ -29,9 +29,15 @@ interface MessageBubbleProps {
   deliveredTo?: { userId: string; time: number }[];
   otherUserId?: string;
   onSelect?: () => void;
-  replyToMessage?: { id: string; text: string; senderName: string; type: string; mediaStorageId?: string | null; } | null;
+  replyToMessage?: {
+    id: string;
+    text: string;
+    senderName: string;
+    type: string;
+    mediaStorageId?: string | null;
+  } | null;
   sentAt?: number;
-  secretKey?: Uint8Array | null; // ── FIX: String ki jagah asal type likh di ──
+  secretKey?: Uint8Array | null;
   otherUserPublicKey?: string;
 }
 
@@ -53,7 +59,7 @@ export default function MessageBubble({
   otherUserId,
   onSelect,
   replyToMessage = null,
-  sentAt = 0, 
+  sentAt = 0,
   secretKey,
   otherUserPublicKey,
 }: MessageBubbleProps) {
@@ -63,7 +69,7 @@ export default function MessageBubble({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const isMedia = type !== "text";
   const currentUserId = useAuthStore((s) => s.userId);
-  const localMediaCache = useChatStore((s) => s.localMediaCache); // ── FIX: Thumbnail URL Cache ──
+  const localMediaCache = useChatStore((s) => s.localMediaCache);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
 
@@ -97,9 +103,12 @@ export default function MessageBubble({
           userId: currentUserId as never,
         });
       } else {
-        // ── FIX: REACTION KO FULLY ENCRYPT KIYA ──
         const theirPublicKeyBytes = base64ToKey(otherUserPublicKey);
-        const { encryptedContent, iv } = encryptMessage(emoji, secretKey, theirPublicKeyBytes); // ── FIX: secretKey direct pass ki ──
+        const { encryptedContent, iv } = encryptMessage(
+          emoji,
+          secretKey,
+          theirPublicKeyBytes,
+        ); // ── FIX: secretKey direct pass ki ──
 
         await addReaction({
           messageId: messageId as never,
@@ -115,22 +124,36 @@ export default function MessageBubble({
     setShowEmojiPicker(false);
   };
 
-  // ── FIX: Scroll to Original Message Logic ──
   const handleScrollToOriginal = () => {
     if (!replyToMessage?.id) return;
 
-    // ── FIX: Agar Media File hai toh sidha uski Preview Open kar do ──
     if (replyToMessage.type !== "text") {
-      window.dispatchEvent(new CustomEvent("reopen-preview", { detail: { id: replyToMessage.id } }));
+      window.dispatchEvent(
+        new CustomEvent("reopen-preview", {
+          detail: { id: replyToMessage.id },
+        }),
+      );
     }
 
-    const element = document.getElementById(`message-${replyToMessage.id}`) || document.getElementById(`wrap-${replyToMessage.id}`);
-    
+    const element =
+      document.getElementById(`message-${replyToMessage.id}`) ||
+      document.getElementById(`wrap-${replyToMessage.id}`);
+
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
-      element.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+      element.classList.add(
+        "ring-2",
+        "ring-primary",
+        "bg-primary/20",
+        "scale-[1.02]",
+      );
       setTimeout(() => {
-        element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+        element.classList.remove(
+          "ring-2",
+          "ring-primary",
+          "bg-primary/20",
+          "scale-[1.02]",
+        );
       }, 1200);
     } else {
       if (replyToMessage.type === "text") {
@@ -153,47 +176,60 @@ export default function MessageBubble({
 
   return (
     <div
-      id={`message-${messageId}`} // ── FIX: ID add ki taake target ho sakay ──
+      id={`message-${messageId}`}
       className={`flex w-full group py-1.5 transition-all duration-500 rounded-lg ${isOwn ? "justify-end" : "justify-start"}`}
     >
       <div
         className={`relative flex max-w-[75%] md:max-w-[65%] items-start gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
       >
         <div
-          // ── FIX: Agar reply hai toh parent pe minimum 120px width lagayi ──
           className={`relative flex flex-col px-4 pt-2.5 pb-2 rounded-2xl shadow-sm text-[15px] transition-all duration-200 ${replyToMessage ? "min-w-30" : ""} ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary border border-border/50 text-secondary-foreground rounded-bl-sm"}`}
         >
-          {/* ── REPLY QUOTED BUBBLE (100% ACCURATE SHRINK-WRAP FIX) ── */}
           {replyToMessage && (
-            <div 
+            <div
               onClick={handleScrollToOriginal}
               className={`mb-1.5 px-2.5 py-1.5 rounded-lg text-sm border-l-4 opacity-90 overflow-hidden cursor-pointer hover:opacity-100 transition-opacity flex flex-row items-center gap-2 w-0 min-w-full ${isOwn ? "bg-primary-foreground/20 border-primary-foreground text-primary-foreground" : "bg-primary/10 border-primary text-foreground"}`}
             >
               <div className="flex flex-col flex-1 min-w-0">
-                <p className="font-bold text-[12px] truncate mb-0.5 w-full">{replyToMessage.senderName}</p>
-                <p className={`opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full ${(!replyToMessage.text && !replyToMessage.mediaStorageId) ? "italic opacity-60" : ""}`}>
-                  {(!replyToMessage.text && !replyToMessage.mediaStorageId) 
-                    ? "🚫 This message was deleted" 
-                    : (replyToMessage.type === "text" ? replyToMessage.text : `Attachment: ${replyToMessage.type}`)
-                  }
+                <p className="font-bold text-[12px] truncate mb-0.5 w-full">
+                  {replyToMessage.senderName}
+                </p>
+                <p
+                  className={`opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full ${!replyToMessage.text && !replyToMessage.mediaStorageId ? "italic opacity-60" : ""}`}
+                >
+                  {!replyToMessage.text && !replyToMessage.mediaStorageId
+                    ? "🚫 This message was deleted"
+                    : replyToMessage.type === "text"
+                      ? replyToMessage.text
+                      : `Attachment: ${replyToMessage.type}`}
                 </p>
               </div>
-              
-              {/* ── FIX: Thumbnail sirf tab dikhao jab message deleted na ho ── */}
-              {replyToMessage.mediaStorageId && replyToMessage.text !== "" && localMediaCache[replyToMessage.mediaStorageId] && replyToMessage.type !== "file" && replyToMessage.type !== "audio" && (
-                <div className="relative w-9 h-9 rounded bg-black/10 shrink-0 overflow-hidden border border-border/50">
-                  {replyToMessage.type === "video" ? (
-                    <>
-                      <video src={localMediaCache[replyToMessage.mediaStorageId]} className="w-full h-full object-cover pointer-events-none" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <Play size={10} fill="white" className="text-white" />
-                      </div>
-                    </>
-                  ) : (
-                    <img src={localMediaCache[replyToMessage.mediaStorageId]} className="w-full h-full object-cover pointer-events-none" alt="thumb" />
-                  )}
-                </div>
-              )}
+
+              {replyToMessage.mediaStorageId &&
+                replyToMessage.text !== "" &&
+                localMediaCache[replyToMessage.mediaStorageId] &&
+                replyToMessage.type !== "file" &&
+                replyToMessage.type !== "audio" && (
+                  <div className="relative w-9 h-9 rounded bg-black/10 shrink-0 overflow-hidden border border-border/50">
+                    {replyToMessage.type === "video" ? (
+                      <>
+                        <video
+                          src={localMediaCache[replyToMessage.mediaStorageId]}
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Play size={10} fill="white" className="text-white" />
+                        </div>
+                      </>
+                    ) : (
+                      <img
+                        src={localMediaCache[replyToMessage.mediaStorageId]}
+                        className="w-full h-full object-cover pointer-events-none"
+                        alt="thumb"
+                      />
+                    )}
+                  </div>
+                )}
             </div>
           )}
 
@@ -278,7 +314,6 @@ export default function MessageBubble({
               onSelect={onSelect}
               senderName={isOwn ? "You" : "User"}
               sentAt={sentAt}
-              // ── FIX: Ye 2 lines add ki taake menu me download chal sake ── 
               mediaStorageId={mediaStorageId ?? undefined}
               mediaOriginalName={mediaOriginalName ?? undefined}
             />

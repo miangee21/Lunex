@@ -60,13 +60,10 @@ interface ChatState {
   setReplyingTo: (msg: ReplyingToState | null) => void;
   editingMessage: { id: string; text: string } | null;
   setEditingMessage: (msg: { id: string; text: string } | null) => void;
-  // ── FIX: Jump Engine State ──
   jumpToMessageId: string | null;
   setJumpToMessageId: (id: string | null) => void;
-  // ── FIX: Reaction Badge State ──
  seenReactions: Record<string, number>;
   markReactionAsSeen: (conversationId: string, timestamp: number) => void;
-  // ── FIX: Manual Scroll Trigger ──
   scrollToBottomTrigger: number;
   triggerScrollToBottom: () => void;
   sidebarOpen: boolean;
@@ -179,13 +176,10 @@ export const useChatStore = create<ChatState>()(
       setEditingMessage: (msg) =>
         set({ editingMessage: msg, replyingTo: null }),
 
-      // ── FIX: Jump Engine Initialization ──
       jumpToMessageId: null,
       setJumpToMessageId: (id) => set({ jumpToMessageId: id }),
-      // ── FIX: Reaction Badge State Init ──
       seenReactions: {},
       markReactionAsSeen: (convId, ts) => set((s) => ({ seenReactions: { ...s.seenReactions, [convId]: ts } })),
-      // ── FIX: Manual Scroll Trigger Init ──
       scrollToBottomTrigger: 0,
       triggerScrollToBottom: () => set((s) => ({ scrollToBottomTrigger: s.scrollToBottomTrigger + 1 })),
 

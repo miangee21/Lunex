@@ -94,7 +94,6 @@ export function useMediaUpload({
   ) => {
     const readyToSend: any[] = [];
 
-    // ── FIX: Generate a single batch ID for all files in this upload ──
     const uploadBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     for (let i = 0; i < items.length; i++) {
@@ -156,9 +155,13 @@ export function useMediaUpload({
           continue;
         }
 
+        const fileExt = item.file.name.split(".").pop() || "bin";
+        const maskedName = `lunex_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
         readyToSend.push({
           itemId: item.id,
           previewUrl: item.previewUrl,
+          originalFileNameForCache: item.file.name,
           messageData: {
             conversationId: conversationId as Id<"conversations">,
             senderId: userId as Id<"users">,
@@ -167,8 +170,8 @@ export function useMediaUpload({
             type: item.type,
             mediaStorageId: storageId as Id<"_storage">,
             mediaIv,
-            mediaOriginalName: item.file.name,
-            uploadBatchId: uploadBatchId, // ── FIX: Same batch ID attached to every file ──
+            mediaOriginalName: maskedName,
+            uploadBatchId: uploadBatchId,
           },
         });
       } catch (err) {
@@ -188,13 +191,13 @@ export function useMediaUpload({
         });
       }, 500);
 
-      const lastItem = readyToSend[readyToSend.length - 1].messageData;
+      const lastItemWrap = readyToSend[readyToSend.length - 1];
       const now = Date.now();
       updateLastMessageCache(conversationId, {
-        text: lastItem.mediaOriginalName,
+        text: lastItemWrap.originalFileNameForCache,
         senderId: userId!,
         sentAt: now,
-        type: lastItem.type,
+        type: lastItemWrap.messageData.type, 
       });
       updateReadByCache(conversationId, [{ userId: userId!, time: now }]);
     }

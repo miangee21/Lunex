@@ -15,7 +15,6 @@ export default function ReplyPreview() {
   if (!replyingTo) return null;
   const accentColor = activeChat?.myBubbleColor || "hsl(var(--primary))";
 
-  // ── FIX: Thumbnail URL ko cache se nikalna ──
   const thumbUrl = replyingTo.mediaStorageId ? localMediaCache[replyingTo.mediaStorageId] : null;
 
   const renderIcon = () => {
@@ -55,7 +54,7 @@ export default function ReplyPreview() {
         </div>
       </div>
 
-      {/* ── FIX: Thumbnail Image/Video Show karna ── */}
+      
       {thumbUrl && replyingTo.type !== "file" && replyingTo.type !== "audio" && (
         <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 ml-3 bg-black/10 border border-border/50 shadow-sm">
           {replyingTo.type === "video" ? (

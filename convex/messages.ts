@@ -189,6 +189,10 @@ export const deleteMessageForEveryone = mutation({
       deletedForEveryone: true,
       encryptedContent: "",
       iv: "",
+      mediaStorageId: undefined,
+      mediaIv: undefined,
+      mediaOriginalName: undefined,
+      type: "text",
     });
   },
 });
