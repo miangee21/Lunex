@@ -220,7 +220,6 @@ export default function MediaGridGroup({
   onDeleteClick,
 }: any) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
-  const { setReplyingTo } = useChatStore();
   const currentUserId = useAuthStore((s) => s.userId);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
