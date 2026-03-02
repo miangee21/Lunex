@@ -6,6 +6,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import {
   ChevronDown,
   Reply,
@@ -14,6 +16,7 @@ import {
   Pencil,
   Trash2,
   Info,
+  Download,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +42,8 @@ interface BubbleMenuProps {
   senderName?: string;
   sentAt?: number;
   onSelect?: () => void;
+  mediaStorageId?: string; // ── FIX: Download ke liye add kiya ──
+  mediaOriginalName?: string; // ── FIX: Original extension nikalne ke liye ──
 }
 
 export default function BubbleMenu({
@@ -49,8 +54,10 @@ export default function BubbleMenu({
   senderName = "User",
   sentAt = 0,
   onSelect,
+  mediaStorageId,
+  mediaOriginalName,
 }: BubbleMenuProps) {
-  const { setSelectedMessageForInfo, setReplyingTo, setEditingMessage } = useChatStore();
+  const { setSelectedMessageForInfo, setReplyingTo, setEditingMessage, localMediaCache } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
 
   const deleteMessageForMe = useMutation(api.messages.deleteMessageForMe);
@@ -67,6 +74,12 @@ export default function BubbleMenu({
   const handleDeleteForMe = async () => {
     if (!userId) return;
     try {
+      // ── RAM CLEANUP: Revoke blob URL before deleting ──
+      if (mediaStorageId && localMediaCache[mediaStorageId]) {
+        URL.revokeObjectURL(localMediaCache[mediaStorageId]);
+        console.log("RAM Cleared for media:", mediaStorageId);
+      }
+
       await deleteMessageForMe({ messageId: messageId as Id<"messages">, userId: userId as Id<"users"> });
       toast.success("Message deleted for you");
       setIsDeleteDialogOpen(false);
@@ -78,6 +91,12 @@ export default function BubbleMenu({
   const handleDeleteForEveryone = async () => {
     if (!userId) return;
     try {
+      // ── RAM CLEANUP: Revoke blob URL before deleting ──
+      if (mediaStorageId && localMediaCache[mediaStorageId]) {
+        URL.revokeObjectURL(localMediaCache[mediaStorageId]);
+        console.log("RAM Cleared for media:", mediaStorageId);
+      }
+
       await deleteMessageForEveryone({ messageId: messageId as Id<"messages">, userId: userId as Id<"users"> });
       toast.success("Message deleted for everyone");
       setIsDeleteDialogOpen(false);
@@ -131,6 +150,59 @@ export default function BubbleMenu({
         >
           <CheckSquare className="w-4 h-4 mr-2 text-muted-foreground" /> Select
         </DropdownMenuItem>
+
+        {/* ── Native Download Option ── */}
+        {type !== "text" && mediaStorageId && (
+          <DropdownMenuItem
+            className="cursor-pointer rounded-lg py-2"
+            onClick={async () => {
+              const url = localMediaCache[mediaStorageId];
+              if (!url) {
+                toast.error("File not loaded yet!");
+                return;
+              }
+
+              const originalName = mediaOriginalName || text || "media";
+              const extMatch = originalName.match(/\.([^.]+)$/);
+              const ext = extMatch ? extMatch[1] : (type === "image" ? "jpg" : type === "video" ? "mp4" : "bin");
+              
+              const randomStr = Math.random().toString(36).substring(2, 8);
+              const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
+
+              try {
+                const filePath = await save({
+                  defaultPath: fileName,
+                  title: "Save Media File",
+                });
+
+                if (!filePath) return;
+
+                const toastId = toast.loading("Saving file...");
+                const response = await fetch(url);
+                const arrayBuffer = await response.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                await writeFile(filePath, uint8Array);
+                toast.success("File saved successfully!", { id: toastId });
+
+              } catch (error: any) {
+                console.error("Native save failed:", error);
+                toast.error(`Save Failed: ${error.message || error}`);
+                
+                // ── Fallback ──
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                a.style.display = "none";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }
+            }}
+          >
+            <Download className="w-4 h-4 mr-2 text-muted-foreground" /> Download
+          </DropdownMenuItem>
+        )}
 
         {isOwn && (
           <>

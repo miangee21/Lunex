@@ -171,12 +171,16 @@ export default function MessageBubble({
             >
               <div className="flex flex-col flex-1 min-w-0">
                 <p className="font-bold text-[12px] truncate mb-0.5 w-full">{replyToMessage.senderName}</p>
-                <p className="opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full">
-                  {replyToMessage.type === "text" ? replyToMessage.text : `Attachment: ${replyToMessage.type}`}
+                <p className={`opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full ${(!replyToMessage.text && !replyToMessage.mediaStorageId) ? "italic opacity-60" : ""}`}>
+                  {(!replyToMessage.text && !replyToMessage.mediaStorageId) 
+                    ? "🚫 This message was deleted" 
+                    : (replyToMessage.type === "text" ? replyToMessage.text : `Attachment: ${replyToMessage.type}`)
+                  }
                 </p>
               </div>
               
-              {replyToMessage.mediaStorageId && localMediaCache[replyToMessage.mediaStorageId] && replyToMessage.type !== "file" && replyToMessage.type !== "audio" && (
+              {/* ── FIX: Thumbnail sirf tab dikhao jab message deleted na ho ── */}
+              {replyToMessage.mediaStorageId && replyToMessage.text !== "" && localMediaCache[replyToMessage.mediaStorageId] && replyToMessage.type !== "file" && replyToMessage.type !== "audio" && (
                 <div className="relative w-9 h-9 rounded bg-black/10 shrink-0 overflow-hidden border border-border/50">
                   {replyToMessage.type === "video" ? (
                     <>
@@ -273,7 +277,10 @@ export default function MessageBubble({
               isOwn={isOwn}
               onSelect={onSelect}
               senderName={isOwn ? "You" : "User"}
-              sentAt={sentAt} 
+              sentAt={sentAt}
+              // ── FIX: Ye 2 lines add ki taake menu me download chal sake ── 
+              mediaStorageId={mediaStorageId ?? undefined}
+              mediaOriginalName={mediaOriginalName ?? undefined}
             />
           </div>
         </div>

@@ -6,6 +6,8 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
 import { toast } from "sonner";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
@@ -189,12 +191,49 @@ export default function MediaPreview({
 
   async function handleDownload() {
     if (!fileUrl) return;
-    const a = document.createElement("a");
-    a.href = fileUrl;
-    a.download = currentItem.originalName ?? "lunex-media";
-    if (!currentItem.decryptedUrl) a.target = "_blank";
-    a.click();
-    toast.success(`${currentItem.originalName ?? "File"} downloading started!`);
+
+    // 1. Privacy ke liye Random Filename generate karna
+    const originalName = currentItem.originalName || "media";
+    const extMatch = originalName.match(/\.([^.]+)$/);
+    const ext = extMatch ? extMatch[1] : (currentItem.type === "image" ? "jpg" : currentItem.type === "video" ? "mp4" : "bin");
+    
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
+
+    try {
+      // 2. Native "Save As" Dialog (Tauri API)
+      const filePath = await save({
+        defaultPath: fileName,
+        title: "Save Media File",
+      });
+
+      // Agar user cancel kar de
+      if (!filePath) return;
+
+      const toastId = toast.loading("Saving file...");
+      
+      // 3. File data ko hard drive pe native tareeqe se likhna
+      const response = await fetch(fileUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      await writeFile(filePath, uint8Array);
+      
+      toast.success("File saved successfully!", { id: toastId });
+
+    } catch (error: any) {
+      console.error("Native save failed:", error);
+      toast.error(`Save Failed: ${error.message || error}`);
+
+      // ── FALLBACK ── (Agar Tauri permissions ka masla ho)
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = fileName;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   }
 
   function showInfo() {
