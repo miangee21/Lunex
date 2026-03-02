@@ -35,6 +35,7 @@ export type DecryptedMessage = {
   mediaStorageId: string | null;
   mediaIv: string | null;
   mediaOriginalName: string | null;
+  uploadBatchId: string | null;
   reactions: Array<{ userId: string; emoji: string }>;
   editedAt: number | null;
   readBy: { userId: string; time: number }[];
@@ -76,10 +77,25 @@ export default function ChatArea() {
   );
 
   function toggleSelectMessage(id: string) {
+    const msg = decryptedMessages.find(m => m.id === id);
+    if (!msg) return;
+
     setSelectedMessages((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const isAlreadySelected = next.has(id);
+
+      // Agar message kisi batch ka hissa hai, tou poore batch ko ek sath select/deselect karein
+      if (msg.uploadBatchId) {
+        const batchMsgs = decryptedMessages.filter(m => m.uploadBatchId === msg.uploadBatchId);
+        batchMsgs.forEach(bm => {
+          if (isAlreadySelected) next.delete(bm.id);
+          else next.add(bm.id);
+        });
+      } else {
+        // Agar single message hai
+        if (isAlreadySelected) next.delete(id);
+        else next.add(id);
+      }
       return next;
     });
   }
@@ -88,6 +104,15 @@ export default function ChatArea() {
     setSelectMode(false);
     setSelectedMessages(new Set());
   }
+  // ── FIX: Listen for single media delete from Preview ──
+  useEffect(() => {
+    const handleSingleDelete = (e: any) => {
+      setSelectedMessages(new Set([e.detail.id]));
+      setIsDeleteDialogOpen(true);
+    };
+    window.addEventListener("open-delete-modal-for-single", handleSingleDelete);
+    return () => window.removeEventListener("open-delete-modal-for-single", handleSingleDelete);
+  }, []);
 
   useEffect(() => {
     const handleClick = () => {
@@ -227,7 +252,8 @@ export default function ChatArea() {
             mediaStorageId: msg.mediaStorageId ?? null,
             mediaIv: msg.mediaIv ?? null,
             mediaOriginalName: msg.mediaOriginalName ?? null,
-            reactions: decryptedReactions, // ── FIX: Plain text ki jagah decrypted pass kiye ──
+            uploadBatchId: msg.uploadBatchId ?? null,
+            reactions: decryptedReactions,
             editedAt: msg.editedAt,
             readBy: msg.readBy,
             deliveredTo: msg.deliveredTo,
@@ -358,13 +384,14 @@ export default function ChatArea() {
     while (i < visibleMessages.length) {
       const msg = visibleMessages[i];
 
-      if (msg.type !== "text" && !selectMode) {
+      if (msg.type !== "text") { // ── FIX: Removed !selectMode taake grid divide na ho ──
         const group: typeof visibleMessages = [];
         let j = i;
         while (
           j < visibleMessages.length &&
           visibleMessages[j].type !== "text" &&
-          visibleMessages[j].senderId === msg.senderId
+          visibleMessages[j].senderId === msg.senderId &&
+          (j === i || (msg.uploadBatchId && visibleMessages[j].uploadBatchId === msg.uploadBatchId))
         ) {
           group.push(visibleMessages[j]);
           j++;
@@ -373,24 +400,50 @@ export default function ChatArea() {
         if (group.length > 1) {
           const displayGroup = group.slice(0, 4);
           const extraCount = group.length > 4 ? group.length - 4 : 0;
-
+          
+          // ── FIX: Grid ko selectable wrapper me daal diya checkbox ke sath ──
           elements.push(
-            <MediaGridGroup
+            <div
               key={`wrap-${msg.id}`}
-              displayGroup={displayGroup}
-              group={group}
-              extraCount={extraCount}
-              secretKey={secretKey}
-              otherUser={otherUser}
-              activeChat={activeChat}
-              isGroupOwn={msg.isOwn}
-              setGridMenuOpen={setGridMenuOpen}
-              gridMenuOpen={gridMenuOpen}
-              toggleSelectMessage={toggleSelectMessage}
-              selectMode={selectMode}
-              setSelectMode={setSelectMode}
-              selectedMessages={selectedMessages}
-            />,
+              id={`wrap-${msg.id}`} // ── FIX: Scroll ke liye id add ki ──
+              onClick={() => selectMode && toggleSelectMessage(msg.id)}
+              className={selectMode ? "cursor-pointer" : ""}
+            >
+              {selectMode && (
+                <div className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} mb-1`}>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedMessages.has(msg.id) ? "bg-primary border-primary" : "border-muted-foreground"}`}>
+                    {selectedMessages.has(msg.id) && (
+                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className={selectMode ? "pointer-events-none" : ""}>
+                <MediaGridGroup
+                  displayGroup={displayGroup}
+                  group={group}
+                  extraCount={extraCount}
+                  secretKey={secretKey}
+                  otherUser={otherUser}
+                  activeChat={activeChat}
+                  isGroupOwn={msg.isOwn}
+                  setGridMenuOpen={setGridMenuOpen}
+                  gridMenuOpen={gridMenuOpen}
+                  toggleSelectMessage={toggleSelectMessage}
+                  selectMode={selectMode}
+                  setSelectMode={setSelectMode}
+                  selectedMessages={selectedMessages}
+                  onDeleteClick={() => {
+                    // ── FIX: Direct select grid and open modal ──
+                    const batchIds = group.map((m: any) => m.id);
+                    setSelectedMessages(new Set(batchIds));
+                    setIsDeleteDialogOpen(true);
+                  }}
+                />
+              </div>
+            </div>
           );
           i = j;
           continue;
@@ -456,10 +509,11 @@ export default function ChatArea() {
               const senderName = originalMsg.isOwn ? "You" : (activeChat?.username || "User");
               
               return {
-                id: originalMsg.id, // ── FIX: Scroll karne k lea ID pass ki ──
+                id: originalMsg.id, 
                 text: originalMsg.text,
                 senderName,
                 type: originalMsg.type,
+                mediaStorageId: originalMsg.mediaStorageId, // ── FIX: Thumbnail k lea ID bheji ──
               };
             })()}
             onSelect={() => {
@@ -487,11 +541,21 @@ export default function ChatArea() {
   const selectedArray = Array.from(selectedMessages);
   let canDeleteForEveryone = false;
 
-  if (selectedArray.length === 1) {
-    const msgToDel = decryptedMessages.find((m) => m.id === selectedArray[0]);
+  if (selectedArray.length > 0) {
+    const selectedMsgs = selectedArray.map(id => decryptedMessages.find(m => m.id === id)).filter(Boolean);
     const ONE_HOUR = 60 * 60 * 1000;
-    if (msgToDel?.isOwn && Date.now() - msgToDel.timestamp < ONE_HOUR) {
-      canDeleteForEveryone = true;
+    const allOwn = selectedMsgs.every(m => m!.isOwn);
+    const allWithinTime = selectedMsgs.every(m => Date.now() - m!.timestamp < ONE_HOUR);
+
+    if (allOwn && allWithinTime) {
+      if (selectedArray.length === 1) {
+        canDeleteForEveryone = true;
+      } else {
+        const firstBatchId = selectedMsgs[0]!.uploadBatchId;
+        if (firstBatchId && selectedMsgs.every(m => m!.uploadBatchId === firstBatchId)) {
+          canDeleteForEveryone = true;
+        }
+      }
     }
   }
 
@@ -512,17 +576,23 @@ export default function ChatArea() {
   };
 
   const handleBulkDeleteForEveryone = async () => {
-    if (!userId || selectedArray.length !== 1) return;
+    if (!userId || selectedArray.length === 0) return;
+
     try {
-      await deleteMessageForEveryone({ 
-        messageId: selectedArray[0] as Id<"messages">, 
-        userId: userId as Id<"users"> 
-      });
-      toast.success("Message deleted for everyone");
+      await Promise.all(
+        selectedArray.map((msgId) =>
+          deleteMessageForEveryone({
+            messageId: msgId as Id<"messages">,
+            userId: userId as Id<"users">
+          })
+        )
+      );
+
+      toast.success("Messages deleted for everyone");
       setIsDeleteDialogOpen(false);
       exitSelectMode();
     } catch {
-      toast.error("Failed to delete message");
+      toast.error("Failed to delete messages");
     }
   };
 

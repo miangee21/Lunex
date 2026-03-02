@@ -6,14 +6,17 @@ import {
   Video,
   FileText,
   Headphones,
+  Play,
 } from "lucide-react";
 
 export default function ReplyPreview() {
-  const { replyingTo, setReplyingTo, activeChat } = useChatStore();
+  const { replyingTo, setReplyingTo, activeChat, localMediaCache } = useChatStore();
 
   if (!replyingTo) return null;
-
   const accentColor = activeChat?.myBubbleColor || "hsl(var(--primary))";
+
+  // ── FIX: Thumbnail URL ko cache se nikalna ──
+  const thumbUrl = replyingTo.mediaStorageId ? localMediaCache[replyingTo.mediaStorageId] : null;
 
   const renderIcon = () => {
     switch (replyingTo.type) {
@@ -51,6 +54,22 @@ export default function ReplyPreview() {
           </p>
         </div>
       </div>
+
+      {/* ── FIX: Thumbnail Image/Video Show karna ── */}
+      {thumbUrl && replyingTo.type !== "file" && replyingTo.type !== "audio" && (
+        <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 ml-3 bg-black/10 border border-border/50 shadow-sm">
+          {replyingTo.type === "video" ? (
+            <>
+              <video src={thumbUrl} className="w-full h-full object-cover pointer-events-none" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <Play size={12} fill="white" className="text-white" />
+              </div>
+            </>
+          ) : (
+            <img src={thumbUrl} className="w-full h-full object-cover pointer-events-none" alt="thumb" />
+          )}
+        </div>
+      )}
 
       <button
         onClick={() => setReplyingTo(null)}

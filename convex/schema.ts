@@ -74,6 +74,7 @@ export default defineSchema({
     mediaDeletedAt: v.optional(v.number()),
     mediaExpiresAt: v.optional(v.number()),
     mediaOriginalName: v.optional(v.string()),
+    uploadBatchId: v.optional(v.string()),
     replyToMessageId: v.optional(v.id("messages")),
     reactions: v.optional(
       v.array(

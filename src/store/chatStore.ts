@@ -52,6 +52,7 @@ export interface ReplyingToState {
   text: string;
   senderName: string;
   type: string;
+  mediaStorageId?: string;
 }
 
 interface ChatState {

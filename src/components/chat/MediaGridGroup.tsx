@@ -10,6 +10,7 @@ import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import { toast } from "sonner";
 import { type DecryptedMessage } from "@/components/chat/ChatArea";
+
 import {
   decryptMediaFile,
   getMimeTypeFromName,
@@ -215,6 +216,7 @@ export default function MediaGridGroup({
   selectMode,
   setSelectMode,
   selectedMessages,
+  onDeleteClick,
 }: any) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
   const { setReplyingTo } = useChatStore();
@@ -366,22 +368,51 @@ export default function MediaGridGroup({
             )}
           </div>
 
-          <button onClick={(e) => { e.stopPropagation(); setGridMenuOpen(msg.id); }} className={`absolute top-2.5 right-2.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md z-10`}>
-            <ChevronDown size={14} />
-          </button>
+          {/* ── Menu Trigger Button (Chevron) ── */}
+          <div className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-30 ${gridMenuOpen === msg.id ? "opacity-100" : ""}`}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setGridMenuOpen(gridMenuOpen === msg.id ? null : msg.id);
+              }}
+              className="w-6 h-6 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md shadow-sm"
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
 
+          {/* ── Menu Dropdown Wrapper ── */}
           {gridMenuOpen === msg.id && (
             <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
               <button onClick={(e) => { 
                 e.stopPropagation(); 
-                // ── FIX: Reply to entire grid ──
-                setReplyingTo({ id: msg.id, text: `Media Grid (${group.length} items)`, senderName: isGroupOwn ? "You" : (otherUser?.username || "User"), type: msg.type });
                 setGridMenuOpen(null);
+                
+                let missingFiles = false;
+                group.forEach((m: any) => {
+                  if (m.mediaStorageId && !localMediaCache[m.mediaStorageId]) missingFiles = true;
+                });
+
+                if (missingFiles) {
+                  setForceDownload(true);
+                  toast.info("Decrypting secure files... Please click Download All again in a moment.");
+                  return;
+                }
+
+                // ── FIX: Bina delay ke direct download taake WebView block na kare ──
+                group.forEach((m: any, index: number) => {
+                  if (m.mediaStorageId && localMediaCache[m.mediaStorageId]) {
+                    const a = document.createElement("a");
+                    a.href = localMediaCache[m.mediaStorageId];
+                    a.download = m.mediaOriginalName || `lunex-media-${index + 1}`;
+                    a.style.display = "none";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }
+                });
+                toast.success(`Downloading ${group.length} files...`);
               }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors">
-                <CornerDownLeft size={14} className="text-muted-foreground" /> Reply Grid
-              </button>
-              
-              <button onClick={(e) => { e.stopPropagation(); toast.success("Feature coming soon!"); setGridMenuOpen(null); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors">
                 <Download size={14} className="text-muted-foreground" /> Download All
               </button>
               
@@ -393,12 +424,10 @@ export default function MediaGridGroup({
               
               <div className="h-px bg-border w-full" />
               
-              {/* ── FIX: 1 Single Delete Button that selects the grid ── */}
               <button onClick={(e) => { 
-                e.stopPropagation(); 
-                handleSelectGrid(); 
+                e.stopPropagation();
                 setGridMenuOpen(null);
-                toast.info("Grid selected! Use the delete icon on top to delete."); 
+                if (onDeleteClick) onDeleteClick(); // ── FIX: Direct Modal open karega ──
               }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-destructive/10 transition-colors text-destructive">
                 <Trash2 size={14} /> Delete Grid
               </button>

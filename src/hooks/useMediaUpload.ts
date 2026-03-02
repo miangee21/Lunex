@@ -94,6 +94,9 @@ export function useMediaUpload({
   ) => {
     const readyToSend: any[] = [];
 
+    // ── FIX: Generate a single batch ID for all files in this upload ──
+    const uploadBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
 
@@ -165,6 +168,7 @@ export function useMediaUpload({
             mediaStorageId: storageId as Id<"_storage">,
             mediaIv,
             mediaOriginalName: item.file.name,
+            uploadBatchId: uploadBatchId, // ── FIX: Same batch ID attached to every file ──
           },
         });
       } catch (err) {

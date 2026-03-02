@@ -8,8 +8,9 @@ import BubbleMenu from "@/components/chat/BubbleMenu";
 import BubbleMedia from "@/components/chat/BubbleMedia";
 
 import EmojiPicker from "@/components/chat/EmojiPicker";
-import { Smile, Plus } from "lucide-react";
+import { Smile, Plus, Play } from "lucide-react";
 import { toast } from "sonner";
+import { useChatStore } from "@/store/chatStore";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 
@@ -28,7 +29,7 @@ interface MessageBubbleProps {
   deliveredTo?: { userId: string; time: number }[];
   otherUserId?: string;
   onSelect?: () => void;
-  replyToMessage?: { id: string; text: string; senderName: string; type: string; } | null;
+  replyToMessage?: { id: string; text: string; senderName: string; type: string; mediaStorageId?: string | null; } | null;
   sentAt?: number;
   secretKey?: Uint8Array | null; // ── FIX: String ki jagah asal type likh di ──
   otherUserPublicKey?: string;
@@ -61,8 +62,8 @@ export default function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const isMedia = type !== "text";
-
   const currentUserId = useAuthStore((s) => s.userId);
+  const localMediaCache = useChatStore((s) => s.localMediaCache); // ── FIX: Thumbnail URL Cache ──
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
 
@@ -117,21 +118,24 @@ export default function MessageBubble({
   // ── FIX: Scroll to Original Message Logic ──
   const handleScrollToOriginal = () => {
     if (!replyToMessage?.id) return;
-    const element = document.getElementById(`message-${replyToMessage.id}`);
+
+    // ── FIX: Agar Media File hai toh sidha uski Preview Open kar do ──
+    if (replyToMessage.type !== "text") {
+      window.dispatchEvent(new CustomEvent("reopen-preview", { detail: { id: replyToMessage.id } }));
+    }
+
+    const element = document.getElementById(`message-${replyToMessage.id}`) || document.getElementById(`wrap-${replyToMessage.id}`);
     
     if (element) {
-      // 1. Smooth scroll kero us message tak
       element.scrollIntoView({ behavior: "smooth", block: "center" });
-      
-      // 2. Highlight effect dalo (WhatsApp ki tarah)
       element.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
-      
-      // 3. 1.2 second baad highlight hata do
       setTimeout(() => {
         element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
       }, 1200);
     } else {
-      toast.info("Message is older and not loaded yet.");
+      if (replyToMessage.type === "text") {
+        toast.info("Message is older and not loaded yet.");
+      }
     }
   };
 
@@ -163,13 +167,29 @@ export default function MessageBubble({
           {replyToMessage && (
             <div 
               onClick={handleScrollToOriginal}
-              // ── MAGIC TRICK: "w-0 min-w-full flex flex-col" lagaya taake ye apni lambaai chhor de aur 100% parent ko follow kare ──
-              className={`mb-1.5 px-2.5 py-1.5 rounded-lg text-sm border-l-4 opacity-90 overflow-hidden cursor-pointer hover:opacity-100 transition-opacity flex flex-col w-0 min-w-full ${isOwn ? "bg-primary-foreground/20 border-primary-foreground text-primary-foreground" : "bg-primary/10 border-primary text-foreground"}`}
+              className={`mb-1.5 px-2.5 py-1.5 rounded-lg text-sm border-l-4 opacity-90 overflow-hidden cursor-pointer hover:opacity-100 transition-opacity flex flex-row items-center gap-2 w-0 min-w-full ${isOwn ? "bg-primary-foreground/20 border-primary-foreground text-primary-foreground" : "bg-primary/10 border-primary text-foreground"}`}
             >
-              <p className="font-bold text-[12px] truncate mb-0.5 w-full">{replyToMessage.senderName}</p>
-              <p className="opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full">
-                {replyToMessage.type === "text" ? replyToMessage.text : `Attachment: ${replyToMessage.type}`}
-              </p>
+              <div className="flex flex-col flex-1 min-w-0">
+                <p className="font-bold text-[12px] truncate mb-0.5 w-full">{replyToMessage.senderName}</p>
+                <p className="opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full">
+                  {replyToMessage.type === "text" ? replyToMessage.text : `Attachment: ${replyToMessage.type}`}
+                </p>
+              </div>
+              
+              {replyToMessage.mediaStorageId && localMediaCache[replyToMessage.mediaStorageId] && replyToMessage.type !== "file" && replyToMessage.type !== "audio" && (
+                <div className="relative w-9 h-9 rounded bg-black/10 shrink-0 overflow-hidden border border-border/50">
+                  {replyToMessage.type === "video" ? (
+                    <>
+                      <video src={localMediaCache[replyToMessage.mediaStorageId]} className="w-full h-full object-cover pointer-events-none" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <Play size={10} fill="white" className="text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <img src={localMediaCache[replyToMessage.mediaStorageId]} className="w-full h-full object-cover pointer-events-none" alt="thumb" />
+                  )}
+                </div>
+              )}
             </div>
           )}
 

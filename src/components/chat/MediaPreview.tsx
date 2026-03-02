@@ -1,5 +1,6 @@
 //src/components/chat/MediaPreview.tsx
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -19,6 +20,8 @@ import {
   Image as ImageIcon,
   FileText,
   Play,
+  CornerDownLeft,
+  Trash2,
 } from "lucide-react";
 
 interface MediaPreviewProps {
@@ -69,6 +72,8 @@ export default function MediaPreview({
   const setSelectedMessageForInfo = useChatStore(
     (s) => s.setSelectedMessageForInfo,
   );
+  const setReplyingTo = useChatStore((s) => s.setReplyingTo);
+  const activeChat = useChatStore((s) => s.activeChat);
 
   const isGallery = gallery.length > 1;
 
@@ -212,7 +217,28 @@ export default function MediaPreview({
     }
   }
 
-  return (
+  function handleReply() {
+    if (currentItem.messageId) {
+      setReplyingTo({
+        id: currentItem.messageId,
+        text: currentItem.originalName || "Media",
+        senderName: currentItem.isOwn ? "You" : (activeChat?.username || "User"),
+        type: currentItem.type,
+        mediaStorageId: currentItem.storageId // ── FIX: Thumbnail ke liye save kar rahe hain ──
+      });
+      onClose();
+    }
+  }
+
+  function handleDelete() {
+    if (currentItem.messageId) {
+      // ── FIX: ChatArea ko signal bhejta hai ke modal open karo ──
+      window.dispatchEvent(new CustomEvent("open-delete-modal-for-single", { detail: { id: currentItem.messageId } }));
+      onClose();
+    }
+  }
+
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col animate-in fade-in duration-200"
       onClick={onClose}
@@ -236,6 +262,14 @@ export default function MediaPreview({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={handleReply}
+            className="p-2.5 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            title="Reply"
+          >
+            <CornerDownLeft size={18} />
+          </button>
+
           {currentItem.isOwn && (
             <button
               onClick={showInfo}
@@ -245,6 +279,14 @@ export default function MediaPreview({
               <Info size={18} />
             </button>
           )}
+
+          <button
+            onClick={handleDelete}
+            className="p-2.5 rounded-full text-white/70 hover:text-red-400 hover:bg-white/10 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={18} />
+          </button>
 
           {currentItem.type === "image" && (
             <div className="hidden sm:flex items-center gap-1 mr-2 border-r border-white/20 pr-3">
@@ -439,4 +481,6 @@ export default function MediaPreview({
       )}
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
