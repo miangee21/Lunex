@@ -47,7 +47,27 @@ export interface PendingUpload {
   status: "uploading" | "error";
 }
 
+export interface ReplyingToState {
+  id: string;
+  text: string;
+  senderName: string;
+  type: string;
+}
+
 interface ChatState {
+  replyingTo: ReplyingToState | null;
+  setReplyingTo: (msg: ReplyingToState | null) => void;
+  editingMessage: { id: string; text: string } | null;
+  setEditingMessage: (msg: { id: string; text: string } | null) => void;
+  // ── FIX: Jump Engine State ──
+  jumpToMessageId: string | null;
+  setJumpToMessageId: (id: string | null) => void;
+  // ── FIX: Reaction Badge State ──
+ seenReactions: Record<string, number>;
+  markReactionAsSeen: (conversationId: string, timestamp: number) => void;
+  // ── FIX: Manual Scroll Trigger ──
+  scrollToBottomTrigger: number;
+  triggerScrollToBottom: () => void;
   sidebarOpen: boolean;
   sidebarView: SidebarView;
   toggleSidebar: () => void;
@@ -150,6 +170,23 @@ export const useChatStore = create<ChatState>()(
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+     replyingTo: null,
+      setReplyingTo: (msg) => set({ replyingTo: msg, editingMessage: null }),
+
+      editingMessage: null,
+      setEditingMessage: (msg) =>
+        set({ editingMessage: msg, replyingTo: null }),
+
+      // ── FIX: Jump Engine Initialization ──
+      jumpToMessageId: null,
+      setJumpToMessageId: (id) => set({ jumpToMessageId: id }),
+      // ── FIX: Reaction Badge State Init ──
+      seenReactions: {},
+      markReactionAsSeen: (convId, ts) => set((s) => ({ seenReactions: { ...s.seenReactions, [convId]: ts } })),
+      // ── FIX: Manual Scroll Trigger Init ──
+      scrollToBottomTrigger: 0,
+      triggerScrollToBottom: () => set((s) => ({ scrollToBottomTrigger: s.scrollToBottomTrigger + 1 })),
 
       localThemes: {},
       activeChat: null,
@@ -340,7 +377,7 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: "lunex-chat-themes-cloud-sync",
-      partialize: (state) => ({ localThemes: state.localThemes }),
+      partialize: (state) => ({ localThemes: state.localThemes, seenReactions: state.seenReactions }),
     },
   ),
 );

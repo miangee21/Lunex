@@ -10,6 +10,15 @@ import ChatInput from "@/components/chat/ChatInput";
 import MessageBubble from "@/components/chat/ChatBubble";
 import { CheckSquare, X } from "lucide-react";
 import { decryptMessage } from "@/crypto/encryption";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import MediaGridGroup from "@/components/chat/MediaGridGroup";
 import PendingUploadsList from "@/components/chat/PendingUploadsList";
@@ -30,6 +39,7 @@ export type DecryptedMessage = {
   editedAt: number | null;
   readBy: { userId: string; time: number }[];
   deliveredTo: { userId: string; time: number }[];
+  replyToMessageId: string | null;
 };
 
 export default function ChatArea() {
@@ -41,6 +51,10 @@ export default function ChatArea() {
     updateReadByCache,
     updateDeliveredToCache,
     pendingUploads,
+    jumpToMessageId,
+    setJumpToMessageId,
+    markReactionAsSeen, 
+    scrollToBottomTrigger, // ── FIX: Store se state nikala ──
   } = useChatStore();
 
   const userId = useAuthStore((s) => s.userId);
@@ -129,6 +143,11 @@ export default function ChatArea() {
 
   const markAsRead = useMutation(api.messages.markMessagesAsRead);
   const markAsDelivered = useMutation(api.messages.markAsDelivered);
+  
+  // ── FIX: Delete Mutations & Modal State ──
+  const deleteMessageForMe = useMutation(api.messages.deleteMessageForMe);
+  const deleteMessageForEveryone = useMutation(api.messages.deleteMessageForEveryone);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const otherUser = useQuery(
     api.users.getUserById,
@@ -145,8 +164,10 @@ export default function ChatArea() {
         conversationId: activeChat.conversationId as Id<"conversations">,
         userId: userId as Id<"users">,
       });
+      // ── FIX: Mark reaction as seen so badge disappears ──
+      markReactionAsSeen(activeChat.conversationId, Date.now());
     }
-  }, [activeChat?.conversationId, rawMessages?.length]);
+  }, [activeChat?.conversationId, rawMessages?.length, markReactionAsSeen]);
 
   const [decryptedMessages, setDecryptedMessages] = useState<
     DecryptedMessage[]
@@ -173,6 +194,24 @@ export default function ChatArea() {
           } catch {
             text = "🔒 Unable to decrypt message";
           }
+
+         // ── FIX: REACTION DECRYPTION ENGINE ──
+          let decryptedReactions: Array<{ userId: string; emoji: string }> = []; // ── FIX: TypeScript ko type bata di ──
+          if (msg.reactions && msg.reactions.length > 0) {
+            decryptedReactions = msg.reactions.map((r: any) => {
+              // Agar purana unencrypted reaction hai toh usay chalne do
+              if (r.emoji) return { userId: r.userId, emoji: r.emoji }; 
+              try {
+                if (!otherUser?.publicKey) return { userId: r.userId, emoji: "🔒" };
+                const theirPublicKey = base64ToKey(otherUser.publicKey);
+                const decEmoji = decryptMessage({ encryptedContent: r.encryptedEmoji, iv: r.iv }, secretKey!, theirPublicKey);
+                return { userId: r.userId, emoji: decEmoji };
+              } catch {
+                return { userId: r.userId, emoji: "🔒" };
+              }
+            });
+          }
+
           return {
             id: msg.id,
             text,
@@ -188,10 +227,11 @@ export default function ChatArea() {
             mediaStorageId: msg.mediaStorageId ?? null,
             mediaIv: msg.mediaIv ?? null,
             mediaOriginalName: msg.mediaOriginalName ?? null,
-            reactions: msg.reactions,
+            reactions: decryptedReactions, // ── FIX: Plain text ki jagah decrypted pass kiye ──
             editedAt: msg.editedAt,
             readBy: msg.readBy,
             deliveredTo: msg.deliveredTo,
+            replyToMessageId: msg.replyToMessageId ?? null,
           };
         }),
       );
@@ -232,9 +272,41 @@ export default function ChatArea() {
     }
   }, [currentPending.length, pendingPreviewIndex]);
 
+ // ── FIX: PERFECT AUTO-SCROLL ENGINE ──
+  const prevMsgCount = useRef(0);
+  const prevScrollTrigger = useRef(scrollToBottomTrigger); // ── FIX: Trigger memory ──
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [decryptedMessages, currentPending.length]);
+    // SCENARIO 1: Jump karna ha (Sidebar se click)
+    if (jumpToMessageId && decryptedMessages.length > 0) {
+      setTimeout(() => {
+        const element = document.getElementById(`message-${jumpToMessageId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+          setTimeout(() => {
+            element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+          }, 1200);
+          setJumpToMessageId(null);
+        }
+      }, 300);
+      prevMsgCount.current = decryptedMessages.length;
+      return; 
+    } 
+    
+    // SCENARIO 2: Normal Scrolling
+    if (!jumpToMessageId) {
+      const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current; // ── FIX: Pata lagaya k user ne click kia ha ──
+      
+      // Agar naya message aya HA YA user ne chatsidebar pe click kia ha, tu bottom pe le jao
+      if (decryptedMessages.length > prevMsgCount.current || currentPending.length > 0 || isManualTrigger) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+    
+    prevMsgCount.current = decryptedMessages.length;
+    prevScrollTrigger.current = scrollToBottomTrigger; // ── FIX: Memory update ──
+  }, [decryptedMessages.length, currentPending.length, jumpToMessageId, setJumpToMessageId, scrollToBottomTrigger]); // ── FIX: Dependency add ki ── 
 
   if (!activeChat) return null;
 
@@ -370,6 +442,26 @@ export default function ChatArea() {
             readBy={msg.readBy}
             deliveredTo={msg.deliveredTo}
             otherUserId={activeChat?.userId}
+            // ── FIX: ACTUAL TIMESTAMP AUR QUOTED BUBBLE DATA ──
+            sentAt={msg.timestamp} 
+            secretKey={secretKey} // ── FIX: Keys pass ki encryption k lea ──
+            otherUserPublicKey={otherUser?.publicKey}
+            replyToMessage={(() => {
+              if (!msg.replyToMessageId) return null;
+              // Message list mein original message dhoondo
+              const originalMsg = decryptedMessages.find(m => m.id === msg.replyToMessageId);
+              if (!originalMsg) return null;
+              
+              // Sender name nikalo (Agar apna hai toh "You", warna doosre ka username)
+              const senderName = originalMsg.isOwn ? "You" : (activeChat?.username || "User");
+              
+              return {
+                id: originalMsg.id, // ── FIX: Scroll karne k lea ID pass ki ──
+                text: originalMsg.text,
+                senderName,
+                type: originalMsg.type,
+              };
+            })()}
             onSelect={() => {
               setSelectMode(true);
               toggleSelectMessage(msg.id);
@@ -390,6 +482,49 @@ export default function ChatArea() {
     otherUser,
     activeChat,
   ]);
+
+  // ── FIX: Delete Logic (1 Hour Check & Ownership) ──
+  const selectedArray = Array.from(selectedMessages);
+  let canDeleteForEveryone = false;
+
+  if (selectedArray.length === 1) {
+    const msgToDel = decryptedMessages.find((m) => m.id === selectedArray[0]);
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (msgToDel?.isOwn && Date.now() - msgToDel.timestamp < ONE_HOUR) {
+      canDeleteForEveryone = true;
+    }
+  }
+
+  const handleBulkDeleteForMe = async () => {
+    if (!userId) return;
+    try {
+      await Promise.all(
+        selectedArray.map((msgId) =>
+          deleteMessageForMe({ messageId: msgId as Id<"messages">, userId: userId as Id<"users"> })
+        )
+      );
+      toast.success("Messages deleted for you");
+      setIsDeleteDialogOpen(false);
+      exitSelectMode();
+    } catch {
+      toast.error("Failed to delete messages");
+    }
+  };
+
+  const handleBulkDeleteForEveryone = async () => {
+    if (!userId || selectedArray.length !== 1) return;
+    try {
+      await deleteMessageForEveryone({ 
+        messageId: selectedArray[0] as Id<"messages">, 
+        userId: userId as Id<"users"> 
+      });
+      toast.success("Message deleted for everyone");
+      setIsDeleteDialogOpen(false);
+      exitSelectMode();
+    } catch {
+      toast.error("Failed to delete message");
+    }
+  };
 
   return (
     <div
@@ -453,11 +588,49 @@ export default function ChatArea() {
         selectMode={selectMode}
         selectedCount={selectedMessages.size}
         onCancelSelect={exitSelectMode}
-        onDeleteSelected={() => {
-          console.log("Deleting:", Array.from(selectedMessages));
-          exitSelectMode();
-        }}
+        onDeleteSelected={() => setIsDeleteDialogOpen(true)}
       />
+
+      {/* ── PROFESSIONAL DELETE MODAL (SELECT MODE) ── */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground font-bold">
+              {selectedArray.length > 1 ? `Delete ${selectedArray.length} messages?` : "Delete message?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-[15px] leading-relaxed">
+              {canDeleteForEveryone 
+                ? "You can delete this message for everyone or just for yourself." 
+                : selectedArray.length > 1 
+                  ? "Are you sure you want to delete these messages for yourself? This cannot be undone."
+                  : "Are you sure you want to delete this message for yourself? This cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <AlertDialogFooter className="mt-4 flex-col sm:flex-row gap-2">
+            <button 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold hover:bg-accent border border-transparent hover:border-border transition-colors w-full sm:w-auto text-foreground"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleBulkDeleteForMe}
+              className="px-4 py-2 rounded-xl text-sm font-semibold border border-border bg-transparent hover:bg-accent transition-colors w-full sm:w-auto text-foreground"
+            >
+              Delete for me
+            </button>
+            {canDeleteForEveryone && (
+              <button 
+                onClick={handleBulkDeleteForEveryone}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-destructive text-white hover:bg-destructive/90 transition-colors w-full sm:w-auto"
+              >
+                Delete for everyone
+              </button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {contextMenu && (
         <div

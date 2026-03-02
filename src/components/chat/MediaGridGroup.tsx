@@ -1,11 +1,13 @@
-//src/components/chat/MediaPreview.tsx
-import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
+//src/components/chat/MediaGridGroup.tsx
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
+import { useAuthStore } from "@/store/authStore";
 import MediaPreview from "@/components/chat/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
+import EmojiPicker from "@/components/chat/EmojiPicker";
 import { toast } from "sonner";
 import { type DecryptedMessage } from "@/components/chat/ChatArea";
 import {
@@ -13,6 +15,7 @@ import {
   getMimeTypeFromName,
 } from "@/crypto/mediaEncryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import { encryptMessage } from "@/crypto/encryption";
 import {
   Play,
   FileText,
@@ -23,6 +26,8 @@ import {
   CornerDownLeft,
   CheckSquare,
   Trash2,
+  Smile,
+  Plus,
 } from "lucide-react";
 
 function MediaGridItem({
@@ -212,194 +217,245 @@ export default function MediaGridGroup({
   selectedMessages,
 }: any) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
+  const { setReplyingTo } = useChatStore();
+  const currentUserId = useAuthStore((s) => s.userId);
+  const addReaction = useMutation(api.messages.addReaction);
+  const removeReaction = useMutation(api.messages.removeReaction);
+
+  const [forceDownload, setForceDownload] = useState(false);
+  const [showQuickReact, setShowQuickReact] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
   const allDownloaded =
     isGroupOwn ||
     displayGroup.every(
       (m: any) => m.mediaStorageId && localMediaCache[m.mediaStorageId],
     );
-  const [forceDownload, setForceDownload] = useState(false);
 
-  const msg = group[group.length - 1];
+  const msg = group[group.length - 1]; // Grid ka aakhri message
+  const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+  
+  // Agar grid ka koi 1 message bhi select hai tu grid select maani jayegi
+  const isGridSelected = group.some((m: any) => selectedMessages.has(m.id));
+
+  // ── FIX: Poori Grid ko ek sath select karne ka function ──
+  const handleSelectGrid = (e?: any) => {
+    if (e) e.stopPropagation();
+    setSelectMode(true);
+    const allSelected = group.every((m: any) => selectedMessages.has(m.id));
+    group.forEach((m: any) => {
+      if (allSelected) {
+        if (selectedMessages.has(m.id)) toggleSelectMessage(m.id);
+      } else {
+        if (!selectedMessages.has(m.id)) toggleSelectMessage(m.id);
+      }
+    });
+  };
+
+  // ── FIX: Click outside logic for reactions ──
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowQuickReact(false);
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showQuickReact || showEmojiPicker) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showQuickReact, showEmojiPicker]);
+
+  // ── FIX: Encrypted Reaction Engine for Grid ──
+  const handleEmojiSelect = async (emoji: string) => {
+    if (!currentUserId || !secretKey || !otherUser?.publicKey) {
+      toast.error("Encryption keys missing!");
+      return;
+    }
+    const myExistingReaction = msg.reactions?.find((r: any) => r.userId === currentUserId);
+    try {
+      if (myExistingReaction && myExistingReaction.emoji === emoji) {
+        await removeReaction({ messageId: msg.id as never, userId: currentUserId as never });
+      } else {
+        const theirPublicKeyBytes = base64ToKey(otherUser.publicKey);
+        const { encryptedContent, iv } = encryptMessage(emoji, secretKey, theirPublicKeyBytes);
+        await addReaction({
+          messageId: msg.id as never,
+          userId: currentUserId as never,
+          encryptedEmoji: encryptedContent,
+          iv: iv,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    setShowQuickReact(false);
+    setShowEmojiPicker(false);
+  };
 
   return (
     <div
       className={`flex w-full group/grid py-1 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""}`}
-      onClick={() => selectMode && toggleSelectMessage(msg.id)}
+      onClick={() => selectMode && handleSelectGrid()}
     >
       {selectMode && (
         <div className="flex items-center justify-center mr-2 mb-1">
-          <div
-            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedMessages.has(msg.id) ? "bg-primary border-primary" : "border-muted-foreground"}`}
-          >
-            {selectedMessages.has(msg.id) && (
-              <svg
-                className="w-3 h-3 text-primary-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M5 13l4 4L19 7"
-                />
+          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${isGridSelected ? "bg-primary border-primary" : "border-muted-foreground"}`}>
+            {isGridSelected && (
+              <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             )}
           </div>
         </div>
       )}
 
-      <div
-        className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-60 sm:w-70 ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}
-      >
-        <div
-          className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}
-        >
-          {displayGroup.map((gMsg: any, gIdx: number) => (
-            <div
-              key={gMsg.id}
-              className={`relative w-full h-full ${displayGroup.length === 3 && gIdx === 0 ? "col-span-2" : ""}`}
-            >
-              <MediaGridItem
-                msg={gMsg}
-                className="absolute inset-0 w-full h-full"
-                secretKey={secretKey}
-                theirPublicKeyBase64={otherUser?.publicKey}
-                otherUserId={activeChat?.userId}
-                forceDownload={forceDownload}
-                gallery={group.map((m: any) => ({
-                  storageId: m.mediaStorageId!,
-                  messageId: m.id,
-                  text: m.text,
-                  isOwn: m.isOwn,
-                  type: m.type as "image" | "video" | "file",
-                  originalName: m.mediaOriginalName,
-                  mediaIv: m.mediaIv,
-                }))}
-                galleryIndex={gIdx}
-              />
-              {gIdx === 3 && extraCount > 0 && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none z-10 backdrop-blur-[1px]">
-                  <span className="text-white font-bold text-2xl">
-                    +{extraCount}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+      {/* ── FIX: Grid Inner Flex (To position emoji picker properly) ── */}
+      <div className={`relative flex max-w-[75%] md:max-w-[65%] items-end gap-2 ${isGroupOwn ? "flex-row-reverse" : "flex-row"}`}>
+        
+        {/* Grid Box Container */}
+        <div className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-60 sm:w-70 ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}>
+          <div className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}>
+            {displayGroup.map((gMsg: any, gIdx: number) => (
+              <div key={gMsg.id} className={`relative w-full h-full ${displayGroup.length === 3 && gIdx === 0 ? "col-span-2" : ""}`}>
+                <MediaGridItem
+                  msg={gMsg}
+                  className="absolute inset-0 w-full h-full"
+                  secretKey={secretKey}
+                  theirPublicKeyBase64={otherUser?.publicKey}
+                  otherUserId={activeChat?.userId}
+                  forceDownload={forceDownload}
+                  gallery={group.map((m: any) => ({
+                    storageId: m.mediaStorageId!,
+                    messageId: m.id,
+                    text: m.text,
+                    isOwn: m.isOwn,
+                    type: m.type as "image" | "video" | "file",
+                    originalName: m.mediaOriginalName,
+                    mediaIv: m.mediaIv,
+                  }))}
+                  galleryIndex={gIdx}
+                />
+                {gIdx === 3 && extraCount > 0 && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none z-10 backdrop-blur-[1px]">
+                    <span className="text-white font-bold text-2xl">+{extraCount}</span>
+                  </div>
+                )}
+              </div>
+            ))}
 
-          {!allDownloaded && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-              {!forceDownload ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setForceDownload(true);
-                  }}
-                  className="w-14 h-14 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 transition-all shadow-2xl border border-white/20 hover:scale-105"
-                  title="Download All"
-                >
-                  <Download size={26} />
-                </button>
-              ) : (
-                <div className="w-12 h-12 rounded-full border-[3.5px] border-white/30 border-t-white animate-spin shadow-2xl"></div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="absolute bottom-1 right-2 flex items-center gap-1 text-[10.5px] font-medium opacity-70 z-10 text-current">
-          <span>{msg.time}</span>
-          {isGroupOwn && (
-            <MessageStatusTick
-              isSeen={
-                activeChat?.userId
-                  ? msg.readBy?.some((r: any) => r.userId === activeChat.userId)
-                  : false
-              }
-              isDelivered={
-                activeChat?.userId
-                  ? msg.deliveredTo?.some(
-                      (d: any) => d.userId === activeChat.userId,
-                    )
-                  : false
-              }
-            />
-          )}
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setGridMenuOpen(msg.id);
-          }}
-          className={`absolute top-2.5 right-2.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md z-10`}
-        >
-          <ChevronDown size={14} />
-        </button>
-        {gridMenuOpen === msg.id && (
-          <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.success("Feature coming soon!");
-                setGridMenuOpen(null);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors"
-            >
-              <CornerDownLeft size={14} className="text-muted-foreground" />{" "}
-              Reply
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.success("Feature coming soon!");
-                setGridMenuOpen(null);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors"
-            >
-              <Download size={14} className="text-muted-foreground" /> Download
-              All
-            </button>
-            <div className="h-px bg-border w-full" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectMode(true);
-                toggleSelectMessage(msg.id);
-                setGridMenuOpen(null);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors text-foreground"
-            >
-              <CheckSquare size={14} className="text-muted-foreground" /> Select
-              Mode
-            </button>
-            <div className="h-px bg-border w-full" />
-            {isGroupOwn && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toast.success("Feature coming soon!");
-                  setGridMenuOpen(null);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-destructive/10 transition-colors text-destructive"
-              >
-                <Trash2 size={14} /> Delete for everyone
-              </button>
+            {!allDownloaded && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+                {!forceDownload ? (
+                  <button onClick={(e) => { e.stopPropagation(); setForceDownload(true); }} className="w-14 h-14 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 transition-all shadow-2xl border border-white/20 hover:scale-105" title="Download All">
+                    <Download size={26} />
+                  </button>
+                ) : (
+                  <div className="w-12 h-12 rounded-full border-[3.5px] border-white/30 border-t-white animate-spin shadow-2xl"></div>
+                )}
+              </div>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.success("Feature coming soon!");
-                setGridMenuOpen(null);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-destructive/10 transition-colors text-destructive"
-            >
-              <Trash2 size={14} /> Delete for me
-            </button>
           </div>
-        )}
+
+          <div className="absolute bottom-1 right-2 flex items-center gap-1 text-[10.5px] font-medium opacity-70 z-10 text-current">
+            <span>{msg.time}</span>
+            {isGroupOwn && (
+              <MessageStatusTick
+                isSeen={activeChat?.userId ? msg.readBy?.some((r: any) => r.userId === activeChat.userId) : false}
+                isDelivered={activeChat?.userId ? msg.deliveredTo?.some((d: any) => d.userId === activeChat.userId) : false}
+              />
+            )}
+          </div>
+
+          <button onClick={(e) => { e.stopPropagation(); setGridMenuOpen(msg.id); }} className={`absolute top-2.5 right-2.5 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-md z-10`}>
+            <ChevronDown size={14} />
+          </button>
+
+          {gridMenuOpen === msg.id && (
+            <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
+              <button onClick={(e) => { 
+                e.stopPropagation(); 
+                // ── FIX: Reply to entire grid ──
+                setReplyingTo({ id: msg.id, text: `Media Grid (${group.length} items)`, senderName: isGroupOwn ? "You" : (otherUser?.username || "User"), type: msg.type });
+                setGridMenuOpen(null);
+              }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors">
+                <CornerDownLeft size={14} className="text-muted-foreground" /> Reply Grid
+              </button>
+              
+              <button onClick={(e) => { e.stopPropagation(); toast.success("Feature coming soon!"); setGridMenuOpen(null); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors">
+                <Download size={14} className="text-muted-foreground" /> Download All
+              </button>
+              
+              <div className="h-px bg-border w-full" />
+              
+              <button onClick={(e) => { e.stopPropagation(); handleSelectGrid(); setGridMenuOpen(null); }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors text-foreground">
+                <CheckSquare size={14} className="text-muted-foreground" /> Select Grid
+              </button>
+              
+              <div className="h-px bg-border w-full" />
+              
+              {/* ── FIX: 1 Single Delete Button that selects the grid ── */}
+              <button onClick={(e) => { 
+                e.stopPropagation(); 
+                handleSelectGrid(); 
+                setGridMenuOpen(null);
+                toast.info("Grid selected! Use the delete icon on top to delete."); 
+              }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-destructive/10 transition-colors text-destructive">
+                <Trash2 size={14} /> Delete Grid
+              </button>
+            </div>
+          )}
+
+          {/* ── FIX: Render Grid Reactions ── */}
+          {msg.reactions && msg.reactions.length > 0 && (
+            <div className={`absolute -bottom-5 ${isGroupOwn ? "right-2" : "left-2"} flex flex-wrap gap-1 z-10 bg-background dark:bg-sidebar border border-border rounded-full p-0.5 shadow-sm`}>
+              {Object.entries(
+                msg.reactions.reduce((acc: any, r: any) => {
+                  if (!acc[r.emoji]) acc[r.emoji] = { count: 0, hasMine: false };
+                  acc[r.emoji].count += 1;
+                  if (r.userId === currentUserId) acc[r.emoji].hasMine = true;
+                  return acc;
+                }, {} as Record<string, { count: number; hasMine: boolean }>),
+              ).map(([emoji, data]: any) => (
+                <button
+                  key={emoji}
+                  onClick={(e) => { e.stopPropagation(); handleEmojiSelect(emoji); }}
+                  className={`text-[11px] font-medium rounded-full px-1.5 py-0.5 flex items-center gap-1 transition-colors ${data.hasMine ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground hover:bg-accent"}`}
+                >
+                  <span>{emoji}</span>
+                  {data.count > 1 && <span>{data.count}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── FIX: Quick Reaction Emoji Trigger (WhatsApp style) ── */}
+        <div className="relative self-center opacity-0 group-hover/grid:opacity-100 transition-opacity z-20" ref={emojiPickerRef}>
+          <button onClick={() => { setShowQuickReact(!showQuickReact); setShowEmojiPicker(false); }} className="p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground rounded-full transition-colors">
+            <Smile size={18} />
+          </button>
+
+          {showQuickReact && (
+            <div className={`absolute top-1/2 -translate-y-1/2 ${isGroupOwn ? "right-full mr-1" : "left-full ml-1"} flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border shadow-xl rounded-full px-2 py-1.5 z-50`}>
+              {QUICK_EMOJIS.map((emoji) => (
+                <button key={emoji} onClick={() => handleEmojiSelect(emoji)} className="hover:scale-125 transition-transform text-xl px-1">{emoji}</button>
+              ))}
+              <div className="w-px h-5 bg-border mx-1" />
+              <button onClick={() => { setShowQuickReact(false); setShowEmojiPicker(true); }} className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground">
+                <Plus size={18} />
+              </button>
+            </div>
+          )}
+
+          {showEmojiPicker && (
+            <div className={`absolute z-50 ${isGroupOwn ? "right-full mr-2 bottom-0" : "left-full ml-2 bottom-0"}`}>
+              <div className="scale-[0.80] md:scale-90 origin-bottom shadow-2xl rounded-xl">
+                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

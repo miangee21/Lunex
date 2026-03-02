@@ -46,6 +46,15 @@ export default defineSchema({
     disappearingSetBy: v.optional(v.id("users")),
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
+    lastReaction: v.optional(
+      v.object({
+        messageId: v.id("messages"),
+        encryptedEmoji: v.string(),
+        iv: v.string(),
+        userId: v.id("users"),
+        timestamp: v.number(),
+      }),
+    ),
   }).index("by_last_message", ["lastMessageAt"]),
 
   messages: defineTable({
@@ -70,12 +79,15 @@ export default defineSchema({
       v.array(
         v.object({
           userId: v.id("users"),
-          emoji: v.string(),
+          emoji: v.optional(v.string()),
+          encryptedEmoji: v.optional(v.string()),
+          iv: v.optional(v.string()),
         }),
       ),
     ),
     editedAt: v.optional(v.number()),
     deletedForSender: v.optional(v.boolean()),
+    deletedForReceiver: v.optional(v.boolean()),
     deletedForEveryone: v.optional(v.boolean()),
     disappearsAt: v.optional(v.number()),
     sentAt: v.number(),

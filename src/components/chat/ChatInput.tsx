@@ -1,6 +1,6 @@
 //src/components/chat/ChatInput.tsx
 import { useState, useRef, useEffect } from "react";
-import { Smile, Paperclip, Send } from "lucide-react";
+import { Smile, Paperclip, Send, Check, X } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import PreSendMediaPreview from "@/components/chat/PreSendMediaPreview";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import ChatInputStatusBars from "@/components/chat/ChatInputStatusBars";
+import ReplyPreview from "@/components/chat/ReplyPreview";
+import EmojiPicker from "@/components/chat/EmojiPicker";
 
 interface ChatInputProps {
   selectMode?: boolean;
@@ -30,12 +32,23 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null); 
+
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
-  const { activeChat, updateLastMessageCache, updateReadByCache } =
-    useChatStore();
+  const { 
+    activeChat, 
+    updateLastMessageCache, 
+    updateReadByCache,
+    replyingTo,
+    setReplyingTo,
+    editingMessage,
+    setEditingMessage
+  } = useChatStore();
 
   const sendMessage = useMutation(api.messages.sendMessage);
+  const editMessage = useMutation(api.messages.editMessage);
   const setTyping = useMutation(api.typing.setTyping);
   const clearTyping = useMutation(api.typing.clearTyping);
 
@@ -83,6 +96,33 @@ export default function ChatInput({
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [message]);
+
+  // ── EDITING MESSAGE HOOK ──
+  useEffect(() => {
+    if (editingMessage) {
+      setMessage(editingMessage.text);
+      textareaRef.current?.focus();
+    } else if (!replyingTo) {
+      setMessage("");
+    }
+  }, [editingMessage]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage((prev) => prev + emoji);
+    textareaRef.current?.focus();
+  };
 
   useEffect(() => {
     return () => {
@@ -156,6 +196,7 @@ export default function ChatInput({
 
     const text = message.trim();
     setMessage("");
+    setShowEmojiPicker(false); 
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -177,13 +218,27 @@ export default function ChatInput({
         theirPublicKey,
       );
 
-      await sendMessage({
-        conversationId: activeChat.conversationId as Id<"conversations">,
-        senderId: userId as Id<"users">,
-        encryptedContent,
-        iv,
-        type: "text",
-      });
+      if (editingMessage) {
+        // ── EDIT MESSAGE LOGIC ──
+        await editMessage({
+          messageId: editingMessage.id as Id<"messages">,
+          userId: userId as Id<"users">,
+          newEncryptedContent: encryptedContent,
+          newIv: iv,
+        });
+        setEditingMessage(null);
+      } else {
+        // ── NORMAL & REPLY MESSAGE LOGIC ──
+        await sendMessage({
+          conversationId: activeChat.conversationId as Id<"conversations">,
+          senderId: userId as Id<"users">,
+          encryptedContent,
+          iv,
+          type: "text",
+          replyToMessageId: replyingTo?.id as Id<"messages">,
+        });
+        setReplyingTo(null);
+      }
 
       const now = Date.now();
       updateLastMessageCache(activeChat.conversationId, {
@@ -247,7 +302,38 @@ export default function ChatInput({
   }
 
   return (
-    <div className="px-4 py-3 bg-sidebar border-t border-border transition-colors duration-300">
+    <div className="px-4 py-3 bg-sidebar border-t border-border transition-colors duration-300 relative">
+      
+      
+      
+      {showEmojiPicker && (
+        <div ref={emojiPickerRef} className="absolute bottom-full right-4 mb-2 z-50">
+          <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+        </div>
+      )}
+
+      
+      <ReplyPreview />
+
+      
+      {editingMessage && (
+        <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border shadow-sm mb-2 rounded-xl mx-4">
+          <div className="flex-1 min-w-0 flex items-center gap-2 text-primary">
+            <Check size={14} />
+            <span className="text-sm font-semibold">Editing Message</span>
+          </div>
+          <button
+            onClick={() => {
+              setEditingMessage(null);
+              setMessage("");
+            }}
+            className="w-7 h-7 flex shrink-0 items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors ml-3"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <input
         ref={fileInputRef}
         type="file"
@@ -294,23 +380,28 @@ export default function ChatInput({
         />
 
         <button
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
           title="Choose emoji"
         >
-          <Smile size={20} />
+          <Smile size={20} className={showEmojiPicker ? "text-primary" : ""} />
         </button>
 
         <button
           onClick={handleSend}
           disabled={!message.trim()}
-          title="Send message"
+          title={editingMessage ? "Update message" : "Send message"}
           className={`p-2 mb-0.5 rounded-xl shrink-0 transition-all duration-200 ${
             message.trim()
               ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90 scale-100"
               : "bg-transparent text-muted-foreground opacity-50 cursor-not-allowed scale-95"
           }`}
         >
-          <Send size={18} className={message.trim() ? "translate-x-0.5" : ""} />
+          {editingMessage ? (
+            <Check size={18} strokeWidth={3} />
+          ) : (
+            <Send size={18} className={message.trim() ? "translate-x-0.5" : ""} />
+          )}
         </button>
       </div>
     </div>

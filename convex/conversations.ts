@@ -88,6 +88,8 @@ export const getConversationsList = query({
           otherUserId: otherUser._id,
           username: otherUser.username,
           profilePicStorageId: otherUser.profilePicStorageId ?? null,
+          publicKey: otherUser.publicKey,
+          lastReaction: conv.lastReaction,
           isOnline: otherUser.isOnline,
           lastSeen: otherUser.lastSeen,
           lastMessage: lastMessage

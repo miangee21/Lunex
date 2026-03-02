@@ -31,6 +31,7 @@ export const getMessages = query({
       .filter((m) => {
         if (m.deletedForEveryone) return false;
         if (m.deletedForSender && m.senderId === args.userId) return false;
+        if (m.deletedForReceiver && m.senderId !== args.userId) return false;
         return true;
       })
       .map((m) => ({
@@ -139,8 +140,22 @@ export const deleteMessageForMe = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
 
-    if (message.senderId === args.userId) {
-      await ctx.db.patch(args.messageId, { deletedForSender: true });
+    const isSender = message.senderId === args.userId;
+    const willBeFullyDeleted = isSender
+      ? message.deletedForReceiver
+      : message.deletedForSender;
+
+    if (willBeFullyDeleted) {
+      if (message.mediaStorageId) {
+        await ctx.storage.delete(message.mediaStorageId);
+      }
+      await ctx.db.delete(args.messageId);
+    } else {
+      if (isSender) {
+        await ctx.db.patch(args.messageId, { deletedForSender: true });
+      } else {
+        await ctx.db.patch(args.messageId, { deletedForReceiver: true });
+      }
     }
   },
 });
@@ -156,6 +171,17 @@ export const deleteMessageForEveryone = mutation({
     if (message.senderId !== args.userId)
       throw new Error("Only sender can delete for everyone");
 
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (Date.now() - message.sentAt > ONE_HOUR) {
+      throw new Error(
+        "Time limit exceeded. Cannot delete for everyone after 1 hour.",
+      );
+    }
+
+    if (message.mediaStorageId) {
+      await ctx.storage.delete(message.mediaStorageId);
+    }
+
     await ctx.db.patch(args.messageId, {
       deletedForEveryone: true,
       encryptedContent: "",
@@ -168,7 +194,8 @@ export const addReaction = mutation({
   args: {
     messageId: v.id("messages"),
     userId: v.id("users"),
-    emoji: v.string(),
+    encryptedEmoji: v.string(),
+    iv: v.string(),
   },
   handler: async (ctx, args) => {
     const message = await ctx.db.get(args.messageId);
@@ -178,8 +205,28 @@ export const addReaction = mutation({
     const filtered = reactions.filter((r) => r.userId !== args.userId);
 
     await ctx.db.patch(args.messageId, {
-      reactions: [...filtered, { userId: args.userId, emoji: args.emoji }],
+      reactions: [
+        ...filtered,
+        {
+          userId: args.userId,
+          encryptedEmoji: args.encryptedEmoji,
+          iv: args.iv,
+        },
+      ],
     });
+
+    if (message.senderId !== args.userId) {
+      await ctx.db.patch(message.conversationId, {
+        lastMessageAt: Date.now(),
+        lastReaction: {
+          messageId: args.messageId,
+          encryptedEmoji: args.encryptedEmoji,
+          iv: args.iv,
+          userId: args.userId,
+          timestamp: Date.now(),
+        },
+      });
+    }
   },
 });
 
@@ -192,11 +239,23 @@ export const removeReaction = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
 
-    const reactions = (message.reactions ?? []).filter(
-      (r) => r.userId !== args.userId,
-    );
+    const reactions = message.reactions ?? [];
+    const filtered = reactions.filter((r) => r.userId !== args.userId);
 
-    await ctx.db.patch(args.messageId, { reactions });
+    await ctx.db.patch(args.messageId, {
+      reactions: filtered,
+    });
+
+    const conversation = await ctx.db.get(message.conversationId);
+    if (
+      conversation?.lastReaction &&
+      conversation.lastReaction.messageId === args.messageId &&
+      conversation.lastReaction.userId === args.userId
+    ) {
+      await ctx.db.patch(message.conversationId, {
+        lastReaction: undefined,
+      });
+    }
   },
 });
 
@@ -212,6 +271,11 @@ export const editMessage = mutation({
     if (!message) throw new Error("Message not found");
     if (message.senderId !== args.userId)
       throw new Error("Only sender can edit");
+
+    const ONE_HOUR = 60 * 60 * 1000;
+    if (Date.now() - message.sentAt > ONE_HOUR) {
+      throw new Error("Time limit exceeded. Cannot edit after 1 hour.");
+    }
 
     await ctx.db.patch(args.messageId, {
       encryptedContent: args.newEncryptedContent,

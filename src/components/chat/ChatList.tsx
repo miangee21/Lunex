@@ -10,6 +10,8 @@ import SearchUsers from "@/components/friends/SearchUsers";
 import { Search, Plus, X, ArrowLeft } from "lucide-react";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
+import { decryptMessage } from "@/crypto/encryption";
+import { base64ToKey } from "@/crypto/keyDerivation";
 
 export default function ChatList() {
   const {
@@ -19,8 +21,14 @@ export default function ChatList() {
     lastMessageCache,
     readByCache,
     deliveredToCache,
+    activeChat, 
+    setJumpToMessageId, 
+    seenReactions, 
+    triggerScrollToBottom, 
+    markReactionAsSeen, // ── FIX: Store se read mark karne wala function nikala ──
   } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
+  const secretKey = useAuthStore((s) => s.secretKey);
   const [search, setSearch] = useState("");
   const [showFriends, setShowFriends] = useState(false);
 
@@ -247,14 +255,59 @@ export default function ChatList() {
             </button>
           </div>
         ) : (
-          filteredConversations.map((conv) =>
-            conv ? (
+          filteredConversations.map((conv) => {
+            if (!conv) return null;
+
+            // ── FIX: Check if reaction is the latest action ──
+            const cached = conv.conversationId ? lastMessageCache[conv.conversationId] : null;
+            const msgSentAt = cached?.sentAt ?? conv.lastMessage?.sentAt ?? 0;
+            const isReactionLatest = conv.lastReaction && conv.lastReaction.timestamp >= msgSentAt;
+
+            // ── FIX: JUMP AUR BADGE KI LOGIC KO UPAR NIKALA ──
+            const seenReactTs = conv.conversationId ? seenReactions[conv.conversationId] || 0 : 0;
+            const isReactionUnread = isReactionLatest && conv.lastReaction && conv.lastReaction.userId !== userId && conv.lastReaction.timestamp > seenReactTs;
+
+            return (
+              <div 
+                key={conv.conversationId} 
+                onClickCapture={() => {
+                  if (isReactionUnread && conv.lastReaction) {
+                    setJumpToMessageId(conv.lastReaction.messageId); 
+                    // ── BUG FIX: Fauran read mark kardo taake agla click bottom pe le jaye! ──
+                    markReactionAsSeen(conv.conversationId, Date.now()); 
+                  } else {
+                    setJumpToMessageId(null);
+                    // ── FIX: Agar chat already khuli ha, tu zabardasti bottom pe bhejo ──
+                    if (activeChat?.conversationId === conv.conversationId) {
+                      triggerScrollToBottom();
+                    }
+                  }
+                }}
+              >
               <ChatListItem
-                key={conv.conversationId}
                 id={conv.otherUserId}
                 conversationId={conv.conversationId}
                 username={conv.username}
                 lastMessage={(() => {
+                  // ── FIX: REACTION PREVIEW LOGIC ──
+                  if (isReactionLatest && conv.lastReaction) { // ── FIX: TypeScript Safety ──
+                    let emoji = "👍";
+                    // Agar chat open ha tu foran real emoji decrypt kero!
+                    if (activeChat?.conversationId === conv.conversationId && secretKey && conv.publicKey) {
+                      try {
+                        const theirPublicKey = base64ToKey(conv.publicKey);
+                        emoji = decryptMessage(
+                          { encryptedContent: conv.lastReaction.encryptedEmoji, iv: conv.lastReaction.iv },
+                          secretKey,
+                          theirPublicKey
+                        );
+                      } catch (e) {}
+                    }
+                    return conv.lastReaction.userId === userId
+                      ? `You: Reacted ${emoji} to a message`
+                      : `${emoji} Reacted to a message`;
+                  }
+
                   const cached = conv.conversationId
                     ? lastMessageCache[conv.conversationId]
                     : null;
@@ -308,6 +361,11 @@ export default function ChatList() {
                   return "Say hello! 👋";
                 })()}
                 time={(() => {
+                  if (isReactionLatest && conv.lastReaction) { // ── FIX: TypeScript Safety ──
+                    return new Date(conv.lastReaction.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit", minute: "2-digit", hour12: true,
+                    });
+                  }
                   const cached = conv.conversationId
                     ? lastMessageCache[conv.conversationId]
                     : null;
@@ -338,7 +396,7 @@ export default function ChatList() {
                     return "delivered";
                   return "sent";
                 })()}
-                unread={conv.unreadCount}
+                unread={conv.unreadCount + (isReactionUnread ? 1 : 0)} // ── FIX: Logic upar lag gayi ha, yahan sirf add kero ──
                 isOnline={conv.isOnline}
                 profilePicStorageId={conv.profilePicStorageId ?? null}
                 chatPresetName={(conv as any).chatPresetName}
@@ -348,8 +406,9 @@ export default function ChatList() {
                 myTextColor={(conv as any).myTextColor}
                 otherTextColor={(conv as any).otherTextColor}
               />
-            ) : null,
-          )
+              </div>
+            );
+          })
         )}
       </div>
     </div>
