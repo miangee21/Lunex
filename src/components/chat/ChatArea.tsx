@@ -347,6 +347,7 @@ export default function ChatArea() {
   const isLoading = activeChat.conversationId && rawMessages === undefined;
 
   const pendingNamesStr = currentPending
+    .filter((p) => p.progress < 100)
     .map((p) => p.file.name)
     .sort()
     .join("|");

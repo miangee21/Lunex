@@ -181,15 +181,14 @@ export function useMediaUpload({
     }
 
     if (readyToSend.length > 0) {
+
       await Promise.all(
         readyToSend.map((readyItem) => sendMessage(readyItem.messageData)),
       );
 
-      setTimeout(() => {
-        readyToSend.forEach((readyItem) => {
-          removePendingUpload(conversationId, readyItem.itemId);
-        });
-      }, 500);
+      readyToSend.forEach((readyItem) => {
+        removePendingUpload(conversationId, readyItem.itemId);
+      });
 
       const lastItemWrap = readyToSend[readyToSend.length - 1];
       const now = Date.now();
