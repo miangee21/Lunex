@@ -10,6 +10,8 @@ import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import { toast } from "sonner";
 import { type DecryptedMessage } from "@/components/chat/ChatArea";
+import { open } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 
 import {
   decryptMediaFile,
@@ -384,7 +386,8 @@ export default function MediaGridGroup({
           {/* ── Menu Dropdown Wrapper ── */}
           {gridMenuOpen === msg.id && (
             <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
-              <button onClick={(e) => { 
+              
+              <button onClick={async (e) => { 
                 e.stopPropagation(); 
                 setGridMenuOpen(null);
                 
@@ -399,19 +402,70 @@ export default function MediaGridGroup({
                   return;
                 }
 
-                // ── FIX: Bina delay ke direct download taake WebView block na kare ──
-                group.forEach((m: any, index: number) => {
-                  if (m.mediaStorageId && localMediaCache[m.mediaStorageId]) {
-                    const a = document.createElement("a");
-                    a.href = localMediaCache[m.mediaStorageId];
-                    a.download = m.mediaOriginalName || `lunex-media-${index + 1}`;
-                    a.style.display = "none";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                // Tauri Native Download Logic
+                const toastId = toast.loading(`Saving ${group.length} files...`);
+
+                try {
+                  const selectedDirPath = await open({
+                    directory: true,
+                    multiple: false,
+                    title: "Select folder to save media files"
+                  });
+
+                  if (!selectedDirPath) {
+                    toast.dismiss(toastId); // Agar user cancel kar de tou loader band ho jaye
+                    return; 
                   }
-                });
-                toast.success(`Downloading ${group.length} files...`);
+
+                  const separator = (selectedDirPath as string).includes('\\') ? '\\' : '/';
+
+                  for (let i = 0; i < group.length; i++) {
+                    const m = group[i];
+                    if (m.mediaStorageId && localMediaCache[m.mediaStorageId]) {
+                      const url = localMediaCache[m.mediaStorageId];
+                      
+                      // ── FIX: Privacy ke liye Random Filename (with original extension) ──
+                      const originalName = m.mediaOriginalName || "";
+                      const extMatch = originalName.match(/\.([^.]+)$/);
+                      const ext = extMatch ? extMatch[1] : (m.type === "image" ? "jpg" : m.type === "video" ? "mp4" : "bin");
+                      
+                      // Timestamp + 6 characters ka random text generate kiya
+                      const randomStr = Math.random().toString(36).substring(2, 8); 
+                      const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
+                      const filePath = `${selectedDirPath}${separator}${fileName}`;
+
+                      const response = await fetch(url);
+                      const arrayBuffer = await response.arrayBuffer();
+                      const uint8Array = new Uint8Array(arrayBuffer);
+
+                      await writeFile(filePath, uint8Array);
+                    }
+                  }
+
+                  toast.success("All files saved successfully!", { id: toastId });
+
+                } catch (error: any) {
+                  console.error("Native download failed:", error);
+                  
+                  // ── FIX: Loader ko stop karo aur asli Tauri Error screen par dikhao! ──
+                  toast.error(`Save Failed: ${error.message || error}`, { id: toastId, duration: 8000 });
+                  
+                  // ── FALLBACK ──
+                  group.forEach((m: any, index: number) => {
+                    if (m.mediaStorageId && localMediaCache[m.mediaStorageId]) {
+                      setTimeout(() => {
+                        const a = document.createElement("a");
+                        a.href = localMediaCache[m.mediaStorageId];
+                        a.download = m.mediaOriginalName || `lunex-media-${index + 1}`;
+                        a.style.display = "none";
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                      }, index * 500);
+                    }
+                  });
+                }
+
               }} className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors">
                 <Download size={14} className="text-muted-foreground" /> Download All
               </button>
