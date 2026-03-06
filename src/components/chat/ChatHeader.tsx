@@ -2,7 +2,7 @@
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Timer } from "lucide-react";
 
 export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
@@ -28,13 +28,28 @@ export default function ChatHeader() {
         <p className="text-foreground font-bold text-sm truncate">
           {activeChat.username}
         </p>
-        <p
-          className={`text-xs font-medium ${
-            activeChat.isOnline ? "text-emerald-500" : "text-muted-foreground"
-          }`}
-        >
-          {activeChat.isOnline ? "Online" : "Offline"}
-        </p>
+        {activeChat.disappearingMode ? (
+          <div className="flex items-center gap-1">
+            <Timer size={10} className="text-primary shrink-0" />
+            <p className="text-xs font-medium text-primary truncate">
+              Disappearing • {activeChat.disappearingTimer === "1h" ? "1 hour"
+                : activeChat.disappearingTimer === "6h" ? "6 hours"
+                : activeChat.disappearingTimer === "12h" ? "12 hours"
+                : activeChat.disappearingTimer === "1d" ? "1 day"
+                : activeChat.disappearingTimer === "3d" ? "3 days"
+                : activeChat.disappearingTimer === "7d" ? "7 days"
+                : ""}
+            </p>
+          </div>
+        ) : (
+          <p
+            className={`text-xs font-medium ${
+              activeChat.isOnline ? "text-emerald-500" : "text-muted-foreground"
+            }`}
+          >
+            {activeChat.isOnline ? "Online" : "Offline"}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-1">

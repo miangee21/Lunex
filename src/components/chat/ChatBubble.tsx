@@ -19,12 +19,14 @@ interface MessageBubbleProps {
   text: string;
   time: string;
   isOwn: boolean;
-  type?: "text" | "image" | "video" | "file";
+  type?: "text" | "image" | "video" | "file" | "system";
   mediaStorageId?: string | null;
   mediaIv?: string | null;
   mediaOriginalName?: string | null;
+  mediaDeletedAt?: number | null;
   reactions?: Array<{ userId: string; emoji: string }>;
   editedAt?: number | null;
+  disappearsAt?: number | null;
   readBy?: { userId: string; time: number }[];
   deliveredTo?: { userId: string; time: number }[];
   otherUserId?: string;
@@ -52,8 +54,10 @@ export default function MessageBubble({
   mediaStorageId = null,
   mediaIv = null,
   mediaOriginalName = null,
+  mediaDeletedAt = null,
   reactions = [],
   editedAt = null,
+  disappearsAt = null,
   readBy = [],
   deliveredTo = [],
   otherUserId,
@@ -174,6 +178,17 @@ export default function MessageBubble({
     ? deliveredTo?.some((d) => d.userId === otherUserId)
     : false;
 
+  // ── FIX: System message ko saare hooks chalne ke baad return karna hai ──
+  if (type === "system") {
+    return (
+      <div className="flex justify-center my-2 w-full">
+        <span className="text-xs text-muted-foreground bg-accent/60 px-3 py-1 rounded-full">
+          {text}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       id={`message-${messageId}`}
@@ -242,6 +257,7 @@ export default function MessageBubble({
               mediaStorageId={mediaStorageId ?? null}
               mediaIv={mediaIv ?? null}
               mediaOriginalName={mediaOriginalName ?? null}
+              mediaDeletedAt={mediaDeletedAt}
             />
           )}
 
@@ -299,6 +315,12 @@ export default function MessageBubble({
 
           <div className="flex justify-end items-center gap-1 mt-1 -mb-0.5 text-[10.5px] font-medium tracking-wide opacity-70">
             {editedAt && <span>edited</span>}
+            {disappearsAt && (
+              <svg className="w-3 h-3 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="10" />
+                <path strokeLinecap="round" d="M12 6v6l4 2" />
+              </svg>
+            )}
             <span>{time}</span>
             {isOwn && (
               <MessageStatusTick isSeen={isSeen} isDelivered={isDelivered} />

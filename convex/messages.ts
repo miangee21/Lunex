@@ -27,33 +27,57 @@ export const getMessages = query({
       ? messages.filter((m) => m.sentAt > deletion.deletedAt)
       : messages;
 
+    const now = Date.now();
+
     return filteredMessages
       .filter((m) => {
         if (m.deletedForEveryone) return false;
         if (m.deletedForSender && m.senderId === args.userId) return false;
         if (m.deletedForReceiver && m.senderId !== args.userId) return false;
+
+        // ── PRO FIX 1: Frontend ko expired message dena hi nahi, zero flicker ──
+        if (
+          m.disappearsAt !== undefined &&
+          m.disappearsAt !== null &&
+          m.disappearsAt !== 0 &&
+          m.disappearsAt <= now
+        ) {
+          return false;
+        }
+
         return true;
       })
-      .map((m) => ({
-        id: m._id,
-        conversationId: m.conversationId,
-        senderId: m.senderId,
-        encryptedContent: m.encryptedContent,
-        iv: m.iv,
-        type: m.type,
-        mediaStorageId: m.mediaStorageId ?? null,
-        mediaIv: m.mediaIv ?? null,
-        mediaOriginalName: m.mediaOriginalName ?? null,
-        uploadBatchId: m.uploadBatchId ?? null,
-        replyToMessageId: m.replyToMessageId ?? null,
-        reactions: m.reactions ?? [],
-        editedAt: m.editedAt ?? null,
-        disappearsAt: m.disappearsAt ?? null,
-        sentAt: m.sentAt,
-        readBy: m.readBy ?? [],
-        deliveredTo: m.deliveredTo ?? [],
-        isOwn: m.senderId === args.userId,
-      }));
+      .map((m) => {
+        // ── PRO FIX 2: Expired media ko server se hi block kar do ──
+        const isMediaExpired =
+          m.mediaExpiresAt !== undefined &&
+          m.mediaExpiresAt !== null &&
+          m.mediaExpiresAt !== 0 &&
+          m.mediaExpiresAt <= now;
+        return {
+          id: m._id,
+          conversationId: m.conversationId,
+          senderId: m.senderId,
+          encryptedContent: m.encryptedContent,
+          iv: m.iv,
+          type: m.type,
+          mediaStorageId: isMediaExpired ? null : (m.mediaStorageId ?? null),
+          mediaIv: isMediaExpired ? null : (m.mediaIv ?? null),
+          mediaOriginalName: isMediaExpired
+            ? null
+            : (m.mediaOriginalName ?? null),
+          mediaDeletedAt: isMediaExpired ? now : (m.mediaDeletedAt ?? null),
+          uploadBatchId: m.uploadBatchId ?? null,
+          replyToMessageId: m.replyToMessageId ?? null,
+          reactions: m.reactions ?? [],
+          editedAt: m.editedAt ?? null,
+          disappearsAt: m.disappearsAt ?? null,
+          sentAt: m.sentAt,
+          readBy: m.readBy ?? [],
+          deliveredTo: m.deliveredTo ?? [],
+          isOwn: m.senderId === args.userId,
+        };
+      });
   },
 });
 
@@ -69,6 +93,7 @@ export const sendMessage = mutation({
       v.literal("video"),
       v.literal("audio"),
       v.literal("file"),
+      v.literal("system"),
     ),
     mediaStorageId: v.optional(v.id("_storage")),
     mediaIv: v.optional(v.string()),
@@ -79,6 +104,30 @@ export const sendMessage = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+
+    // ── FIX 1: Backend automatically disappearing time calculate karega ──
+    const conv = await ctx.db.get(args.conversationId);
+    let calculatedDisappearsAt: number | undefined = undefined;
+
+    // Agar system message nahi hai, aur chat me disappearing ON hai
+    if (
+      args.type !== "system" &&
+      conv?.disappearingMode &&
+      conv?.disappearingTimer
+    ) {
+      const timerMap: Record<string, number> = {
+        "1h": 1 * 60 * 60 * 1000,
+        "6h": 6 * 60 * 60 * 1000,
+        "12h": 12 * 60 * 60 * 1000,
+        "1d": 24 * 60 * 60 * 1000,
+        "3d": 3 * 24 * 60 * 60 * 1000,
+        "7d": 7 * 24 * 60 * 60 * 1000,
+      };
+      const duration = timerMap[conv.disappearingTimer];
+      if (duration) {
+        calculatedDisappearsAt = now + duration;
+      }
+    }
 
     await ctx.db.insert("messages", {
       conversationId: args.conversationId,
@@ -91,9 +140,13 @@ export const sendMessage = mutation({
       mediaOriginalName: args.mediaOriginalName,
       uploadBatchId: args.uploadBatchId,
       replyToMessageId: args.replyToMessageId,
-      disappearsAt: args.disappearsAt,
-      sentAt: now,
 
+      // ── FIX 2: Hamara calculated timer yahan assign hoga ──
+      disappearsAt: calculatedDisappearsAt,
+      mediaExpiresAt: args.mediaStorageId
+        ? now + 6 * 60 * 60 * 1000
+        : undefined,
+      sentAt: now,
       readBy: [{ userId: args.senderId, time: now }],
       deliveredTo: [{ userId: args.senderId, time: now }],
     });

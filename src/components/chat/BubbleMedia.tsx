@@ -18,6 +18,7 @@ import {
   Image as ImageIcon,
   Film,
 } from "lucide-react";
+import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 
 interface BubbleMediaProps {
   messageId: string;
@@ -27,6 +28,7 @@ interface BubbleMediaProps {
   mediaStorageId: string | null;
   mediaIv: string | null;
   mediaOriginalName: string | null;
+  mediaDeletedAt?: number | null;
 }
 
 export default function BubbleMedia({
@@ -37,6 +39,7 @@ export default function BubbleMedia({
   mediaStorageId,
   mediaIv,
   mediaOriginalName,
+  mediaDeletedAt = null,
 }: BubbleMediaProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -117,6 +120,11 @@ export default function BubbleMedia({
     finalUrl,
     mediaStorageId,
   ]);
+
+  // ── FIX: Deleted Placeholder hamesha saare hooks ke baad aana chahiye ──
+  if (mediaDeletedAt || !mediaStorageId) {
+    return <DeletedMediaPlaceholder type={type} isOwn={isOwn} />;
+  }
 
   const overlay = (
     <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-10 transition-all rounded-xl overflow-hidden">

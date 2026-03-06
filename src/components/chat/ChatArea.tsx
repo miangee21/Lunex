@@ -31,13 +31,15 @@ export type DecryptedMessage = {
   timestamp: number;
   isOwn: boolean;
   senderId: string;
-  type: "text" | "image" | "video" | "file";
+  type: "text" | "image" | "video" | "file" | "system";
   mediaStorageId: string | null;
   mediaIv: string | null;
   mediaOriginalName: string | null;
+  mediaDeletedAt: number | null;
   uploadBatchId: string | null;
   reactions: Array<{ userId: string; emoji: string }>;
   editedAt: number | null;
+  disappearsAt: number | null;
   readBy: { userId: string; time: number }[];
   deliveredTo: { userId: string; time: number }[];
   replyToMessageId: string | null;
@@ -130,6 +132,16 @@ export default function ChatArea() {
       : "skip",
   );
 
+  // ── Conversation disappearing info fetch karo ──
+  const conversationData = useQuery(
+    api.conversations.getConversationById,
+    activeChat?.conversationId
+      ? { conversationId: activeChat.conversationId as Id<"conversations"> }
+      : "skip",
+  );
+
+  const { syncDisappearing } = useChatStore();
+
   useEffect(() => {
     if (userId && activeChat?.userId && cloudTheme !== undefined) {
       const themeData = cloudTheme
@@ -152,6 +164,16 @@ export default function ChatArea() {
       syncChatTheme(userId, activeChat.userId, themeData);
     }
   }, [cloudTheme, userId, activeChat?.userId, syncChatTheme]);
+
+  useEffect(() => {
+    if (conversationData !== undefined) {
+      syncDisappearing(
+        conversationData?.disappearingMode ?? undefined,
+        conversationData?.disappearingTimer as any ?? undefined,
+        conversationData?.disappearingSetBy ?? undefined,
+      );
+    }
+  }, [conversationData, syncDisappearing]);
 
   const rawMessages = useQuery(
     api.messages.getMessages,
@@ -201,7 +223,10 @@ export default function ChatArea() {
         rawMessages!.map(async (msg) => {
           let text = "";
           try {
-            if (!otherUser?.publicKey) {
+            // ── System messages encrypted nahi hote ──
+            if (msg.type === "system") {
+              text = msg.encryptedContent;
+            } else if (!otherUser?.publicKey) {
               text = "🔒 Unable to decrypt message";
             } else {
               const theirPublicKey = base64ToKey(otherUser.publicKey);
@@ -241,13 +266,15 @@ export default function ChatArea() {
             timestamp: msg.sentAt,
             isOwn: msg.isOwn,
             senderId: msg.senderId,
-            type: msg.type as "text" | "image" | "video" | "file",
+            type: msg.type as "text" | "image" | "video" | "file" | "system",
             mediaStorageId: msg.mediaStorageId ?? null,
             mediaIv: msg.mediaIv ?? null,
             mediaOriginalName: msg.mediaOriginalName ?? null,
+            mediaDeletedAt: msg.mediaDeletedAt ?? null,
             uploadBatchId: msg.uploadBatchId ?? null,
             reactions: decryptedReactions,
             editedAt: msg.editedAt,
+            disappearsAt: msg.disappearsAt ?? null,
             readBy: msg.readBy,
             deliveredTo: msg.deliveredTo,
             replyToMessageId: msg.replyToMessageId ?? null,
@@ -276,6 +303,25 @@ export default function ChatArea() {
 
     decryptAll();
   }, [rawMessages, secretKey, otherUser?.publicKey]);
+
+  // ── Client side disappearing & media cleanup ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setDecryptedMessages((prev) =>
+        prev
+          .map((m) => {
+            // ── FIX 3: Agar media ko theek 6 ghante (21600000 ms) ho gaye hain, tou UI par foran hide kar do ──
+            if (m.mediaStorageId && (now - m.timestamp) >= 6 * 60 * 60 * 1000) {
+              return { ...m, mediaStorageId: null, mediaDeletedAt: now };
+            }
+            return m;
+          })
+          .filter((m) => !m.disappearsAt || m.disappearsAt > now) // Disappearing chat remove
+      );
+    }, 10000); // har 10 seconds check karo
+    return () => clearInterval(interval);
+  }, []);
 
   const currentPending = activeChat?.conversationId
     ? pendingUploads[activeChat.conversationId] || []
@@ -373,12 +419,13 @@ export default function ChatArea() {
     while (i < visibleMessages.length) {
       const msg = visibleMessages[i];
 
-      if (msg.type !== "text") { 
+      if (msg.type !== "text" && msg.type !== "system") { 
         const group: typeof visibleMessages = [];
         let j = i;
         while (
           j < visibleMessages.length &&
           visibleMessages[j].type !== "text" &&
+          visibleMessages[j].type !== "system" &&
           visibleMessages[j].senderId === msg.senderId &&
           (j === i || (msg.uploadBatchId && visibleMessages[j].uploadBatchId === msg.uploadBatchId))
         ) {
@@ -474,6 +521,8 @@ export default function ChatArea() {
             time={msg.time}
             isOwn={msg.isOwn}
             type={msg.type}
+            disappearsAt={msg.disappearsAt ?? undefined}
+            mediaDeletedAt={msg.mediaDeletedAt ?? undefined}
             mediaStorageId={msg.mediaStorageId}
             mediaIv={msg.mediaIv}
             mediaOriginalName={msg.mediaOriginalName}

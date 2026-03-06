@@ -1,3 +1,4 @@
+//src/components/profile/OtherUserPanel.tsx
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
@@ -8,13 +9,14 @@ import { X, UserX, Shield, ShieldOff, Timer, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import ChatThemeCustomizer from "@/components/chat/ChatThemeCustomizer";
+import DisappearingPicker from "@/components/chat/DisappearingPicker";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function OtherUserPanel() {
   const { activeChat, setProfilePanelOpen, clearActiveChat } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
 
-  const [view, setView] = useState<"profile" | "theme">("profile");
+  const [view, setView] = useState<"profile" | "theme" | "disappearing">("profile");
   const [disappearing, setDisappearing] = useState(false);
 
   const unfriend = useMutation(api.friends.unfriend);
@@ -81,6 +83,10 @@ export default function OtherUserPanel() {
 
   if (view === "theme") {
     return <ChatThemeCustomizer onBack={() => setView("profile")} />;
+  }
+
+  if (view === "disappearing") {
+    return <DisappearingPicker onBack={() => setView("profile")} />;
   }
 
   return (
@@ -170,36 +176,31 @@ export default function OtherUserPanel() {
 
         <div className="px-4 mb-4">
           <button
-            onClick={() => {
-              setDisappearing(!disappearing);
-              toast.success(
-                disappearing
-                  ? "Disappearing messages off"
-                  : "Disappearing messages on — coming in Step 11!",
-              );
-            }}
+            onClick={() => setView("disappearing")}
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-accent hover:bg-accent/70 transition-colors group"
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Timer size={16} className="text-primary" />
               </div>
-              <span className="text-foreground font-semibold text-sm">
-                Disappearing Messages
-              </span>
+              <div className="flex flex-col items-start">
+                <span className="text-foreground font-semibold text-sm">
+                  Disappearing Messages
+                </span>
+                {activeChat.disappearingMode && (
+                  <span className="text-xs text-primary font-medium">
+                    {activeChat.disappearingTimer === "1h" ? "1 hour"
+                      : activeChat.disappearingTimer === "6h" ? "6 hours"
+                      : activeChat.disappearingTimer === "12h" ? "12 hours"
+                      : activeChat.disappearingTimer === "1d" ? "1 day"
+                      : activeChat.disappearingTimer === "3d" ? "3 days"
+                      : activeChat.disappearingTimer === "7d" ? "7 days"
+                      : "On"}
+                  </span>
+                )}
+              </div>
             </div>
-
-            <div
-              className={`w-10 h-6 rounded-full transition-colors ${
-                disappearing ? "bg-primary" : "bg-muted"
-              }`}
-            >
-              <div
-                className={`w-4 h-4 bg-white rounded-full mt-1 transition-all ${
-                  disappearing ? "ml-5" : "ml-1"
-                }`}
-              />
-            </div>
+            <div className={`w-2 h-2 rounded-full ${activeChat.disappearingMode ? "bg-primary" : "bg-muted-foreground/30"}`} />
           </button>
         </div>
 

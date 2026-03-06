@@ -24,6 +24,9 @@ interface ActiveChat {
   otherBubbleColor?: string;
   myTextColor?: string;
   otherTextColor?: string;
+  disappearingMode?: boolean;
+  disappearingTimer?: "1h" | "6h" | "12h" | "1d" | "3d" | "7d";
+  disappearingSetBy?: string;
 }
 
 type ThemeOptions = Partial<
@@ -62,7 +65,7 @@ interface ChatState {
   setEditingMessage: (msg: { id: string; text: string } | null) => void;
   jumpToMessageId: string | null;
   setJumpToMessageId: (id: string | null) => void;
- seenReactions: Record<string, number>;
+  seenReactions: Record<string, number>;
   markReactionAsSeen: (conversationId: string, timestamp: number) => void;
   scrollToBottomTrigger: number;
   triggerScrollToBottom: () => void;
@@ -138,6 +141,12 @@ interface ChatState {
     themeData: ThemeOptions,
   ) => void;
 
+  syncDisappearing: (
+    disappearingMode: boolean | undefined,
+    disappearingTimer: "1h" | "6h" | "12h" | "1d" | "3d" | "7d" | undefined,
+    disappearingSetBy: string | undefined,
+  ) => void;
+
   profilePanelOpen: boolean;
   toggleProfilePanel: () => void;
   setProfilePanelOpen: (open: boolean) => void;
@@ -169,7 +178,7 @@ export const useChatStore = create<ChatState>()(
       setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-     replyingTo: null,
+      replyingTo: null,
       setReplyingTo: (msg) => set({ replyingTo: msg, editingMessage: null }),
 
       editingMessage: null,
@@ -179,9 +188,11 @@ export const useChatStore = create<ChatState>()(
       jumpToMessageId: null,
       setJumpToMessageId: (id) => set({ jumpToMessageId: id }),
       seenReactions: {},
-      markReactionAsSeen: (convId, ts) => set((s) => ({ seenReactions: { ...s.seenReactions, [convId]: ts } })),
+      markReactionAsSeen: (convId, ts) =>
+        set((s) => ({ seenReactions: { ...s.seenReactions, [convId]: ts } })),
       scrollToBottomTrigger: 0,
-      triggerScrollToBottom: () => set((s) => ({ scrollToBottomTrigger: s.scrollToBottomTrigger + 1 })),
+      triggerScrollToBottom: () =>
+        set((s) => ({ scrollToBottomTrigger: s.scrollToBottomTrigger + 1 })),
 
       localThemes: {},
       activeChat: null,
@@ -238,6 +249,22 @@ export const useChatStore = create<ChatState>()(
             },
           };
         }),
+
+      syncDisappearing: (
+        disappearingMode,
+        disappearingTimer,
+        disappearingSetBy,
+      ) =>
+        set((s) => ({
+          activeChat: s.activeChat
+            ? {
+                ...s.activeChat,
+                disappearingMode,
+                disappearingTimer,
+                disappearingSetBy,
+              }
+            : null,
+        })),
 
       setConversationId: (conversationId) =>
         set((s) => ({
@@ -372,7 +399,10 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: "lunex-chat-themes-cloud-sync",
-      partialize: (state) => ({ localThemes: state.localThemes, seenReactions: state.seenReactions }),
+      partialize: (state) => ({
+        localThemes: state.localThemes,
+        seenReactions: state.seenReactions,
+      }),
     },
   ),
 );

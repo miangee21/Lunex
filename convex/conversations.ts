@@ -196,3 +196,46 @@ export const updateLastMessageAt = mutation({
     });
   },
 });
+
+// ── SET DISAPPEARING MESSAGES ──
+export const setDisappearing = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    timer: v.optional(
+      v.union(
+        v.literal("1h"),
+        v.literal("6h"),
+        v.literal("12h"),
+        v.literal("1d"),
+        v.literal("3d"),
+        v.literal("7d"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) throw new Error("Conversation not found");
+    if (!conv.participantIds.includes(args.userId))
+      throw new Error("Not a participant");
+
+    // Agar koi aur pehle se on kar chuka hai tu sirf wahi off kar sakta hai
+    if (
+      conv.disappearingMode &&
+      conv.disappearingSetBy !== args.userId &&
+      args.timer !== undefined
+    ) {
+      throw new Error("Another user has already enabled disappearing messages");
+    }
+
+    const isTurningOn = args.timer !== undefined;
+
+    await ctx.db.patch(args.conversationId, {
+      disappearingMode: isTurningOn ? true : undefined,
+      disappearingSetBy: isTurningOn ? args.userId : undefined,
+      disappearingTimer: isTurningOn ? args.timer : undefined,
+    });
+
+    return { success: true };
+  },
+});

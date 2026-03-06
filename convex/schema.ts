@@ -44,6 +44,14 @@ export default defineSchema({
     participantIds: v.array(v.id("users")),
     disappearingMode: v.optional(v.boolean()),
     disappearingSetBy: v.optional(v.id("users")),
+    disappearingTimer: v.optional(v.union(
+      v.literal("1h"),
+      v.literal("6h"),
+      v.literal("12h"),
+      v.literal("1d"),
+      v.literal("3d"),
+      v.literal("7d"),
+    )),
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
     lastReaction: v.optional(
@@ -68,6 +76,7 @@ export default defineSchema({
       v.literal("video"),
       v.literal("audio"),
       v.literal("file"),
+      v.literal("system"),
     ),
     mediaStorageId: v.optional(v.id("_storage")),
     mediaIv: v.optional(v.string()),
