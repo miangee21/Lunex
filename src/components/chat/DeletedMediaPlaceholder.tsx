@@ -1,8 +1,8 @@
 //src/components/chat/DeletedMediaPlaceholder.tsx
-import { ImageOff, VideoOff, FileX } from "lucide-react";
+import { ImageOff, VideoOff, FileX, LayoutGrid } from "lucide-react";
 
 interface DeletedMediaPlaceholderProps {
-  type: "image" | "video" | "file";
+  type: "image" | "video" | "file" | "grid";
   isOwn: boolean;
 }
 
@@ -11,15 +11,22 @@ export default function DeletedMediaPlaceholder({
   isOwn,
 }: DeletedMediaPlaceholderProps) {
   const Icon =
-    type === "image" ? ImageOff : type === "video" ? VideoOff : FileX;
+    type === "image"
+      ? ImageOff
+      : type === "video"
+        ? VideoOff
+        : type === "grid"
+          ? LayoutGrid
+          : FileX;
 
   const label =
     type === "image"
       ? "Image expired"
       : type === "video"
         ? "Video expired"
-        : "File expired";
-
+        : type === "grid"
+          ? "Grid expired"
+          : "File expired";
   const sublabel = "Media is automatically deleted after 6 hours";
 
   return (

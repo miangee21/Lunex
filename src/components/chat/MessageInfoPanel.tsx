@@ -17,11 +17,25 @@ import {
   Play,
   FileText,
 } from "lucide-react";
+import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 
 function MiniMediaThumbnail({ msg }: { msg: any }) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
   const secretKey = useAuthStore((s) => s.secretKey);
+  const currentUserId = useAuthStore((s) => s.userId);
   const { activeChat } = useChatStore();
+
+  // ── FIX 1: Agar media expire ho chuka hai toh direct Placeholder dikhao (COMPACT SIZE) ──
+  if (msg.mediaDeletedAt) {
+    return (
+      <div className="relative w-40 h-25 mb-1.5 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center border border-white/5">
+        {/* CSS Scale se isko chota aur perfect center kiya gaya hai taake info panel me cut na ho */}
+        <div className="w-[180%] transform scale-[0.6] origin-center">
+          <DeletedMediaPlaceholder type={msg.type || "file"} isOwn={msg.senderId === currentUserId} />
+        </div>
+      </div>
+    );
+  }
 
   const otherUser = useQuery(
     api.users.getUserById,
@@ -239,11 +253,9 @@ export default function MessageInfoPanel({
               <MiniMediaThumbnail msg={msg} />
             )}
 
-            {(!msg.type ||
-              msg.type === "text" ||
-              (msg.type !== "file" &&
-                messageText !== msg.mediaOriginalName)) && (
-              <p className="text-[15px] leading-relaxed wrap-break-word">
+            {/* ── FIX 2: Sirf normal text message ho toh dikhao, media ke neeche file ka name bilkul gayab kar do ── */}
+            {(!msg.type || msg.type === "text") && messageText && (
+              <p className="text-[15px] leading-relaxed wrap-break-word mt-1">
                 {messageText.replace(/\n/g, " ").length > 40
                   ? messageText.replace(/\n/g, " ").substring(0, 40) + "..."
                   : messageText.replace(/\n/g, " ")}

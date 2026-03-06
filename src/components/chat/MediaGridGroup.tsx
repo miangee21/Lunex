@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 import MediaPreview from "@/components/chat/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/EmojiPicker";
+import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 import { toast } from "sonner";
 import { type DecryptedMessage } from "@/components/chat/ChatArea";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -339,6 +340,10 @@ export default function MediaGridGroup({
         <div
           className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-60 sm:w-70 ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}
         >
+          {/* ── FIX: Agar Grid Expire ho gaya hai toh pyara sa Placeholder dikhao ── */}
+          {msg.mediaDeletedAt ? (
+            <DeletedMediaPlaceholder type="grid" isOwn={isGroupOwn} />
+          ) : (
           <div
             className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}
           >
@@ -394,6 +399,7 @@ export default function MediaGridGroup({
               </div>
             )}
           </div>
+          )}
 
           <div className="absolute bottom-1 right-2 flex items-center gap-1 text-[10.5px] font-medium opacity-70 z-10 text-current">
             <span>{msg.time}</span>
@@ -433,8 +439,12 @@ export default function MediaGridGroup({
 
           {gridMenuOpen === msg.id && (
             <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
-              <button
-                onClick={async (e) => {
+              
+              {/* ── FIX: Agar expired hai toh Download All chupao ── */}
+              {!msg.mediaDeletedAt && (
+                <>
+                  <button
+                    onClick={async (e) => {
                   e.stopPropagation();
                   setGridMenuOpen(null);
 
@@ -541,6 +551,8 @@ export default function MediaGridGroup({
               </button>
 
               <div className="h-px bg-border w-full" />
+              </>
+              )}
 
               <button
                 onClick={(e) => {
