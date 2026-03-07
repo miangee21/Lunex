@@ -163,6 +163,10 @@ export const markMessagesAsRead = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // ── settingReadReceipts false hai tu read mark hi mat karo ──
+    const user = await ctx.db.get(args.userId);
+    if (user?.settingReadReceipts === false) return;
+
     const messages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>

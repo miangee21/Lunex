@@ -3,11 +3,37 @@ import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Timer } from "lucide-react";
+import { useQuery } from "convex/react";
+import { useState, useEffect } from "react";
+import { api } from "../../../convex/_generated/api";
 
 export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
+  
+  // ── Polling trigger - har 2 seconds mein status check kar ──
+  const [pollTrigger, setPollTrigger] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPollTrigger((prev) => prev + 1);
+    }, 2000); // 2 second polling
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── PRO FIX: Header ko direct Convex se real-time connect karo ──
+  const otherUser = useQuery(
+    api.users.getUserById,
+    activeChat?.userId ? { userId: activeChat.userId as Id<"users"> } : "skip"
+  );
 
   if (!activeChat) return null;
+
+  // Agar real-time data aa gaya hai tou wo use karo, warna store wala fallback
+  const isOnlineRealtime = otherUser?.isOnline ?? activeChat.isOnline;
+
+  // Force dependency on pollTrigger
+  useEffect(() => {}, [pollTrigger]);
 
   return (
     <div
@@ -20,7 +46,7 @@ export default function ChatHeader() {
         profilePicStorageId={
           activeChat.profilePicStorageId as Id<"_storage"> | null
         }
-        isOnline={activeChat.isOnline}
+        isOnline={isOnlineRealtime}
         size="md"
       />
 
@@ -44,10 +70,10 @@ export default function ChatHeader() {
         ) : (
           <p
             className={`text-xs font-medium ${
-              activeChat.isOnline ? "text-emerald-500" : "text-muted-foreground"
+              isOnlineRealtime ? "text-emerald-500" : "text-muted-foreground"
             }`}
           >
-            {activeChat.isOnline ? "Online" : "Offline"}
+            {isOnlineRealtime ? "Online" : "Offline"}
           </p>
         )}
       </div>

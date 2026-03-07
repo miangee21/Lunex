@@ -13,6 +13,19 @@ export default defineSchema({
 
     theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
     globalPreset: v.optional(v.string()),
+    settingOnlineStatus: v.optional(v.boolean()),
+    settingTyping: v.optional(v.boolean()),
+    settingReadReceipts: v.optional(v.boolean()),
+    settingDisappearing: v.optional(
+      v.union(
+        v.literal("1h"),
+        v.literal("6h"),
+        v.literal("12h"),
+        v.literal("1d"),
+        v.literal("3d"),
+        v.literal("7d"),
+      ),
+    ),
   })
     .index("by_username", ["username"])
     .index("by_public_key", ["publicKey"]),

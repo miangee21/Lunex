@@ -1,6 +1,10 @@
 //src/pages/ChatPage.tsx
 import { useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
+import { useAuthStore } from "@/store/authStore";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import SlimBar from "@/components/sidebar/SlimBar";
 import ChatList from "@/components/chat/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
@@ -11,6 +15,9 @@ import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
 export default function ChatPage() {
+  const userId = useAuthStore((s) => s.userId);
+  const setOnlineStatus = useMutation(api.users.setOnlineStatus);
+
   const {
     sidebarOpen,
     sidebarView,
@@ -18,6 +25,73 @@ export default function ChatPage() {
     profilePanelOpen,
     selectedMessageForInfo,
   } = useChatStore();
+
+  // ── FIX 2: Real-time Smart Online/Offline Presence System with Debounce ──
+  useEffect(() => {
+    if (!userId) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let pendingStatus: boolean | null = null;
+    let isProcessing = false;
+
+    const updateOnlineStatus = async (isOnline: boolean) => {
+      // agar same status pending hai to duplicate request nai bhejo
+      if (pendingStatus === isOnline) return;
+
+      pendingStatus = isOnline;
+
+      // Debounce 500ms - jab user multiple events trigger kare
+      clearTimeout(timeoutId!);
+      timeoutId = setTimeout(async () => {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        try {
+          await setOnlineStatus({
+            userId: userId as Id<"users">,
+            isOnline,
+          });
+        } catch (error) {
+          console.error(
+            `Failed to set online status to ${isOnline}:`,
+            error
+          );
+        } finally {
+          isProcessing = false;
+          pendingStatus = null;
+        }
+      }, 500);
+    };
+
+    // App khulte hi online ho jao
+    updateOnlineStatus(true);
+
+    // ── ONLY close/logout events - focus/blur se toggle mat kar ──
+    const handleBeforeUnload = () => updateOnlineStatus(false); // App close ki
+    const handlePageHide = () => updateOnlineStatus(false); // Tab band kiya
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+
+    return () => {
+      // Cleanup: remove listeners
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+      clearTimeout(timeoutId!);
+
+      // Flush pending status immediately on unmount
+      if (pendingStatus !== null) {
+        try {
+          setOnlineStatus({
+            userId: userId as Id<"users">,
+            isOnline: false,
+          }).catch(console.error);
+        } catch (error) {
+          console.error("Failed to set offline on unmount:", error);
+        }
+      }
+    };
+  }, [userId, setOnlineStatus]);
 
   useEffect(() => {
     let prevWidth = window.innerWidth;

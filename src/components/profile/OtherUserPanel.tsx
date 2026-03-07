@@ -7,7 +7,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { X, UserX, Shield, ShieldOff, Timer, Palette } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ChatThemeCustomizer from "@/components/chat/ChatThemeCustomizer";
 import DisappearingPicker from "@/components/chat/DisappearingPicker";
 import ConfirmModal from "@/components/shared/ConfirmModal";
@@ -18,6 +18,17 @@ export default function OtherUserPanel() {
 
   const [view, setView] = useState<"profile" | "theme" | "disappearing">("profile");
   const [disappearing, setDisappearing] = useState(false);
+  
+  // ── Polling trigger - har 2 seconds mein status check kar ──
+  const [pollTrigger, setPollTrigger] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPollTrigger((prev) => prev + 1);
+    }, 2000); // 2 second polling
+
+    return () => clearInterval(interval);
+  }, []);
 
   const unfriend = useMutation(api.friends.unfriend);
   const blockUser = useMutation(api.friends.blockUser);
@@ -25,18 +36,21 @@ export default function OtherUserPanel() {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat ? { userId: activeChat.userId as never } : "skip",
+    activeChat ? { userId: activeChat.userId as never } : "skip"
   );
 
   const friends = useQuery(
     api.friends.getFriends,
-    userId ? { userId } : "skip",
+    userId ? { userId } : "skip"
   );
 
   const blockedUsers = useQuery(
     api.friends.getBlockedUsers,
-    userId ? { userId } : "skip",
+    userId ? { userId } : "skip"
   );
+
+  // Force dependency on pollTrigger
+  useEffect(() => {}, [pollTrigger]);
 
   if (!activeChat) return null;
 
@@ -109,7 +123,7 @@ export default function OtherUserPanel() {
               otherUser?.profilePicStorageId as Id<"_storage"> | null
             }
             size="lg"
-            isOnline={activeChat.isOnline}
+            isOnline={otherUser?.isOnline ?? activeChat.isOnline}
             isGrayedOut={iBlockedThem || hasBlockedMe}
           />
           <div className="text-center">
@@ -121,12 +135,12 @@ export default function OtherUserPanel() {
             </p>
             <p
               className={`text-xs font-medium mt-1 ${
-                activeChat.isOnline
+                (otherUser?.isOnline ?? activeChat.isOnline)
                   ? "text-emerald-500"
                   : "text-muted-foreground"
               }`}
             >
-              {activeChat.isOnline ? "Online" : "Offline"}
+              {(otherUser?.isOnline ?? activeChat.isOnline) ? "Online" : "Offline"}
             </p>
           </div>
 

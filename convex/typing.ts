@@ -9,6 +9,10 @@ export const setTyping = mutation({
     isTyping: v.boolean(),
   },
   handler: async (ctx, args) => {
+    // ── settingTyping false hai tu typing indicator send hi mat karo ──
+    const user = await ctx.db.get(args.userId);
+    if (user?.settingTyping === false) return;
+
     const existing = await ctx.db
       .query("typingIndicators")
       .withIndex("by_conversation", (q) =>

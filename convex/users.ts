@@ -92,10 +92,20 @@ export const setOnlineStatus = mutation({
     isOnline: v.boolean(),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // ── PRO FIX: Agar privacy setting OFF hai tou zabardasti offline rakho ──
+    const effectiveOnline = user.settingOnlineStatus === false ? false : args.isOnline;
+
     await ctx.db.patch(args.userId, {
-      isOnline: args.isOnline,
+      isOnline: effectiveOnline,
       lastSeen: Date.now(),
     });
+
+    return { success: true, isOnline: effectiveOnline };
   },
 });
 
@@ -113,9 +123,44 @@ export const getUserById = query({
   },
 });
 
+// ── Get user online status real-time (lightweight query) ──
+export const getUserOnlineStatus = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    return {
+      userId: user._id,
+      isOnline: user.isOnline,
+      lastSeen: user.lastSeen,
+    };
+  },
+});
+
 export const removeProfilePic = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.userId, { profilePicStorageId: undefined });
+  },
+});
+
+// ── Online status setting respect karo ──
+export const setOnlineStatusWithSetting = mutation({
+  args: {
+    userId: v.id("users"),
+    isOnline: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return;
+
+    // ── Agar settingOnlineStatus false hai tu hamesha offline dikhao ──
+    const effectiveOnline =
+      user.settingOnlineStatus === false ? false : args.isOnline;
+
+    await ctx.db.patch(args.userId, {
+      isOnline: effectiveOnline,
+      lastSeen: Date.now(),
+    });
   },
 });

@@ -10,7 +10,8 @@ type SidebarView =
   | "profile"
   | "friends"
   | "blocked"
-  | "search";
+  | "search"
+  | "settings";
 
 interface ActiveChat {
   userId: string;

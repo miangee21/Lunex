@@ -4,14 +4,16 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import ChatListItem from "@/components/chat/ChatListItem";
+import ChatListItemWithStatus from "@/components/chat/ChatListItemWithStatus";
+import FriendListItemWithStatus from "@/components/chat/FriendListItemWithStatus";
 import RequestsPanel from "@/components/friends/RequestItem";
 import SearchUsers from "@/components/friends/SearchUsers";
 import { Search, Plus, X, ArrowLeft } from "lucide-react";
-import UserAvatar from "@/components/shared/UserAvatar";
+import DotsMenu from "@/components/sidebar/DotsMenu";
 import { Id } from "../../../convex/_generated/dataModel";
 import { decryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import SettingsPanel from "../sidebar/SettingsPanel";
 
 export default function ChatList() {
   const {
@@ -26,6 +28,7 @@ export default function ChatList() {
     seenReactions,
     triggerScrollToBottom,
     markReactionAsSeen,
+    setSidebarView,
   } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
@@ -63,6 +66,8 @@ export default function ChatList() {
 
   if (sidebarView === "requests") return <RequestsPanel />;
   if (sidebarView === "search") return <SearchUsers />;
+  if (sidebarView === "settings") 
+  return <SettingsPanel onBack={() => setSidebarView("chats")} />;
 
   async function handleOpenChat(friend: {
     userId: string;
@@ -155,14 +160,18 @@ export default function ChatList() {
           ) : (
             filteredFriends.map((friend) =>
               friend ? (
-                <button
+                <FriendListItemWithStatus
                   key={friend.userId}
-                  onClick={() => {
+                  userId={friend.userId}
+                  username={friend.username}
+                  profilePicStorageId={friend.profilePicStorageId}
+                  isOnline={friend.isOnline}
+                  onSelect={(isOnline) => {
                     handleOpenChat({
                       userId: friend.userId,
                       username: friend.username,
                       profilePicStorageId: friend.profilePicStorageId,
-                      isOnline: friend.isOnline,
+                      isOnline: isOnline,
                       chatPresetName: (friend as any).chatPresetName,
                       chatBgColor: (friend as any).chatBgColor,
                       myBubbleColor: (friend as any).myBubbleColor,
@@ -173,24 +182,7 @@ export default function ChatList() {
                     setShowFriends(false);
                     setSearch("");
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-3 hover:bg-accent/50 transition-colors"
-                >
-                  <UserAvatar
-                    username={friend.username}
-                    profilePicStorageId={
-                      friend.profilePicStorageId as Id<"_storage"> | null
-                    }
-                    isOnline={friend.isOnline}
-                  />
-                  <div className="flex flex-col items-start min-w-0">
-                    <span className="text-foreground text-sm font-semibold truncate">
-                      {friend.username}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {friend.isOnline ? "Online" : "Offline"}
-                    </span>
-                  </div>
-                </button>
+                />
               ) : null,
             )
           )}
@@ -207,16 +199,21 @@ export default function ChatList() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-foreground font-bold text-lg">Chats</h2>
-        <button
-          onClick={() => {
-            setShowFriends(true);
-            setSearch("");
-          }}
-          className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
-          title="New Chat"
-        >
-          <Plus size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setShowFriends(true);
+              setSearch("");
+            }}
+            className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
+            title="New Chat"
+          >
+            <Plus size={18} />
+          </button>
+          <DotsMenu
+            onSettingsClick={() => setSidebarView("settings")}
+          />
+        </div>
       </div>
 
       <div className="px-3 pb-3">
@@ -291,7 +288,7 @@ export default function ChatList() {
                   }
                 }}
               >
-                <ChatListItem
+                <ChatListItemWithStatus
                   id={conv.otherUserId}
                   conversationId={conv.conversationId}
                   username={conv.username}
