@@ -32,7 +32,7 @@ export default function SlimBar() {
 
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId } : "skip",
+    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
 
   const handleThemeToggle = async () => {

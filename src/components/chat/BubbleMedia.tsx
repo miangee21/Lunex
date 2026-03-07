@@ -60,9 +60,10 @@ export default function BubbleMedia({
 
   const secretKey = useAuthStore((s) => s.secretKey);
   const { activeChat } = useChatStore();
+  const userId = useAuthStore((s) => s.userId);
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
+    activeChat?.userId && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
 
   const instantUrl = useChatStore((s) =>

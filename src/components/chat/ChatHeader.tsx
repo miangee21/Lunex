@@ -26,7 +26,7 @@ export default function ChatHeader() {
 // ── PRO FIX: Header ko direct Convex se real-time connect karo ──
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId ? { userId: activeChat.userId as Id<"users"> } : "skip"
+    activeChat?.userId && currentUserId ? { userId: activeChat.userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
   );
 
   if (!activeChat) return null;

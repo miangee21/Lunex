@@ -20,7 +20,7 @@ export default function AppRouter() {
 
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId: userId as Id<"users"> } : "skip",
+    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
 
   const syncFromCloud = useThemeStore((s) => s.syncFromCloud);

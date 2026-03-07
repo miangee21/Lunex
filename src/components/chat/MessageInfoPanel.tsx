@@ -39,7 +39,8 @@ function MiniMediaThumbnail({ msg }: { msg: any }) {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
+    // ── FIX: 'userId' ki jagah 'currentUserId' use karna hai ──
+    activeChat?.userId && currentUserId ? { userId: activeChat.userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip",
   );
 
   const instantUrl = msg.mediaStorageId

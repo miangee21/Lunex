@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,7 +21,7 @@ export default function AvatarUpload() {
 
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId } : "skip",
+    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
 
   const avatarUrl = useQuery(

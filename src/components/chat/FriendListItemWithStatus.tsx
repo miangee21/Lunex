@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
+import { useAuthStore } from "@/store/authStore";
 
 interface FriendListItemProps {
   userId: string;
@@ -19,10 +20,12 @@ export default function FriendListItemWithStatus({
   isOnline: fallbackIsOnline,
   onSelect,
 }: FriendListItemProps) {
+  const currentUserId = useAuthStore((s) => s.userId);
+
 // ── Fetch real-time online status for this user ──
   const userStatus = useQuery(
     api.users.getUserOnlineStatus,
-    userId ? { userId: userId as Id<"users"> } : "skip"
+    userId && currentUserId ? { userId: userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
   );
 
   // Use real-time data if available, fallback to stale data

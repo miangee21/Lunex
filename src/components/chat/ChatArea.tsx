@@ -184,12 +184,12 @@ export default function ChatArea() {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
+    activeChat?.userId && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
 
   const currentUser = useQuery(
  api.users.getUserById,
- userId ? { userId: userId as never } : "skip",
+ userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
  );
 
  // ── PRO FIX: Effect ko yahan lagana hai taake variables pehle load ho chuke hon ──

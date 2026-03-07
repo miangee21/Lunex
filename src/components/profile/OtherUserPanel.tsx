@@ -25,7 +25,7 @@ export default function OtherUserPanel() {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat ? { userId: activeChat.userId as never } : "skip"
+    activeChat && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip"
   );
 
   const friends = useQuery(

@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
 import GlobalThemeCustomizer from "@/components/profile/GlobalThemeCustomizer";
@@ -32,7 +33,7 @@ export default function MyProfilePanel() {
   );
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId } : "skip",
+    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
   );
   const updateProfile = useMutation(api.users.updateUserProfile);
 

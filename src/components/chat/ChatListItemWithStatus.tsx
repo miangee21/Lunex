@@ -36,7 +36,7 @@ export default function ChatListItemWithStatus({
   // ── Fetch real-time online status for this user ──
   const userStatus = useQuery(
     api.users.getUserOnlineStatus,
-    id ? { userId: id as Id<"users"> } : "skip"
+    id && currentUserId ? { userId: id as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
   );
 
   // Use real-time data if available, fallback to stale data
