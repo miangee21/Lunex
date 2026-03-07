@@ -182,9 +182,33 @@ export const markMessagesAsRead = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // ── POINT-IN-TIME FIX: Check user setting exactly when reading ──
     const user = await ctx.db.get(args.userId);
-    const sendReceipts = user?.settingReadReceipts !== false;
+    const conv = await ctx.db.get(args.conversationId);
+
+    // ── PRO FIX: 4-Option Read Receipts Privacy Logic ──
+    let sendReceipts = true;
+
+    if (user) {
+      const privacy = user.privacyReadReceipts ?? "everyone";
+      const exceptions = user.readReceiptsExceptions ?? [];
+
+      if (privacy === "nobody") {
+        sendReceipts = false;
+      } else if ((privacy === "only_these" || privacy === "all_except") && conv) {
+        // Pata lagao ke saamne wala banda (jisne message bheja tha) kon hai
+        const otherUserId = conv.participantIds.find((id: string) => id !== args.userId);
+
+        if (otherUserId) {
+          if (privacy === "only_these") {
+            // Whitelist: Sirf unko blue ticks bhejo jo list mein HAIN
+            sendReceipts = exceptions.includes(otherUserId);
+          } else if (privacy === "all_except") {
+            // Blacklist: Unko blue ticks MAT bhejo jo list mein hain
+            sendReceipts = !exceptions.includes(otherUserId);
+          }
+        }
+      }
+    }
 
     const messages = await ctx.db
       .query("messages")

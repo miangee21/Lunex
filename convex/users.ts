@@ -97,8 +97,8 @@ export const setOnlineStatus = mutation({
       throw new Error("User not found");
     }
 
-    // ── PRO FIX: Agar privacy setting OFF hai tou zabardasti offline rakho ──
-    const effectiveOnline = user.settingOnlineStatus === false ? false : args.isOnline;
+    // ── PRO FIX: Agar privacy 'nobody' hai tou hamesha offline physical state ──
+    const effectiveOnline = user.privacyOnline === "nobody" ? false : args.isOnline;
 
     await ctx.db.patch(args.userId, {
       isOnline: effectiveOnline,
@@ -117,22 +117,64 @@ export const getProfilePicUrl = query({
 });
 
 export const getUserById = query({
-  args: { userId: v.id("users") },
+  args: { 
+    userId: v.id("users"),
+    viewerId: v.optional(v.id("users")) // Viewer ID zaroori hai
+  },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId);
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+
+    // ── PRO FIX: 4-Option Privacy Logic (Whitelist & Blacklist) ──
+    let canSee = true;
+    const privacy = user.privacyOnline ?? "everyone";
+    const exceptions = user.onlineExceptions ?? [];
+
+    if (privacy === "nobody") {
+      canSee = false;
+    } else if (privacy === "only_these") {
+      // Whitelist: Sirf unko dikhao jo list mein hain
+      canSee = args.viewerId ? exceptions.includes(args.viewerId) : false;
+    } else if (privacy === "all_except") {
+      // Blacklist: Unko chhupao jo list mein hain
+      canSee = args.viewerId ? !exceptions.includes(args.viewerId) : true;
+    }
+
+    return {
+      ...user,
+      isOnline: canSee ? user.isOnline : false,
+      lastSeen: canSee ? user.lastSeen : undefined,
+    };
   },
 });
 
 // ── Get user online status real-time (lightweight query) ──
 export const getUserOnlineStatus = query({
-  args: { userId: v.id("users") },
+  args: { 
+    userId: v.id("users"),
+    viewerId: v.optional(v.id("users")) 
+  },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
+
+    // ── PRO FIX: 4-Option Privacy Logic (Whitelist & Blacklist) ──
+    let canSee = true;
+    const privacy = user.privacyOnline ?? "everyone";
+    const exceptions = user.onlineExceptions ?? [];
+
+    if (privacy === "nobody") {
+      canSee = false;
+    } else if (privacy === "only_these") {
+      canSee = args.viewerId ? exceptions.includes(args.viewerId) : false;
+    } else if (privacy === "all_except") {
+      canSee = args.viewerId ? !exceptions.includes(args.viewerId) : true;
+    }
+
     return {
       userId: user._id,
-      isOnline: user.isOnline,
-      lastSeen: user.lastSeen,
+      isOnline: canSee ? user.isOnline : false,
+      lastSeen: canSee ? user.lastSeen : undefined,
     };
   },
 });
@@ -154,9 +196,8 @@ export const setOnlineStatusWithSetting = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) return;
 
-    // ── Agar settingOnlineStatus false hai tu hamesha offline dikhao ──
-    const effectiveOnline =
-      user.settingOnlineStatus === false ? false : args.isOnline;
+    // ── PRO FIX: 'nobody' par hamesha false rakho ──
+    const effectiveOnline = user.privacyOnline === "nobody" ? false : args.isOnline;
 
     await ctx.db.patch(args.userId, {
       isOnline: effectiveOnline,

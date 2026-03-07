@@ -9,9 +9,36 @@ export const setTyping = mutation({
     isTyping: v.boolean(),
   },
   handler: async (ctx, args) => {
-    // ── settingTyping false hai tu typing indicator send hi mat karo ──
     const user = await ctx.db.get(args.userId);
-    if (user?.settingTyping === false) return;
+    if (!user) return;
+
+    // ── PRO FIX: 4-Option Typing Privacy Logic ──
+    let canSendTyping = true;
+    const privacy = user.privacyTyping ?? "everyone";
+    const exceptions = user.typingExceptions ?? [];
+
+    if (privacy === "nobody") {
+      canSendTyping = false;
+    } else if (privacy === "only_these" || privacy === "all_except") {
+      // Humein dekhna hoga ke doosra banda (viewer) kaun hai
+      const conv = await ctx.db.get(args.conversationId);
+      if (conv) {
+        const otherUserId = conv.participantIds.find((id) => id !== args.userId);
+        
+        if (otherUserId) {
+          if (privacy === "only_these") {
+            // Whitelist: Sirf tab bhejo agar doosra banda list mein HAI
+            canSendTyping = exceptions.includes(otherUserId);
+          } else if (privacy === "all_except") {
+            // Blacklist: Sirf tab bhejo agar doosra banda list mein NAHI hai
+            canSendTyping = !exceptions.includes(otherUserId);
+          }
+        }
+      }
+    }
+
+    // Agar privacy allow nahi karti, tou typing event send hi mat karo
+    if (!canSendTyping) return;
 
     const existing = await ctx.db
       .query("typingIndicators")

@@ -6,9 +6,17 @@ import { query, mutation } from "./_generated/server";
 export const updatePrivacySettings = mutation({
   args: {
     userId: v.id("users"),
-    settingOnlineStatus: v.optional(v.boolean()),
-    settingTyping: v.optional(v.boolean()),
-    settingReadReceipts: v.optional(v.boolean()),
+    
+    // ── PRO FIX: 4-Option Privacy System ──
+    privacyOnline: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    onlineExceptions: v.optional(v.array(v.id("users"))),
+    
+    privacyTyping: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    typingExceptions: v.optional(v.array(v.id("users"))),
+    
+    privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    readReceiptsExceptions: v.optional(v.array(v.id("users"))),
+    
     settingDisappearing: v.optional(
       v.union(
         v.literal("off"),
@@ -26,14 +34,15 @@ export const updatePrivacySettings = mutation({
 
     const patch: Record<string, unknown> = {};
 
-    if (settings.settingOnlineStatus !== undefined)
-      patch.settingOnlineStatus = settings.settingOnlineStatus;
+    // ── PRO FIX: Map New Settings to Database Patch ──
+    if (settings.privacyOnline !== undefined) patch.privacyOnline = settings.privacyOnline;
+    if (settings.onlineExceptions !== undefined) patch.onlineExceptions = settings.onlineExceptions;
 
-    if (settings.settingTyping !== undefined)
-      patch.settingTyping = settings.settingTyping;
+    if (settings.privacyTyping !== undefined) patch.privacyTyping = settings.privacyTyping;
+    if (settings.typingExceptions !== undefined) patch.typingExceptions = settings.typingExceptions;
 
-    if (settings.settingReadReceipts !== undefined)
-      patch.settingReadReceipts = settings.settingReadReceipts;
+    if (settings.privacyReadReceipts !== undefined) patch.privacyReadReceipts = settings.privacyReadReceipts;
+    if (settings.readReceiptsExceptions !== undefined) patch.readReceiptsExceptions = settings.readReceiptsExceptions;
 
     if (settings.settingDisappearing !== undefined)
       patch.settingDisappearing =
@@ -45,10 +54,10 @@ export const updatePrivacySettings = mutation({
       await ctx.db.patch(userId, patch);
     }
 
-    // ── FIX 1: Toggle ON ya OFF hone par isOnline ko foran update karo ──
-    if (settings.settingOnlineStatus === false) {
+    // ── FIX 1: Jab Online status set ho, isOnline table mein physical force update check karo ──
+    if (settings.privacyOnline === "nobody") {
       await ctx.db.patch(userId, { isOnline: false, lastSeen: Date.now() });
-    } else if (settings.settingOnlineStatus === true) {
+    } else if (settings.privacyOnline === "everyone" || settings.privacyOnline === "only_these" || settings.privacyOnline === "all_except") {
       await ctx.db.patch(userId, { isOnline: true, lastSeen: Date.now() });
     }
 
@@ -64,9 +73,15 @@ export const getUserSettings = query({
     if (!user) return null;
 
     return {
-      settingOnlineStatus: user.settingOnlineStatus ?? true,
-      settingTyping: user.settingTyping ?? true,
-      settingReadReceipts: user.settingReadReceipts ?? true,
+      privacyOnline: user.privacyOnline ?? "everyone",
+      onlineExceptions: user.onlineExceptions ?? [],
+      
+      privacyTyping: user.privacyTyping ?? "everyone",
+      typingExceptions: user.typingExceptions ?? [],
+      
+      privacyReadReceipts: user.privacyReadReceipts ?? "everyone",
+      readReceiptsExceptions: user.readReceiptsExceptions ?? [],
+      
       settingDisappearing: user.settingDisappearing ?? "off",
     };
   },

@@ -13,9 +13,17 @@ export default defineSchema({
 
     theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
     globalPreset: v.optional(v.string()),
-    settingOnlineStatus: v.optional(v.boolean()),
-    settingTyping: v.optional(v.boolean()),
-    settingReadReceipts: v.optional(v.boolean()),
+    
+    // ── PRO FIX: WhatsApp-Style Privacy System (4 Options) ──
+    privacyOnline: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    onlineExceptions: v.optional(v.array(v.id("users"))),
+    
+    privacyTyping: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    typingExceptions: v.optional(v.array(v.id("users"))),
+    
+    privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    readReceiptsExceptions: v.optional(v.array(v.id("users"))),
+
     settingDisappearing: v.optional(
       v.union(
         v.literal("1h"),
