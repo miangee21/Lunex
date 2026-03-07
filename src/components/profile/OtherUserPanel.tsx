@@ -18,17 +18,6 @@ export default function OtherUserPanel() {
 
   const [view, setView] = useState<"profile" | "theme" | "disappearing">("profile");
   const [disappearing, setDisappearing] = useState(false);
-  
-  // ── Polling trigger - har 2 seconds mein status check kar ──
-  const [pollTrigger, setPollTrigger] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPollTrigger((prev) => prev + 1);
-    }, 2000); // 2 second polling
-
-    return () => clearInterval(interval);
-  }, []);
 
   const unfriend = useMutation(api.friends.unfriend);
   const blockUser = useMutation(api.friends.blockUser);
@@ -48,9 +37,6 @@ export default function OtherUserPanel() {
     api.friends.getBlockedUsers,
     userId ? { userId } : "skip"
   );
-
-  // Force dependency on pollTrigger
-  useEffect(() => {}, [pollTrigger]);
 
   if (!activeChat) return null;
 

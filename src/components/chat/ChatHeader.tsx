@@ -4,24 +4,12 @@ import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Timer } from "lucide-react";
 import { useQuery } from "convex/react";
-import { useState, useEffect } from "react";
 import { api } from "../../../convex/_generated/api";
 
 export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
-  
-  // ── Polling trigger - har 2 seconds mein status check kar ──
-  const [pollTrigger, setPollTrigger] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPollTrigger((prev) => prev + 1);
-    }, 2000); // 2 second polling
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── PRO FIX: Header ko direct Convex se real-time connect karo ──
+// ── PRO FIX: Header ko direct Convex se real-time connect karo ──
   const otherUser = useQuery(
     api.users.getUserById,
     activeChat?.userId ? { userId: activeChat.userId as Id<"users"> } : "skip"
@@ -31,9 +19,6 @@ export default function ChatHeader() {
 
   // Agar real-time data aa gaya hai tou wo use karo, warna store wala fallback
   const isOnlineRealtime = otherUser?.isOnline ?? activeChat.isOnline;
-
-  // Force dependency on pollTrigger
-  useEffect(() => {}, [pollTrigger]);
 
   return (
     <div

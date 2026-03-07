@@ -1,6 +1,5 @@
 //src/components/chat/FriendListItemWithStatus.tsx
 import { useQuery } from "convex/react";
-import { useState, useEffect } from "react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
@@ -20,18 +19,7 @@ export default function FriendListItemWithStatus({
   isOnline: fallbackIsOnline,
   onSelect,
 }: FriendListItemProps) {
-  // ── Polling trigger - har 2 seconds mein status check kar ──
-  const [pollTrigger, setPollTrigger] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPollTrigger((prev) => prev + 1);
-    }, 2000); // 2 second polling
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── Fetch real-time online status for this user ──
+// ── Fetch real-time online status for this user ──
   const userStatus = useQuery(
     api.users.getUserOnlineStatus,
     userId ? { userId: userId as Id<"users"> } : "skip"
@@ -39,9 +27,6 @@ export default function FriendListItemWithStatus({
 
   // Use real-time data if available, fallback to stale data
   const isOnline = userStatus?.isOnline ?? fallbackIsOnline;
-
-  // Force dependency on pollTrigger to ensure re-render
-  useEffect(() => {}, [pollTrigger]);
 
   return (
     <button
