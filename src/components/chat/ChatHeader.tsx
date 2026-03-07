@@ -5,9 +5,23 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Timer } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAuthStore } from "@/store/authStore";
 
 export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
+  const currentUserId = useAuthStore((s) => s.userId);
+
+  // ── FIX: Real-time check karo ke samne wala type kar raha hai ya nahi ──
+  const typingUsers = useQuery(
+    api.typing.getTypingUsers,
+    activeChat?.conversationId && currentUserId
+      ? {
+          conversationId: activeChat.conversationId as Id<"conversations">,
+          currentUserId: currentUserId as Id<"users">,
+        }
+      : "skip"
+  );
+  const isTyping = typingUsers && typingUsers.length > 0;
 
 // ── PRO FIX: Header ko direct Convex se real-time connect karo ──
   const otherUser = useQuery(
@@ -39,7 +53,13 @@ export default function ChatHeader() {
         <p className="text-foreground font-bold text-sm truncate">
           {activeChat.username}
         </p>
-        {activeChat.disappearingMode ? (
+        
+        {/* ── FIX: Agar type kar raha hai tou priority pe typing dikhao ── */}
+        {isTyping ? (
+          <p className="text-xs font-medium text-emerald-500 animate-pulse truncate tracking-wide">
+            typing...
+          </p>
+        ) : activeChat.disappearingMode ? (
           <div className="flex items-center gap-1">
             <Timer size={10} className="text-primary shrink-0" />
             <p className="text-xs font-medium text-primary truncate">

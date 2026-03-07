@@ -21,16 +21,22 @@ export const setTyping = mutation({
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .unique();
 
+    // ── PRO FIX: Zombie data ko delete karo bajaye 'false' set karne ke ──
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        isTyping: args.isTyping,
-        updatedAt: Date.now(),
-      });
-    } else {
+      if (args.isTyping) {
+        await ctx.db.patch(existing._id, {
+          isTyping: true,
+          updatedAt: Date.now(),
+        });
+      } else {
+        // Typing ruki tou row hi delete kar do
+        await ctx.db.delete(existing._id);
+      }
+    } else if (args.isTyping) {
       await ctx.db.insert("typingIndicators", {
         conversationId: args.conversationId,
         userId: args.userId,
-        isTyping: args.isTyping,
+        isTyping: true,
         updatedAt: Date.now(),
       });
     }

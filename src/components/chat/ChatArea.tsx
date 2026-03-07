@@ -197,6 +197,18 @@ export default function ChatArea() {
     activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
   );
 
+  // ── FIX: Typing Indicator Query ──
+  const typingUsers = useQuery(
+    api.typing.getTypingUsers,
+    activeChat?.conversationId && userId
+      ? {
+          conversationId: activeChat.conversationId as Id<"conversations">,
+          currentUserId: userId as Id<"users">,
+        }
+      : "skip"
+  );
+  const isTyping = typingUsers && typingUsers.length > 0;
+
   useEffect(() => {
     if (activeChat?.conversationId && userId) {
       markAsRead({
@@ -628,6 +640,17 @@ export default function ChatArea() {
     }
   };
 
+  // ── FIX: Bouncing Dots Animation Component ──
+  const TypingBubble = () => (
+    <div className="flex justify-start mb-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
+      <div className="bg-secondary text-secondary-foreground px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
+        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s] opacity-70" />
+        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s] opacity-70" />
+        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce opacity-70" />
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative ${themeClass}`}
@@ -677,6 +700,9 @@ export default function ChatArea() {
         ) : (
           memoizedMessages
         )}
+
+        {/* ── FIX: Show Animated Typing Bubble at the bottom ── */}
+        {isTyping && <TypingBubble />}
 
         <PendingUploadsList
           currentPending={currentPending}

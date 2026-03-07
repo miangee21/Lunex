@@ -201,11 +201,13 @@ export default function ChatInput({
     setShowEmojiPicker(false);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
+    // ── FIX: Send karte waqt har tarah ka typing data foran urra do ──
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    
     await clearTyping({
       conversationId: activeChat.conversationId as Id<"conversations">,
       userId: userId as Id<"users">,
-    });
+    }).catch(console.error); // Error aane pe message send hona nahi rukna chahiye
 
     try {
       if (!otherUser?.publicKey) {
@@ -354,8 +356,21 @@ export default function ChatInput({
           ref={textareaRef}
           value={message}
           onChange={(e) => {
-            setMessage(e.target.value);
-            handleTyping();
+            const val = e.target.value;
+            setMessage(val);
+            
+            // ── PRO FIX: Agar input khali ho gaya tou timer ka wait mat karo, foran clear karo ──
+            if (val.trim() === "") {
+              if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+              if (activeChat?.conversationId && userId) {
+                clearTyping({
+                  conversationId: activeChat.conversationId as Id<"conversations">,
+                  userId: userId as Id<"users">,
+                });
+              }
+            } else {
+              handleTyping();
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
