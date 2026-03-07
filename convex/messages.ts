@@ -73,7 +73,8 @@ export const getMessages = query({
           editedAt: m.editedAt ?? null,
           disappearsAt: m.disappearsAt ?? null,
           sentAt: m.sentAt,
-          readBy: m.readBy ?? [],
+          // ── POINT-IN-TIME FIX: Agar time -1 hai, toh wo "Ghost Read" hai, usay chupa do ──
+          readBy: (m.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
           deliveredTo: m.deliveredTo ?? [],
           isOwn: m.senderId === args.userId,
         };
@@ -163,9 +164,9 @@ export const markMessagesAsRead = mutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // ── settingReadReceipts false hai tu read mark hi mat karo ──
+    // ── POINT-IN-TIME FIX: Check user setting exactly when reading ──
     const user = await ctx.db.get(args.userId);
-    if (user?.settingReadReceipts === false) return;
+    const sendReceipts = user?.settingReadReceipts !== false;
 
     const messages = await ctx.db
       .query("messages")
@@ -184,7 +185,8 @@ export const markMessagesAsRead = mutation({
     await Promise.all(
       unread.map((m) =>
         ctx.db.patch(m._id, {
-          readBy: [...(m.readBy ?? []), { userId: args.userId, time: now }],
+          // ── POINT-IN-TIME FIX: Agar setting OFF thi toh Ghost Mark (-1) lagao ──
+          readBy: [...(m.readBy ?? []), { userId: args.userId, time: sendReceipts ? now : -1 }],
         }),
       ),
     );

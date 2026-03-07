@@ -98,6 +98,9 @@ export const getConversationsList = query({
                 sentAt: lastMessage.sentAt,
                 senderId: lastMessage.senderId,
                 type: lastMessage.type,
+                // ── POINT-IN-TIME FIX: Sidebar mein se Ghost Reads (time: -1) nikal do ──
+                readBy: (lastMessage.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
+                deliveredTo: lastMessage.deliveredTo ?? [],
               }
             : null,
           unreadCount,
