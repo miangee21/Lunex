@@ -106,27 +106,45 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // ── FIX 1: Backend automatically disappearing time calculate karega ──
+    // ── PRO FIX: Backend automatically Disappearing Time calculate karega (Override Logic) ──
     const conv = await ctx.db.get(args.conversationId);
+    const currentUser = await ctx.db.get(args.senderId);
+    const otherUserId = conv?.participantIds.find((id) => id !== args.senderId);
+    const otherUser = otherUserId ? await ctx.db.get(otherUserId) : null;
+    
     let calculatedDisappearsAt: number | undefined = undefined;
 
-    // Agar system message nahi hai, aur chat me disappearing ON hai
-    if (
-      args.type !== "system" &&
-      conv?.disappearingMode &&
-      conv?.disappearingTimer
-    ) {
-      const timerMap: Record<string, number> = {
-        "1h": 1 * 60 * 60 * 1000,
-        "6h": 6 * 60 * 60 * 1000,
-        "12h": 12 * 60 * 60 * 1000,
-        "1d": 24 * 60 * 60 * 1000,
-        "3d": 3 * 24 * 60 * 60 * 1000,
-        "7d": 7 * 24 * 60 * 60 * 1000,
-      };
-      const duration = timerMap[conv.disappearingTimer];
-      if (duration) {
-        calculatedDisappearsAt = now + duration;
+    // System messages par timer apply nahi hota
+    if (args.type !== "system") {
+      let effectiveTimer: string | undefined = undefined;
+
+      // Priority 1: Chat ka apna Individual Timer
+      if (conv?.disappearingMode && conv?.disappearingTimer) {
+        effectiveTimer = conv.disappearingTimer;
+      } 
+      // Priority 2: Sender ka apna Global Timer (Settings se)
+      else if (currentUser?.settingDisappearing) {
+        effectiveTimer = currentUser.settingDisappearing as string;
+      }
+      // Priority 3: Receiver ka apna Global Timer (Symmetric Fix - Dono k liye)
+      else if (otherUser?.settingDisappearing) {
+        effectiveTimer = otherUser.settingDisappearing as string;
+      }
+
+      // Agar koi bhi timer mila hai, tou usay apply kar do
+      if (effectiveTimer) {
+        const timerMap: Record<string, number> = {
+          "1h": 1 * 60 * 60 * 1000,
+          "6h": 6 * 60 * 60 * 1000,
+          "12h": 12 * 60 * 60 * 1000,
+          "1d": 24 * 60 * 60 * 1000,
+          "3d": 3 * 24 * 60 * 60 * 1000,
+          "7d": 7 * 24 * 60 * 60 * 1000,
+        };
+        const duration = timerMap[effectiveTimer];
+        if (duration) {
+          calculatedDisappearsAt = now + duration;
+        }
       }
     }
 

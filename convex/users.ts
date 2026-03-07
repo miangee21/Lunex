@@ -164,3 +164,26 @@ export const setOnlineStatusWithSetting = mutation({
     });
   },
 });
+
+// ── PRO FIX: Global Disappearing Messages Setting (Settings Panel ke liye) ──
+export const updateGlobalDisappearingSetting = mutation({
+  args: {
+    userId: v.id("users"),
+    timer: v.optional(
+      v.union(
+        v.literal("1h"),
+        v.literal("6h"),
+        v.literal("12h"),
+        v.literal("1d"),
+        v.literal("3d"),
+        v.literal("7d"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    // Agar timer pass hoga tou set ho jayega, undefined hoga tou OFF ho jayega
+    await ctx.db.patch(args.userId, {
+      settingDisappearing: args.timer,
+    });
+  },
+});

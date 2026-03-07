@@ -49,6 +49,8 @@ function Toggle({ checked, onChange, disabled }: ToggleProps) {
 export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const userId = useAuthStore((s) => s.userId);
   const updatePrivacySettings = useMutation(api.presence.updatePrivacySettings);
+  // ── PRO FIX: Import new global disappearing mutation ──
+  const updateGlobalDisappearingSetting = useMutation(api.users.updateGlobalDisappearingSetting);
 
   const userSettings = useQuery(
     api.presence.getUserSettings,
@@ -100,16 +102,19 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   async function handleDisappearingChange(value: string) {
     if (!userId) return;
 
+    const previousValue = disappearing; // Bug fix: error aney par sahi purani value wapas laane k liye
     setDisappearing(value);
     setShowTimerPicker(false);
     setSaving("settingDisappearing");
     try {
-      await updatePrivacySettings({
+      // ── PRO FIX: Call the new Global Setting mutation ──
+      await updateGlobalDisappearingSetting({
         userId: userId as Id<"users">,
-        settingDisappearing: value as any,
+        timer: value === "off" ? undefined : (value as any),
       });
+      toast.success(`Default timer set to ${TIMER_LABELS[value]}`);
     } catch {
-      setDisappearing(disappearing);
+      setDisappearing(previousValue);
       toast.error("Failed to update setting");
     } finally {
       setSaving(null);

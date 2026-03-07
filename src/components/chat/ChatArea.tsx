@@ -8,7 +8,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/ChatInput";
 import MessageBubble from "@/components/chat/ChatBubble";
-import { CheckSquare, X } from "lucide-react";
+import { CheckSquare, X, Timer } from "lucide-react";
 import { decryptMessage } from "@/crypto/encryption";
 import { toast } from "sonner";
 import {
@@ -165,16 +165,6 @@ export default function ChatArea() {
     }
   }, [cloudTheme, userId, activeChat?.userId, syncChatTheme]);
 
-  useEffect(() => {
-    if (conversationData !== undefined) {
-      syncDisappearing(
-        conversationData?.disappearingMode ?? undefined,
-        conversationData?.disappearingTimer as any ?? undefined,
-        conversationData?.disappearingSetBy ?? undefined,
-      );
-    }
-  }, [conversationData, syncDisappearing]);
-
   const rawMessages = useQuery(
     api.messages.getMessages,
     activeChat?.conversationId && userId
@@ -197,7 +187,37 @@ export default function ChatArea() {
     activeChat?.userId ? { userId: activeChat.userId as never } : "skip",
   );
 
-  // ── FIX: Typing Indicator Query ──
+  const currentUser = useQuery(
+ api.users.getUserById,
+ userId ? { userId: userId as never } : "skip",
+ );
+
+ // ── PRO FIX: Effect ko yahan lagana hai taake variables pehle load ho chuke hon ──
+ useEffect(() => {
+  if (conversationData !== undefined && currentUser !== undefined && otherUser !== undefined) {
+ let effectiveMode = false;
+ let effectiveTimer: string | undefined = undefined;
+ let effectiveSetBy: string | undefined = undefined;
+
+ if (conversationData?.disappearingMode && conversationData?.disappearingTimer) {
+  effectiveMode = true;
+  effectiveTimer = conversationData.disappearingTimer;
+  effectiveSetBy = conversationData.disappearingSetBy;
+ } else if (currentUser?.settingDisappearing) {
+ effectiveMode = true;
+ effectiveTimer = currentUser.settingDisappearing;
+  effectiveSetBy = userId as string;
+ } else if (otherUser?.settingDisappearing) {
+  effectiveMode = true;
+  effectiveTimer = otherUser.settingDisappearing;
+  effectiveSetBy = otherUser._id;
+ }
+
+ syncDisappearing(effectiveMode, effectiveTimer as any, effectiveSetBy);
+ }
+ }, [conversationData, currentUser, otherUser, syncDisappearing, userId]);
+
+ // ── FIX: Typing Indicator Query ──
   const typingUsers = useQuery(
     api.typing.getTypingUsers,
     activeChat?.conversationId && userId
