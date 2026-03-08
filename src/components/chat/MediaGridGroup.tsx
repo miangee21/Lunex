@@ -240,6 +240,7 @@ export default function MediaGridGroup({
   const [showQuickReact, setShowQuickReact] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top"); // ── PRO FIX: Viewport awareness state ──
 
   const allDownloaded =
     isGroupOwn ||
@@ -340,7 +341,8 @@ export default function MediaGridGroup({
 
   return (
     <div
-      className={`flex w-full group/grid py-1 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""}`}
+      /* ── PRO FIX: Grid ko upar uthao jab menu open ho ── */
+      className={`flex w-full group/grid py-1 transition-all duration-500 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""} ${showQuickReact || showEmojiPicker ? "relative z-[100]" : "z-10"}`}
       onClick={() => selectMode && handleSelectGrid()}
     >
       {selectMode && (
@@ -651,40 +653,58 @@ export default function MediaGridGroup({
           )}
         </div>
 
-        <div
-          className="relative self-center opacity-0 group-hover/grid:opacity-100 transition-opacity z-20"
+       <div
+          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-[9999] opacity-100" : "z-20 opacity-0 group-hover/grid:opacity-100"}`}
           ref={emojiPickerRef}
         >
           <button
             onClick={() => {
-              setShowQuickReact(!showQuickReact);
-              setShowEmojiPicker(false);
+              if (!showQuickReact) {
+                // ── PRO FIX: Calculate space before opening! ──
+                if (emojiPickerRef.current) {
+                  const rect = emojiPickerRef.current.getBoundingClientRect();
+                  setPickerPosition(rect.top < 150 ? "bottom" : "top"); // Agar top se bohot qareeb hai tou neechay kholo
+                }
+                setShowQuickReact(true);
+                setShowEmojiPicker(false);
+              } else {
+                setShowQuickReact(false);
+              }
             }}
-            className="p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground rounded-full transition-colors"
+            className={`p-1.5 rounded-full transition-colors ${showQuickReact || showEmojiPicker ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
           >
             <Smile size={18} />
           </button>
 
           {showQuickReact && (
             <div
-              className={`absolute top-1/2 -translate-y-1/2 ${isGroupOwn ? "right-full mr-1" : "left-full ml-1"} flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border shadow-xl rounded-full px-2 py-1.5 z-50`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-[9999] animate-in zoom-in-75 duration-200`}
             >
               {QUICK_EMOJIS.map((emoji) => (
                 <button
                   key={emoji}
-                  onClick={() => handleEmojiSelect(emoji)}
-                  className="hover:scale-125 transition-transform text-xl px-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEmojiSelect(emoji);
+                  }}
+                  className="hover:scale-125 transition-transform text-xl px-1.5 shrink-0"
                 >
                   {emoji}
                 </button>
               ))}
-              <div className="w-px h-5 bg-border mx-1" />
+              <div className="w-px h-5 bg-border mx-1 shrink-0" />
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // ── PRO FIX: Full picker ko bohot zyada jagah chahiye hoti hai, is liye 400px pe check kiya ──
+                  if (emojiPickerRef.current) {
+                    const rect = emojiPickerRef.current.getBoundingClientRect();
+                    setPickerPosition(rect.top < 400 ? "bottom" : "top");
+                  }
                   setShowQuickReact(false);
                   setShowEmojiPicker(true);
                 }}
-                className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground"
+                className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground shrink-0"
               >
                 <Plus size={18} />
               </button>
@@ -693,9 +713,9 @@ export default function MediaGridGroup({
 
           {showEmojiPicker && (
             <div
-              className={`absolute z-50 ${isGroupOwn ? "right-full mr-2 bottom-0" : "left-full ml-2 bottom-0"}`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-[9999] animate-in zoom-in-75 duration-200`}
             >
-              <div className="scale-[0.80] md:scale-90 origin-bottom shadow-2xl rounded-xl">
+              <div className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}>
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               </div>
             </div>

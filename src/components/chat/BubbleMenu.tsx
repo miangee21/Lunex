@@ -175,7 +175,9 @@ export default function BubbleMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={isOwn ? "end" : "start"}
-        className="w-48 shadow-lg rounded-xl"
+        sideOffset={8} // ── PRO FIX: Bubble aur menu ke darmiyan thora gap ──
+        collisionPadding={16} // ── PRO FIX: Screen ke kinaron se hamesha 16px door rahega ──
+        className="w-48 shadow-lg rounded-xl z-[9999]" // ── PRO FIX: Highest Z-index taake Pin bar ya sidebar ke neechay na chhupe ──
       >
         <DropdownMenuItem
           className="cursor-pointer rounded-lg py-2"

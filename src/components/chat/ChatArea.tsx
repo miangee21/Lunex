@@ -682,7 +682,8 @@ export default function ChatArea() {
 
   return (
     <div
-      className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative ${themeClass}`}
+      /* ── PRO FIX: Raised main container z-index so popups can overlay Sidebar ── */
+      className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative z-[60] ${themeClass}`}
       style={customThemeStyles}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -727,7 +728,8 @@ export default function ChatArea() {
       )}
 
       <div
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2"
+        /* ── PRO FIX: Raised messages list z-index to overlap ChatInput shadows/borders ── */
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2 relative z-[50]"
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -779,12 +781,15 @@ export default function ChatArea() {
         <div ref={messagesEndRef} />
       </div>
 
-      <ChatInput
-        selectMode={selectMode}
-        selectedCount={selectedMessages.size}
-        onCancelSelect={exitSelectMode}
-        onDeleteSelected={() => setIsDeleteDialogOpen(true)}
-      />
+      {/* ── PRO FIX: ChatInput ko z-[70] diya taake iska apna emoji picker messages (z-[50]) ke ooper khulay ── */}
+      <div className="relative z-[70] shrink-0">
+        <ChatInput
+          selectMode={selectMode}
+          selectedCount={selectedMessages.size}
+          onCancelSelect={exitSelectMode}
+          onDeleteSelected={() => setIsDeleteDialogOpen(true)}
+        />
+      </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-100">
