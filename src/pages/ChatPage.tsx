@@ -145,12 +145,16 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <SlimBar />
+    <div className="flex h-screen w-full overflow-hidden bg-background relative z-0">
+      {/* ── PRO FIX: SlimBar Wrapper (Level 4: Highest Layer - z-[100]) ── */}
+      <div className="relative z-100 h-full shrink-0 flex">
+        <SlimBar />
+      </div>
 
+      {/* ── PRO FIX: Left Sidebar (Level 3: Middle Layer - z-[90]) ── */}
       <div
         className={`
-        shrink-0 border-r border-border bg-sidebar overflow-hidden
+        relative z-90 shrink-0 border-r border-border bg-sidebar overflow-hidden
         transition-all duration-300 ease-in-out
         ${sidebarOpen ? "w-72" : "w-0"}
       `}
@@ -162,7 +166,8 @@ export default function ChatPage() {
         )}
       </div>
 
-      <div className="flex-1 flex overflow-hidden min-w-0">
+      {/* ── PRO FIX: Main Chat Area (Level 1: Base Layer - z-[40]) ── */}
+      <div className="relative z-40 flex-1 flex overflow-hidden min-w-0">
         {activeChat ? (
           <ChatArea />
         ) : (
@@ -187,8 +192,9 @@ export default function ChatPage() {
           </div>
         )}
 
+        {/* ── PRO FIX: Right Sidebar (Level 3: Middle Layer - z-[90]) ── */}
         {activeChat && profilePanelOpen && (
-          <div className="w-72 shrink-0 border-l border-border bg-sidebar overflow-hidden">
+          <div className="relative z-90 w-72 shrink-0 border-l border-border bg-sidebar overflow-hidden">
             {selectedMessageForInfo ? (
               <MessageInfoPanel
                 messageId={selectedMessageForInfo.id}

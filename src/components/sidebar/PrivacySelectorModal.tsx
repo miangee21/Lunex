@@ -1,5 +1,6 @@
 // src/components/sidebar/PrivacySelectorModal.tsx
 import { useState } from "react";
+import { createPortal } from "react-dom"; // ── PRO FIX: Modal ko qaid se nikalne ke liye portal ──
 import { X, Check, Shield } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -97,9 +98,9 @@ export default function PrivacySelectorModal({
   }
 
   // ── Render Main 4-Option Modal ──
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      
+ // ── Render Main 4-Option Modal ──
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ pointerEvents: 'auto' }}>
       {/* Click outside to close */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -163,6 +164,7 @@ export default function PrivacySelectorModal({
         </div>
         
       </div>
-    </div>
+    </div>,
+    document.body // ── PRO FIX: Modal ko direct body mein render kar diya ──
   );
 }
