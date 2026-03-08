@@ -17,6 +17,8 @@ import {
   Trash2,
   Info,
   Download,
+  Star,
+  Pin,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -44,6 +46,9 @@ interface BubbleMenuProps {
   onSelect?: () => void;
   mediaStorageId?: string;
   mediaOriginalName?: string;
+  isStarred?: boolean; // ── FIX: Added isStarred ──
+  isPinned?: boolean; // ── FIX: Added isPinned ──
+  conversationId?: string; // ── FIX: Added conversationId for Pinning ──
 }
 
 export default function BubbleMenu({
@@ -56,6 +61,9 @@ export default function BubbleMenu({
   onSelect,
   mediaStorageId,
   mediaOriginalName,
+  isStarred = false,
+  isPinned = false,
+  conversationId,
 }: BubbleMenuProps) {
   const {
     setSelectedMessageForInfo,
@@ -69,8 +77,43 @@ export default function BubbleMenu({
   const deleteMessageForEveryone = useMutation(
     api.messages.deleteMessageForEveryone,
   );
+  // ── FIX: Added Mutations for Star and Pin ──
+  const toggleStarMessage = useMutation(api.messages.toggleStarMessage);
+  const togglePinMessage = useMutation(api.messages.togglePinMessage);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // ── FIX: Handlers for Star and Pin ──
+  const handleToggleStar = async () => {
+    if (!userId) return;
+    try {
+      await toggleStarMessage({
+        messageId: messageId as Id<"messages">,
+        userId: userId as Id<"users">,
+      });
+      // ── PRO FIX: Removed success toast for cleaner UI ──
+    } catch (error) {
+      toast.error("Failed to update star status");
+    }
+  };
+
+  const handleTogglePin = async () => {
+    if (!conversationId) return;
+    try {
+      await togglePinMessage({
+        messageId: messageId as Id<"messages">,
+        conversationId: conversationId as Id<"conversations">,
+      });
+      // ── PRO FIX: Removed success toast for cleaner UI ──
+    } catch (error: any) {
+      // ── PRO FIX: Clean error message for 3-pin limit ──
+      if (error.message && error.message.includes("3 messages")) {
+        toast.error("You can only pin up to 3 messages in a chat.");
+      } else {
+        toast.error("Failed to pin message.");
+      }
+    }
+  };
 
   const ONE_HOUR = 60 * 60 * 1000;
   const isEligibleForEveryone = isOwn && Date.now() - sentAt < ONE_HOUR;
@@ -161,6 +204,25 @@ export default function BubbleMenu({
         >
           <CheckSquare className="w-4 h-4 mr-2 text-muted-foreground" /> Select
         </DropdownMenuItem>
+
+        {/* ── FIX: Star and Pin Buttons ── */}
+        <DropdownMenuItem
+          className="cursor-pointer rounded-lg py-2"
+          onClick={handleToggleStar}
+        >
+          <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} /> 
+          {isStarred ? "Unstar" : "Star"}
+        </DropdownMenuItem>
+
+        {conversationId && (
+          <DropdownMenuItem
+            className="cursor-pointer rounded-lg py-2"
+            onClick={handleTogglePin}
+          >
+            <Pin className={`w-4 h-4 mr-2 ${isPinned ? "fill-primary text-primary" : "text-muted-foreground"}`} /> 
+            {isPinned ? "Unpin" : "Pin"}
+          </DropdownMenuItem>
+        )}
 
         {type !== "text" && mediaStorageId && (
           <DropdownMenuItem

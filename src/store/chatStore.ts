@@ -12,7 +12,8 @@ type SidebarView =
   | "blocked"
   | "search"
   | "settings"
-  | "about"; // ── STEP 16: Added 'about' view ──
+  | "about"
+  | "starred"; // ── PRO FIX: Added 'starred' view for Starred Messages ── 
 
 interface ActiveChat {
   userId: string;

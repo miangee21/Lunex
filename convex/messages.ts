@@ -77,6 +77,9 @@ export const getMessages = query({
           readBy: (m.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
           deliveredTo: m.deliveredTo ?? [],
           isOwn: m.senderId === args.userId,
+          // ── FIX: Frontend ko batana ke yeh message starred hai ya nahi ──
+          starredBy: m.starredBy ?? [], 
+          isStarred: (m.starredBy ?? []).includes(args.userId),
         };
       });
   },
@@ -244,6 +247,14 @@ export const deleteMessageForMe = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
 
+    // ── PRO FIX: Remove from Pinned Messages array if deleted ──
+    const conv = await ctx.db.get(message.conversationId);
+    if (conv && conv.pinnedMessages?.includes(args.messageId)) {
+      await ctx.db.patch(message.conversationId, {
+        pinnedMessages: conv.pinnedMessages.filter((id: string) => id !== args.messageId),
+      });
+    }
+
     const isSender = message.senderId === args.userId;
     const willBeFullyDeleted = isSender
       ? message.deletedForReceiver
@@ -274,6 +285,14 @@ export const deleteMessageForEveryone = mutation({
     if (!message) throw new Error("Message not found");
     if (message.senderId !== args.userId)
       throw new Error("Only sender can delete for everyone");
+
+    // ── PRO FIX: Remove from Pinned Messages array if deleted for everyone ──
+    const conv = await ctx.db.get(message.conversationId);
+    if (conv && conv.pinnedMessages?.includes(args.messageId)) {
+      await ctx.db.patch(message.conversationId, {
+        pinnedMessages: conv.pinnedMessages.filter((id: string) => id !== args.messageId),
+      });
+    }
 
     const ONE_HOUR = 60 * 60 * 1000;
     if (Date.now() - message.sentAt > ONE_HOUR) {
@@ -431,5 +450,124 @@ export const markAsDelivered = mutation({
         }),
       ),
     );
+  },
+});
+
+// ── PRO FIX: Star & Pin Messages APIs ──
+
+export const toggleStarMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    if (!message) throw new Error("Message not found");
+
+    const starredBy = message.starredBy ?? [];
+    const isStarred = starredBy.includes(args.userId);
+
+    if (isStarred) {
+      await ctx.db.patch(args.messageId, {
+        starredBy: starredBy.filter((id) => id !== args.userId),
+      });
+      return false; // Unstarred ho gaya
+    } else {
+      await ctx.db.patch(args.messageId, {
+        starredBy: [...starredBy, args.userId],
+      });
+      return true; // Star ho gaya
+    }
+  },
+});
+
+export const togglePinMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const conv = await ctx.db.get(args.conversationId);
+    if (!conv) throw new Error("Conversation not found");
+
+    const pinnedMessages = conv.pinnedMessages ?? [];
+    const isPinned = pinnedMessages.includes(args.messageId);
+
+    if (isPinned) {
+      await ctx.db.patch(args.conversationId, {
+        pinnedMessages: pinnedMessages.filter((id) => id !== args.messageId),
+      });
+      return false; // Unpinned ho gaya
+    } else {
+      if (pinnedMessages.length >= 3) {
+        throw new Error("You can only pin up to 3 messages in a chat.");
+      }
+      await ctx.db.patch(args.conversationId, {
+        pinnedMessages: [...pinnedMessages, args.messageId],
+      });
+      return true; // Pinned ho gaya
+    }
+  },
+});
+
+export const getStarredMessages = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // 1. User ki saari conversations fetch karein
+    const convos = await ctx.db.query("conversations").collect();
+    const userConvos = convos.filter(c => c.participantIds.includes(args.userId));
+    const convoIds = userConvos.map(c => c._id);
+
+    let starredMessages: any[] = [];
+    const now = Date.now();
+
+    // 2. Un conversations ke messages mein se sirf starred nikalen
+    for (const cid of convoIds) {
+      const msgs = await ctx.db
+        .query("messages")
+        .withIndex("by_conversation", (q) => q.eq("conversationId", cid))
+        .collect();
+      
+      const filtered = msgs.filter(m => {
+        if (!m.starredBy?.includes(args.userId)) return false; // Must be starred
+        if (m.deletedForEveryone) return false;
+        if (m.deletedForSender && m.senderId === args.userId) return false;
+        if (m.deletedForReceiver && m.senderId !== args.userId) return false;
+        if (m.disappearsAt !== undefined && m.disappearsAt !== null && m.disappearsAt !== 0 && m.disappearsAt <= now) return false;
+        return true;
+      });
+
+      starredMessages.push(...filtered);
+    }
+
+    // 3. Time ke hisaab se sort karein (Newest first)
+    starredMessages.sort((a, b) => b.sentAt - a.sentAt);
+
+    // 4. Frontend friendly format mein return karein
+    return starredMessages.map((m) => {
+      const isMediaExpired = m.mediaExpiresAt !== undefined && m.mediaExpiresAt !== null && m.mediaExpiresAt !== 0 && m.mediaExpiresAt <= now;
+      return {
+        id: m._id,
+        conversationId: m.conversationId,
+        senderId: m.senderId,
+        encryptedContent: m.encryptedContent,
+        iv: m.iv,
+        type: m.type,
+        mediaStorageId: isMediaExpired ? null : (m.mediaStorageId ?? null),
+        mediaIv: isMediaExpired ? null : (m.mediaIv ?? null),
+        mediaOriginalName: isMediaExpired ? null : (m.mediaOriginalName ?? null),
+        mediaDeletedAt: isMediaExpired ? now : (m.mediaDeletedAt ?? null),
+        uploadBatchId: m.uploadBatchId ?? null,
+        replyToMessageId: m.replyToMessageId ?? null,
+        reactions: m.reactions ?? [],
+        editedAt: m.editedAt ?? null,
+        disappearsAt: m.disappearsAt ?? null,
+        sentAt: m.sentAt,
+        readBy: (m.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
+        deliveredTo: m.deliveredTo ?? [],
+        isOwn: m.senderId === args.userId,
+        isStarred: true,
+      };
+    });
   },
 });

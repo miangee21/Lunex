@@ -41,6 +41,9 @@ function MediaGridItem({
   secretKey,
   theirPublicKeyBase64,
   forceDownload,
+  isStarred,
+  isPinned,
+  conversationId,
 }: {
   msg: DecryptedMessage;
   className?: string;
@@ -50,6 +53,9 @@ function MediaGridItem({
   theirPublicKeyBase64?: string;
   otherUserId?: string;
   forceDownload?: boolean;
+  isStarred?: boolean; // ── PRO FIX: Added isStarred ──
+  isPinned?: boolean; // ── PRO FIX: Added isPinned ──
+  conversationId?: string; // ── PRO FIX: Added conversationId ──
 }) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -154,6 +160,9 @@ function MediaGridItem({
           onClose={() => setPreviewOpen(false)}
           gallery={gallery}
           galleryIndex={galleryIndex}
+          isStarred={isStarred} // ── PRO FIX: Pass to Preview ──
+          isPinned={isPinned} // ── PRO FIX: Pass to Preview ──
+          conversationId={conversationId} // ── PRO FIX: Pass to Preview ──
         />
       )}
       <div
@@ -211,6 +220,7 @@ export default function MediaGridGroup({
   secretKey,
   otherUser,
   activeChat,
+  pinnedMessages = [], // ── PRO FIX: Receive pinned messages array ──
   isGroupOwn,
   setGridMenuOpen,
   gridMenuOpen,
@@ -221,6 +231,7 @@ export default function MediaGridGroup({
   onDeleteClick,
 }: any) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
+  const jumpToMessageId = useChatStore((s) => s.jumpToMessageId); // ── PRO FIX: Listen for jump triggers ──
   const currentUserId = useAuthStore((s) => s.userId);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
@@ -240,6 +251,28 @@ export default function MediaGridGroup({
   const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
   const isGridSelected = group.some((m: any) => selectedMessages.has(m.id));
+
+  // ── PRO FIX: Auto-open Preview & Scroll to Grid on Jump ──
+  useEffect(() => {
+    if (jumpToMessageId && group.some((m: any) => m.id === jumpToMessageId)) {
+      // 1. Pehle Grid Wrapper ko dhoondh kar us tak smooth scroll karein
+      const wrapElement = document.getElementById(`wrap-${group[0].id}`);
+      if (wrapElement) {
+        wrapElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        wrapElement.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]", "transition-all", "duration-300");
+        setTimeout(() => {
+          wrapElement.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+        }, 1200);
+      }
+      
+      // 2. Phir us specific file ki MediaPreview open kar dein
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("reopen-preview", { detail: { id: jumpToMessageId } })
+        );
+      }, 300); // 300ms ka delay taake pehle scroll theek se ho jaye
+    }
+  }, [jumpToMessageId, group]);
 
   const handleSelectGrid = (e?: any) => {
     if (e) e.stopPropagation();
@@ -359,6 +392,9 @@ export default function MediaGridGroup({
                   theirPublicKeyBase64={otherUser?.publicKey}
                   otherUserId={activeChat?.userId}
                   forceDownload={forceDownload}
+                  isStarred={gMsg.isStarred} // ── PRO FIX: Map isStarred ──
+                  isPinned={pinnedMessages?.includes(gMsg.id)} // ── PRO FIX: Map isPinned ──
+                  conversationId={activeChat?.conversationId} // ── PRO FIX: Map conversationId ──
                   gallery={group.map((m: any) => ({
                     storageId: m.mediaStorageId!,
                     messageId: m.id,
@@ -367,6 +403,8 @@ export default function MediaGridGroup({
                     type: m.type as "image" | "video" | "file",
                     originalName: m.mediaOriginalName,
                     mediaIv: m.mediaIv,
+                    isStarred: m.isStarred, // ── PRO FIX: Map to gallery for slide support ──
+                    isPinned: pinnedMessages?.includes(m.id), // ── PRO FIX: Map to gallery for slide support ──
                   }))}
                   galleryIndex={gIdx}
                 />

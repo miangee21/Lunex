@@ -37,8 +37,11 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
     {
       icon: Star,
       label: "Starred Messages",
-      onClick: () => setOpen(false),
-      active: false,
+      onClick: () => {
+        setSidebarView("starred"); // ── FIX: Open Starred Messages Panel ──
+        setOpen(false);
+      },
+      active: true, // ── FIX: Enabled Starred Messages ──
     },
     {
       icon: Settings,

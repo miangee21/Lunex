@@ -80,6 +80,8 @@ export default defineSchema({
     )),
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
+    pinnedMessages: v.optional(v.array(v.id("messages"))), // ── FIX: Pinned Messages Array (Max 3) ──
+    
     lastReaction: v.optional(
       v.object({
         messageId: v.id("messages"),
@@ -111,6 +113,7 @@ export default defineSchema({
     mediaOriginalName: v.optional(v.string()),
     uploadBatchId: v.optional(v.string()),
     replyToMessageId: v.optional(v.id("messages")),
+    starredBy: v.optional(v.array(v.id("users"))), // ── FIX: Starred Messages by Users ──
     reactions: v.optional(
       v.array(
         v.object({

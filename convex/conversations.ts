@@ -105,6 +105,7 @@ export const getConversationsList = query({
             : null,
           unreadCount,
           lastMessageAt: conv.lastMessageAt ?? conv.createdAt,
+          pinnedMessages: conv.pinnedMessages ?? [], // ── FIX: Frontend ko pinned messages bhejein ──
         };
       }),
     );

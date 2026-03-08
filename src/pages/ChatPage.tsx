@@ -11,6 +11,7 @@ import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
 import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
+import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel"; // ── FIX: Imported Starred Panel ──
 import { useAppNotifications } from "@/hooks/useAppNotifications";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
@@ -136,6 +137,8 @@ export default function ChatPage() {
       case "friends":
       case "blocked":
         return <MyProfilePanel />;
+      case "starred": // ── FIX: Added Starred Messages View ──
+        return <StarredMessagesPanel onBack={() => useChatStore.getState().setSidebarView("chats")} />;
       default:
         return <ChatList />;
     }

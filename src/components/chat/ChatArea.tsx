@@ -8,7 +8,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/ChatInput";
 import MessageBubble from "@/components/chat/ChatBubble";
-import { CheckSquare, X, Timer } from "lucide-react";
+import { CheckSquare, X, Pin } from "lucide-react"; // ── FIX: Added Pin for Pinned Bar ──
 import { decryptMessage } from "@/crypto/encryption";
 import { toast } from "sonner";
 import {
@@ -43,6 +43,7 @@ export type DecryptedMessage = {
   readBy: { userId: string; time: number }[];
   deliveredTo: { userId: string; time: number }[];
   replyToMessageId: string | null;
+  isStarred?: boolean; // ── FIX: Added isStarred ──
 };
 
 export default function ChatArea() {
@@ -73,6 +74,7 @@ export default function ChatArea() {
     new Set(),
   );
   const [selectMode, setSelectMode] = useState(false);
+  const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0); // ── FIX: State for cycling Pinned Messages ──
 
   const [pendingPreviewIndex, setPendingPreviewIndex] = useState<number | null>(
     null,
@@ -310,6 +312,7 @@ export default function ChatArea() {
             readBy: msg.readBy,
             deliveredTo: msg.deliveredTo,
             replyToMessageId: msg.replyToMessageId ?? null,
+            isStarred: (msg as any).isStarred, // ── FIX: Pass isStarred from backend ──
           };
         }),
       );
@@ -380,14 +383,15 @@ export default function ChatArea() {
           element.scrollIntoView({ behavior: "smooth", block: "center" });
           element.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
           setTimeout(() => {
-            element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+             element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
           }, 1200);
-          setJumpToMessageId(null);
         }
-      }, 300);
+        // ── PRO FIX: Always clear jump ID after delay, whether it's a normal msg or inside a grid ──
+        setJumpToMessageId(null);
+      }, 400); // Thora time badhaya taake grid ko process karne ka time mil jaye
       prevMsgCount.current = decryptedMessages.length;
       return; 
-    } 
+    }
     
     if (!jumpToMessageId) {
       const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current; 
@@ -495,6 +499,7 @@ export default function ChatArea() {
                   secretKey={secretKey}
                   otherUser={otherUser}
                   activeChat={activeChat}
+                  pinnedMessages={conversationData?.pinnedMessages || []} // ── PRO FIX: Passed pinned messages for Grid Preview ──
                   isGroupOwn={msg.isOwn}
                   setGridMenuOpen={setGridMenuOpen}
                   gridMenuOpen={gridMenuOpen}
@@ -566,6 +571,9 @@ export default function ChatArea() {
             sentAt={msg.timestamp} 
             secretKey={secretKey} 
             otherUserPublicKey={otherUser?.publicKey}
+            isStarred={msg.isStarred} // ── FIX: Pass isStarred ──
+            isPinned={conversationData?.pinnedMessages?.includes(msg.id as any)} // ── FIX: Type cast to fix string vs Id error ──
+            conversationId={activeChat?.conversationId ?? undefined} // ── FIX: Handle null gracefully ──
             replyToMessage={(() => {
               if (!msg.replyToMessageId) return null;
               const originalMsg = decryptedMessages.find(m => m.id === msg.replyToMessageId);
@@ -600,6 +608,7 @@ export default function ChatArea() {
     secretKey,
     otherUser,
     activeChat,
+    conversationData?.pinnedMessages, // ── PRO FIX: Added so Grid updates instantly on Pin/Unpin ──
   ]);
 
   const selectedArray = Array.from(selectedMessages);
@@ -678,6 +687,44 @@ export default function ChatArea() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <ChatHeader />
+
+      {/* ── PRO FIX: Pinned Messages Bar ── */}
+      {conversationData?.pinnedMessages && conversationData.pinnedMessages.length > 0 && (
+        <div 
+          className="bg-accent/40 backdrop-blur-md border-b border-border/50 px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-accent/60 transition-colors z-10 shadow-sm"
+          onClick={() => {
+            const pinnedIds = conversationData.pinnedMessages!;
+            const targetId = pinnedIds[currentPinnedIndex % pinnedIds.length];
+            setJumpToMessageId(targetId);
+            // Agar 1 se zyada pinned hain, tou agle click par next message par cycle karo
+            if (pinnedIds.length > 1) {
+              setCurrentPinnedIndex((prev) => (prev + 1) % pinnedIds.length);
+            }
+          }}
+        >
+          <div className="flex items-center gap-3 overflow-hidden">
+            <Pin size={16} className="text-primary shrink-0" />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[12px] font-bold text-primary leading-tight">Pinned Message</span>
+              <span className="text-[13px] text-muted-foreground truncate leading-tight">
+                {(() => {
+                  const pinnedIds = conversationData.pinnedMessages!;
+                  const targetId = pinnedIds[currentPinnedIndex % pinnedIds.length];
+                  const pMsg = decryptedMessages.find(m => m.id === targetId);
+                  if (!pMsg) return "Tap to view message...";
+                  if (pMsg.type === "text") return pMsg.text;
+                  return `Attachment: ${pMsg.type}`;
+                })()}
+              </span>
+            </div>
+          </div>
+          {conversationData.pinnedMessages.length > 1 && (
+            <div className="text-[11px] font-semibold text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full shrink-0">
+              {(currentPinnedIndex % conversationData.pinnedMessages.length) + 1}/{conversationData.pinnedMessages.length}
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2"

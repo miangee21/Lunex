@@ -8,7 +8,7 @@ import BubbleMenu from "@/components/chat/BubbleMenu";
 import BubbleMedia from "@/components/chat/BubbleMedia";
 
 import EmojiPicker from "@/components/chat/EmojiPicker";
-import { Smile, Plus, Play } from "lucide-react";
+import { Smile, Plus, Play, Star, Pin } from "lucide-react"; // ── PRO FIX: Added Pin icon ──
 import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";
 import { encryptMessage } from "@/crypto/encryption";
@@ -41,6 +41,9 @@ interface MessageBubbleProps {
   sentAt?: number;
   secretKey?: Uint8Array | null;
   otherUserPublicKey?: string;
+  isStarred?: boolean; // ── FIX: Added Star state ──
+  isPinned?: boolean; // ── FIX: Added Pin state ──
+  conversationId?: string; // ── FIX: Added Conversation ID ──
 }
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
@@ -66,6 +69,9 @@ export default function MessageBubble({
   sentAt = 0,
   secretKey,
   otherUserPublicKey,
+  isStarred = false,
+  isPinned = false,
+  conversationId,
 }: MessageBubbleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showQuickReact, setShowQuickReact] = useState(false);
@@ -321,6 +327,12 @@ export default function MessageBubble({
                 <path strokeLinecap="round" d="M12 6v6l4 2" />
               </svg>
             )}
+            
+            {/* ── PRO FIX: Show Star and Pin icons ── */}
+            {isStarred && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 -mt-px" />}
+            {/* ── PRO FIX: Use 'current' color so it adapts to any bubble background automatically ── */}
+            {isPinned && <Pin className="w-3 h-3 fill-current text-current opacity-90 -mt-px" />}
+            
             <span>{time}</span>
             {isOwn && (
               <MessageStatusTick isSeen={isSeen} isDelivered={isDelivered} />
@@ -338,6 +350,9 @@ export default function MessageBubble({
               sentAt={sentAt}
               mediaStorageId={mediaStorageId ?? undefined}
               mediaOriginalName={mediaOriginalName ?? undefined}
+              isStarred={isStarred}
+              isPinned={isPinned}
+              conversationId={conversationId}
             />
           </div>
         </div>
