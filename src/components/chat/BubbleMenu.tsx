@@ -9,18 +9,6 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import {
-  ChevronDown,
-  Reply,
-  Copy,
-  CheckSquare,
-  Pencil,
-  Trash2,
-  Info,
-  Download,
-  Star,
-  Pin,
-} from "lucide-react";
-import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -35,6 +23,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ChevronDown,
+  Reply,
+  Copy,
+  CheckSquare,
+  Pencil,
+  Trash2,
+  Info,
+  Download,
+  Star,
+  Pin,
+} from "lucide-react";
 
 interface BubbleMenuProps {
   messageId: string;
@@ -46,9 +46,9 @@ interface BubbleMenuProps {
   onSelect?: () => void;
   mediaStorageId?: string;
   mediaOriginalName?: string;
-  isStarred?: boolean; // ── FIX: Added isStarred ──
-  isPinned?: boolean; // ── FIX: Added isPinned ──
-  conversationId?: string; // ── FIX: Added conversationId for Pinning ──
+  isStarred?: boolean;
+  isPinned?: boolean;
+  conversationId?: string;
 }
 
 export default function BubbleMenu({
@@ -77,13 +77,11 @@ export default function BubbleMenu({
   const deleteMessageForEveryone = useMutation(
     api.messages.deleteMessageForEveryone,
   );
-  // ── FIX: Added Mutations for Star and Pin ──
   const toggleStarMessage = useMutation(api.messages.toggleStarMessage);
   const togglePinMessage = useMutation(api.messages.togglePinMessage);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // ── FIX: Handlers for Star and Pin ──
   const handleToggleStar = async () => {
     if (!userId) return;
     try {
@@ -91,7 +89,6 @@ export default function BubbleMenu({
         messageId: messageId as Id<"messages">,
         userId: userId as Id<"users">,
       });
-      // ── PRO FIX: Removed success toast for cleaner UI ──
     } catch (error) {
       toast.error("Failed to update star status");
     }
@@ -104,9 +101,7 @@ export default function BubbleMenu({
         messageId: messageId as Id<"messages">,
         conversationId: conversationId as Id<"conversations">,
       });
-      // ── PRO FIX: Removed success toast for cleaner UI ──
     } catch (error: any) {
-      // ── PRO FIX: Clean error message for 3-pin limit ──
       if (error.message && error.message.includes("3 messages")) {
         toast.error("You can only pin up to 3 messages in a chat.");
       } else {
@@ -175,9 +170,9 @@ export default function BubbleMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={isOwn ? "end" : "start"}
-        sideOffset={8} // ── PRO FIX: Bubble aur menu ke darmiyan thora gap ──
-        collisionPadding={16} // ── PRO FIX: Screen ke kinaron se hamesha 16px door rahega ──
-        className="w-48 shadow-lg rounded-xl z-[9999]" // ── PRO FIX: Highest Z-index taake Pin bar ya sidebar ke neechay na chhupe ──
+        sideOffset={8}
+        collisionPadding={16}
+        className="w-48 shadow-lg rounded-xl z-9999"
       >
         <DropdownMenuItem
           className="cursor-pointer rounded-lg py-2"
@@ -207,12 +202,13 @@ export default function BubbleMenu({
           <CheckSquare className="w-4 h-4 mr-2 text-muted-foreground" /> Select
         </DropdownMenuItem>
 
-        {/* ── FIX: Star and Pin Buttons ── */}
         <DropdownMenuItem
           className="cursor-pointer rounded-lg py-2"
           onClick={handleToggleStar}
         >
-          <Star className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`} /> 
+          <Star
+            className={`w-4 h-4 mr-2 ${isStarred ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"}`}
+          />
           {isStarred ? "Unstar" : "Star"}
         </DropdownMenuItem>
 
@@ -221,7 +217,9 @@ export default function BubbleMenu({
             className="cursor-pointer rounded-lg py-2"
             onClick={handleTogglePin}
           >
-            <Pin className={`w-4 h-4 mr-2 ${isPinned ? "fill-primary text-primary" : "text-muted-foreground"}`} /> 
+            <Pin
+              className={`w-4 h-4 mr-2 ${isPinned ? "fill-primary text-primary" : "text-muted-foreground"}`}
+            />
             {isPinned ? "Unpin" : "Pin"}
           </DropdownMenuItem>
         )}

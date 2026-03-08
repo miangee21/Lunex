@@ -13,7 +13,7 @@ type SidebarView =
   | "search"
   | "settings"
   | "about"
-  | "starred"; // ── PRO FIX: Added 'starred' view for Starred Messages ── 
+  | "starred";
 
 interface ActiveChat {
   userId: string;
@@ -78,13 +78,12 @@ interface ChatState {
   setSidebarView: (view: SidebarView) => void;
   setSidebarOpen: (open: boolean) => void;
 
-  // ── STEP 16: Multi-Select State ──
   isSelectionMode: boolean;
   selectedChats: string[];
   setIsSelectionMode: (isSelectionMode: boolean) => void;
   toggleChatSelection: (conversationId: string) => void;
   clearSelection: () => void;
-  selectAll: (ids: string[]) => void; // ── FIX: Added selectAll ──
+  selectAll: (ids: string[]) => void;
 
   activeChat: ActiveChat | null;
   localThemes: Record<string, Record<string, ThemeOptions>>;
@@ -189,19 +188,21 @@ export const useChatStore = create<ChatState>()(
       setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-      // ── STEP 16: Multi-Select Implementation ──
       isSelectionMode: false,
       selectedChats: [],
-      setIsSelectionMode: (isSelectionMode) => 
-        set((s) => ({ isSelectionMode, selectedChats: isSelectionMode ? s.selectedChats : [] })),
-      toggleChatSelection: (conversationId) => 
+      setIsSelectionMode: (isSelectionMode) =>
+        set((s) => ({
+          isSelectionMode,
+          selectedChats: isSelectionMode ? s.selectedChats : [],
+        })),
+      toggleChatSelection: (conversationId) =>
         set((s) => ({
           selectedChats: s.selectedChats.includes(conversationId)
             ? s.selectedChats.filter((id) => id !== conversationId)
-            : [...s.selectedChats, conversationId]
+            : [...s.selectedChats, conversationId],
         })),
       clearSelection: () => set({ selectedChats: [], isSelectionMode: false }),
-      selectAll: (ids) => set({ selectedChats: ids }), // ── FIX: Select All Logic ──
+      selectAll: (ids) => set({ selectedChats: ids }),
 
       replyingTo: null,
       setReplyingTo: (msg) => set({ replyingTo: msg, editingMessage: null }),

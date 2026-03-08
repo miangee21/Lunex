@@ -1,11 +1,11 @@
 //src/components/chat/MediaPreview.tsx
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useQuery, useMutation } from "convex/react"; // ── PRO FIX: Added useMutation ──
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
-import { useAuthStore } from "@/store/authStore"; // ── PRO FIX: Added missing import ──
+import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
@@ -25,8 +25,8 @@ import {
   Play,
   CornerDownLeft,
   Trash2,
-  Star, // ── PRO FIX: Added Star Icon ──
-  Pin,  // ── PRO FIX: Added Pin Icon ──
+  Star,
+  Pin,
 } from "lucide-react";
 
 interface MediaPreviewProps {
@@ -41,9 +41,9 @@ interface MediaPreviewProps {
   secretKey?: any;
   theirPublicKey?: any;
   onClose: () => void;
-  isStarred?: boolean; // ── PRO FIX: Added isStarred ──
-  isPinned?: boolean; // ── PRO FIX: Added isPinned ──
-  conversationId?: string; // ── PRO FIX: Added conversationId ──
+  isStarred?: boolean;
+  isPinned?: boolean;
+  conversationId?: string;
   gallery?: Array<{
     storageId: string;
     messageId?: string;
@@ -52,9 +52,9 @@ interface MediaPreviewProps {
     type: "image" | "video" | "file";
     originalName?: string | null;
     mediaIv?: string | null;
-    isStarred?: boolean; // ── PRO FIX: Added isStarred for Gallery ──
-    isPinned?: boolean; // ── PRO FIX: Added isPinned for Gallery ──
-    decryptedUrl?: string | null; // ── PRO FIX: Added missing decryptedUrl ──
+    isStarred?: boolean;
+    isPinned?: boolean;
+    decryptedUrl?: string | null;
   }>;
   galleryIndex?: number;
 }
@@ -67,7 +67,7 @@ export default function MediaPreview({
   type: initialType,
   originalName: initialOriginalName,
   mediaIv: initialMediaIv,
-  decryptedUrl: initialDecryptedUrl, // ── PRO FIX: Extract decryptedUrl properly ──
+  decryptedUrl: initialDecryptedUrl,
   secretKey,
   theirPublicKey,
   onClose,
@@ -87,9 +87,8 @@ export default function MediaPreview({
   );
   const setReplyingTo = useChatStore((s) => s.setReplyingTo);
   const activeChat = useChatStore((s) => s.activeChat);
-  const userId = useAuthStore((s) => s.userId); // ── PRO FIX: Added for star mutation ──
+  const userId = useAuthStore((s) => s.userId);
 
-  // ── PRO FIX: Star & Pin Mutations ──
   const toggleStarMessage = useMutation(api.messages.toggleStarMessage);
   const togglePinMessage = useMutation(api.messages.togglePinMessage);
 
@@ -120,8 +119,8 @@ export default function MediaPreview({
           type: initialType,
           originalName: initialOriginalName,
           mediaIv: initialMediaIv,
-          isStarred: initialIsStarred, // ── PRO FIX: Add Star state ──
-          isPinned: initialIsPinned,   // ── PRO FIX: Add Pin state ──
+          isStarred: initialIsStarred,
+          isPinned: initialIsPinned,
         };
 
   const [localDecryptedUrl, setLocalDecryptedUrl] = useState<string | null>(
@@ -321,8 +320,6 @@ export default function MediaPreview({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          
-          {/* ── PRO FIX: Star Button & Logic (Silent Success) ── */}
           <button
             onClick={async () => {
               if (!userId || !currentItem.messageId) return;
@@ -331,7 +328,6 @@ export default function MediaPreview({
                   messageId: currentItem.messageId as Id<"messages">,
                   userId: userId as Id<"users">,
                 });
-                // ── PRO FIX: Removed success toast for a cleaner UI ──
               } catch (error) {
                 toast.error("Failed to update star status");
               }
@@ -339,10 +335,12 @@ export default function MediaPreview({
             className={`p-2.5 rounded-full transition-colors ${currentItem.isStarred ? "text-yellow-400 bg-white/10" : "text-white/70 hover:text-white hover:bg-white/10"}`}
             title="Star"
           >
-            <Star size={18} className={currentItem.isStarred ? "fill-yellow-400" : ""} />
+            <Star
+              size={18}
+              className={currentItem.isStarred ? "fill-yellow-400" : ""}
+            />
           </button>
 
-          {/* ── PRO FIX: Pin Button & Logic (Silent Success) ── */}
           {conversationId && (
             <button
               onClick={async () => {
@@ -352,9 +350,7 @@ export default function MediaPreview({
                     messageId: currentItem.messageId as Id<"messages">,
                     conversationId: conversationId as Id<"conversations">,
                   });
-                  // ── PRO FIX: Removed success toast for a cleaner UI ──
                 } catch (error: any) {
-                  // ── PRO FIX: Clean error message for 3-pin limit ──
                   if (error.message && error.message.includes("3 messages")) {
                     toast.error("You can only pin up to 3 messages in a chat.");
                   } else {
@@ -365,7 +361,10 @@ export default function MediaPreview({
               className={`p-2.5 rounded-full transition-colors ${currentItem.isPinned ? "text-primary bg-white/10" : "text-white/70 hover:text-white hover:bg-white/10"}`}
               title="Pin"
             >
-              <Pin size={18} className={currentItem.isPinned ? "fill-primary" : ""} />
+              <Pin
+                size={18}
+                className={currentItem.isPinned ? "fill-primary" : ""}
+              />
             </button>
           )}
 

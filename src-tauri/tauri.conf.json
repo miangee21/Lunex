@@ -33,9 +33,9 @@
       "icons/icon.ico"
     ],
     "windows": {
-  "nsis": {
-    "installerIcon": "icons/icon.ico"
-  }
-}
+      "nsis": {
+        "installerIcon": "icons/icon.ico"
+      }
+    }
   }
 }

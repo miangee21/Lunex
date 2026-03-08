@@ -1,6 +1,6 @@
 // src/components/sidebar/PrivacySelectorModal.tsx
 import { useState } from "react";
-import { createPortal } from "react-dom"; // ── PRO FIX: Modal ko qaid se nikalne ke liye portal ──
+import { createPortal } from "react-dom";
 import { X, Check, Shield } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Id } from "../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { PrivacyField } from "./SettingsPanel";
-import ContactPicker from "./ContactPicker"; // Yeh file hum next banayenge
+import ContactPicker from "./ContactPicker";
 
 interface PrivacySelectorModalProps {
   isOpen: boolean;
@@ -22,14 +22,22 @@ const HEADER_LABELS: Record<PrivacyField, string> = {
   privacyOnline: "Online Status",
   privacyTyping: "Typing Indicator",
   privacyReadReceipts: "Read Receipts",
-  privacyNotifications: "Notifications", // ── STEP 16 ──
+  privacyNotifications: "Notifications",
 };
 
 const OPTIONS = [
   { id: "everyone", label: "Everyone", description: "Anyone can see this" },
   { id: "nobody", label: "Nobody", description: "Hide from everyone" },
-  { id: "only_these", label: "Only these contacts...", description: "Share only with selected people" },
-  { id: "all_except", label: "All except...", description: "Hide from selected people" },
+  {
+    id: "only_these",
+    label: "Only these contacts...",
+    description: "Share only with selected people",
+  },
+  {
+    id: "all_except",
+    label: "All except...",
+    description: "Hide from selected people",
+  },
 ];
 
 export default function PrivacySelectorModal({
@@ -43,8 +51,7 @@ export default function PrivacySelectorModal({
   const updatePrivacySettings = useMutation(api.presence.updatePrivacySettings);
 
   const [saving, setSaving] = useState(false);
-  
-  // State for handling transition to Contact Picker
+
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [pendingOption, setPendingOption] = useState<string | null>(null);
 
@@ -53,28 +60,29 @@ export default function PrivacySelectorModal({
   async function handleOptionClick(optionId: string) {
     if (!userId) return;
 
-    // Agar user ne 'Exceptions' wala option chuna hai, tou Contact Picker kholo
     if (optionId === "only_these" || optionId === "all_except") {
       setPendingOption(optionId);
       setShowContactPicker(true);
       return;
     }
 
-    // Agar Everyone ya Nobody chuna hai, tou seedha save kardo
     setSaving(true);
     try {
-      const exceptionField = 
-        field === "privacyOnline" ? "onlineExceptions" :
-        field === "privacyTyping" ? "typingExceptions" : 
-        field === "privacyNotifications" ? "notificationExceptions" : // ── STEP 16 ──
-        "readReceiptsExceptions";
+      const exceptionField =
+        field === "privacyOnline"
+          ? "onlineExceptions"
+          : field === "privacyTyping"
+            ? "typingExceptions"
+            : field === "privacyNotifications"
+              ? "notificationExceptions"
+              : "readReceiptsExceptions";
 
       await updatePrivacySettings({
         userId: userId as Id<"users">,
         [field]: optionId as any,
-        [exceptionField]: [], // Everyone/Nobody mein exception list khali kar dete hain
+        [exceptionField]: [],
       });
-      
+
       toast.success("Privacy updated successfully");
       onClose();
     } catch {
@@ -84,30 +92,26 @@ export default function PrivacySelectorModal({
     }
   }
 
-  // ── Render Contact Picker if an exception option was clicked ──
   if (showContactPicker && pendingOption) {
     return (
-      <ContactPicker 
+      <ContactPicker
         field={field}
         selectedOption={pendingOption}
-        currentExceptions={currentExceptions?.filter(e => e !== null) || []} // ✅ Filter kar le
+        currentExceptions={currentExceptions?.filter((e) => e !== null) || []}
         onBack={() => setShowContactPicker(false)}
         onClose={onClose}
       />
     );
   }
 
-  // ── Render Main 4-Option Modal ──
- // ── Render Main 4-Option Modal ──
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ pointerEvents: 'auto' }}>
-      {/* Click outside to close */}
+    <div
+      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+      style={{ pointerEvents: "auto" }}
+    >
       <div className="absolute inset-0" onClick={onClose} />
 
-      {/* Modal Container */}
       <div className="relative w-full max-w-[320px] bg-card border border-border/50 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 m-4">
-        
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/40 bg-muted/20">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -125,7 +129,6 @@ export default function PrivacySelectorModal({
           </button>
         </div>
 
-        {/* Options List */}
         <div className="p-2">
           {OPTIONS.map((option) => {
             const isSelected = currentValue === option.id;
@@ -141,7 +144,9 @@ export default function PrivacySelectorModal({
                 `}
               >
                 <div className="flex flex-col items-start text-left">
-                  <span className={`text-[14.5px] font-medium ${isSelected ? "text-primary" : "text-foreground"}`}>
+                  <span
+                    className={`text-[14.5px] font-medium ${isSelected ? "text-primary" : "text-foreground"}`}
+                  >
                     {option.label}
                   </span>
                   <span className="text-[12px] text-muted-foreground mt-0.5">
@@ -154,7 +159,7 @@ export default function PrivacySelectorModal({
                     <Check size={12} strokeWidth={3} />
                   </div>
                 )}
-                
+
                 {saving && isSelected && (
                   <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                 )}
@@ -162,9 +167,8 @@ export default function PrivacySelectorModal({
             );
           })}
         </div>
-        
       </div>
     </div>,
-    document.body // ── PRO FIX: Modal ko direct body mein render kar diya ──
+    document.body,
   );
 }

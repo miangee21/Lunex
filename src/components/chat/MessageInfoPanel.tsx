@@ -6,18 +6,12 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
 } from "@/crypto/mediaEncryption";
-import {
-  X,
-  CalendarDays,
-  Clock,
-  Play,
-  FileText,
-} from "lucide-react";
-import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
+import { X, CalendarDays, Clock, Play, FileText } from "lucide-react";
 
 function MiniMediaThumbnail({ msg }: { msg: any }) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
@@ -25,13 +19,14 @@ function MiniMediaThumbnail({ msg }: { msg: any }) {
   const currentUserId = useAuthStore((s) => s.userId);
   const { activeChat } = useChatStore();
 
-  // ── FIX 1: Agar media expire ho chuka hai toh direct Placeholder dikhao (COMPACT SIZE) ──
   if (msg.mediaDeletedAt) {
     return (
       <div className="relative w-40 h-25 mb-1.5 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 flex items-center justify-center border border-white/5">
-        {/* CSS Scale se isko chota aur perfect center kiya gaya hai taake info panel me cut na ho */}
         <div className="w-[180%] transform scale-[0.6] origin-center">
-          <DeletedMediaPlaceholder type={msg.type || "file"} isOwn={msg.senderId === currentUserId} />
+          <DeletedMediaPlaceholder
+            type={msg.type || "file"}
+            isOwn={msg.senderId === currentUserId}
+          />
         </div>
       </div>
     );
@@ -39,8 +34,12 @@ function MiniMediaThumbnail({ msg }: { msg: any }) {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    // ── FIX: 'userId' ki jagah 'currentUserId' use karna hai ──
-    activeChat?.userId && currentUserId ? { userId: activeChat.userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip",
+    activeChat?.userId && currentUserId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: currentUserId as Id<"users">,
+        }
+      : "skip",
   );
 
   const instantUrl = msg.mediaStorageId
@@ -254,7 +253,6 @@ export default function MessageInfoPanel({
               <MiniMediaThumbnail msg={msg} />
             )}
 
-            {/* ── FIX 2: Sirf normal text message ho toh dikhao, media ke neeche file ka name bilkul gayab kar do ── */}
             {(!msg.type || msg.type === "text") && messageText && (
               <p className="text-[15px] leading-relaxed wrap-break-word mt-1">
                 {messageText.replace(/\n/g, " ").length > 40

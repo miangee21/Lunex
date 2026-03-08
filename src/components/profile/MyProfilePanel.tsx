@@ -33,7 +33,9 @@ export default function MyProfilePanel() {
   );
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
+    userId
+      ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> }
+      : "skip",
   );
   const updateProfile = useMutation(api.users.updateUserProfile);
 

@@ -9,11 +9,10 @@ import MediaPreview from "@/components/chat/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
-import { toast } from "sonner";
 import { type DecryptedMessage } from "@/components/chat/ChatArea";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-
+import { toast } from "sonner";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
@@ -53,9 +52,9 @@ function MediaGridItem({
   theirPublicKeyBase64?: string;
   otherUserId?: string;
   forceDownload?: boolean;
-  isStarred?: boolean; // ── PRO FIX: Added isStarred ──
-  isPinned?: boolean; // ── PRO FIX: Added isPinned ──
-  conversationId?: string; // ── PRO FIX: Added conversationId ──
+  isStarred?: boolean;
+  isPinned?: boolean;
+  conversationId?: string;
 }) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -160,9 +159,9 @@ function MediaGridItem({
           onClose={() => setPreviewOpen(false)}
           gallery={gallery}
           galleryIndex={galleryIndex}
-          isStarred={isStarred} // ── PRO FIX: Pass to Preview ──
-          isPinned={isPinned} // ── PRO FIX: Pass to Preview ──
-          conversationId={conversationId} // ── PRO FIX: Pass to Preview ──
+          isStarred={isStarred}
+          isPinned={isPinned}
+          conversationId={conversationId}
         />
       )}
       <div
@@ -220,7 +219,7 @@ export default function MediaGridGroup({
   secretKey,
   otherUser,
   activeChat,
-  pinnedMessages = [], // ── PRO FIX: Receive pinned messages array ──
+  pinnedMessages = [],
   isGroupOwn,
   setGridMenuOpen,
   gridMenuOpen,
@@ -231,7 +230,7 @@ export default function MediaGridGroup({
   onDeleteClick,
 }: any) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);
-  const jumpToMessageId = useChatStore((s) => s.jumpToMessageId); // ── PRO FIX: Listen for jump triggers ──
+  const jumpToMessageId = useChatStore((s) => s.jumpToMessageId);
   const currentUserId = useAuthStore((s) => s.userId);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
@@ -240,7 +239,7 @@ export default function MediaGridGroup({
   const [showQuickReact, setShowQuickReact] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top"); // ── PRO FIX: Viewport awareness state ──
+  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top");
 
   const allDownloaded =
     isGroupOwn ||
@@ -253,25 +252,36 @@ export default function MediaGridGroup({
 
   const isGridSelected = group.some((m: any) => selectedMessages.has(m.id));
 
-  // ── PRO FIX: Auto-open Preview & Scroll to Grid on Jump ──
   useEffect(() => {
     if (jumpToMessageId && group.some((m: any) => m.id === jumpToMessageId)) {
-      // 1. Pehle Grid Wrapper ko dhoondh kar us tak smooth scroll karein
       const wrapElement = document.getElementById(`wrap-${group[0].id}`);
       if (wrapElement) {
         wrapElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        wrapElement.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]", "transition-all", "duration-300");
+        wrapElement.classList.add(
+          "ring-2",
+          "ring-primary",
+          "bg-primary/20",
+          "scale-[1.02]",
+          "transition-all",
+          "duration-300",
+        );
         setTimeout(() => {
-          wrapElement.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+          wrapElement.classList.remove(
+            "ring-2",
+            "ring-primary",
+            "bg-primary/20",
+            "scale-[1.02]",
+          );
         }, 1200);
       }
-      
-      // 2. Phir us specific file ki MediaPreview open kar dein
+
       setTimeout(() => {
         window.dispatchEvent(
-          new CustomEvent("reopen-preview", { detail: { id: jumpToMessageId } })
+          new CustomEvent("reopen-preview", {
+            detail: { id: jumpToMessageId },
+          }),
         );
-      }, 300); // 300ms ka delay taake pehle scroll theek se ho jaye
+      }, 300);
     }
   }, [jumpToMessageId, group]);
 
@@ -303,7 +313,6 @@ export default function MediaGridGroup({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showQuickReact, showEmojiPicker]);
 
-  // ── FIX: Encrypted Reaction Engine for Grid ──
   const handleEmojiSelect = async (emoji: string) => {
     if (!currentUserId || !secretKey || !otherUser?.publicKey) {
       toast.error("Encryption keys missing!");
@@ -341,8 +350,7 @@ export default function MediaGridGroup({
 
   return (
     <div
-      /* ── PRO FIX: Grid ko upar uthao jab menu open ho ── */
-      className={`flex w-full group/grid py-1 transition-all duration-500 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""} ${showQuickReact || showEmojiPicker ? "relative z-[100]" : "z-10"}`}
+      className={`flex w-full group/grid py-1 transition-all duration-500 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""} ${showQuickReact || showEmojiPicker ? "relative z-100" : "z-10"}`}
       onClick={() => selectMode && handleSelectGrid()}
     >
       {selectMode && (
@@ -375,70 +383,69 @@ export default function MediaGridGroup({
         <div
           className={`relative group px-1.5 pt-1.5 pb-6 rounded-2xl shadow-sm transition-all duration-200 w-60 sm:w-70 ${isGroupOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-card text-card-foreground border border-border/50 rounded-bl-sm"}`}
         >
-          {/* ── FIX: Agar Grid Expire ho gaya hai toh pyara sa Placeholder dikhao ── */}
           {msg.mediaDeletedAt ? (
             <DeletedMediaPlaceholder type="grid" isOwn={isGroupOwn} />
           ) : (
-          <div
-            className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}
-          >
-            {displayGroup.map((gMsg: any, gIdx: number) => (
-              <div
-                key={gMsg.id}
-                className={`relative w-full h-full ${displayGroup.length === 3 && gIdx === 0 ? "col-span-2" : ""}`}
-              >
-                <MediaGridItem
-                  msg={gMsg}
-                  className="absolute inset-0 w-full h-full"
-                  secretKey={secretKey}
-                  theirPublicKeyBase64={otherUser?.publicKey}
-                  otherUserId={activeChat?.userId}
-                  forceDownload={forceDownload}
-                  isStarred={gMsg.isStarred} // ── PRO FIX: Map isStarred ──
-                  isPinned={pinnedMessages?.includes(gMsg.id)} // ── PRO FIX: Map isPinned ──
-                  conversationId={activeChat?.conversationId} // ── PRO FIX: Map conversationId ──
-                  gallery={group.map((m: any) => ({
-                    storageId: m.mediaStorageId!,
-                    messageId: m.id,
-                    text: m.text,
-                    isOwn: m.isOwn,
-                    type: m.type as "image" | "video" | "file",
-                    originalName: m.mediaOriginalName,
-                    mediaIv: m.mediaIv,
-                    isStarred: m.isStarred, // ── PRO FIX: Map to gallery for slide support ──
-                    isPinned: pinnedMessages?.includes(m.id), // ── PRO FIX: Map to gallery for slide support ──
-                  }))}
-                  galleryIndex={gIdx}
-                />
-                {gIdx === 3 && extraCount > 0 && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none z-10 backdrop-blur-[1px]">
-                    <span className="text-white font-bold text-2xl">
-                      +{extraCount}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
+            <div
+              className={`relative grid gap-1 w-full aspect-square rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 ${displayGroup.length === 2 ? "grid-cols-2 grid-rows-1" : "grid-cols-2 grid-rows-2"}`}
+            >
+              {displayGroup.map((gMsg: any, gIdx: number) => (
+                <div
+                  key={gMsg.id}
+                  className={`relative w-full h-full ${displayGroup.length === 3 && gIdx === 0 ? "col-span-2" : ""}`}
+                >
+                  <MediaGridItem
+                    msg={gMsg}
+                    className="absolute inset-0 w-full h-full"
+                    secretKey={secretKey}
+                    theirPublicKeyBase64={otherUser?.publicKey}
+                    otherUserId={activeChat?.userId}
+                    forceDownload={forceDownload}
+                    isStarred={gMsg.isStarred}
+                    isPinned={pinnedMessages?.includes(gMsg.id)}
+                    conversationId={activeChat?.conversationId}
+                    gallery={group.map((m: any) => ({
+                      storageId: m.mediaStorageId!,
+                      messageId: m.id,
+                      text: m.text,
+                      isOwn: m.isOwn,
+                      type: m.type as "image" | "video" | "file",
+                      originalName: m.mediaOriginalName,
+                      mediaIv: m.mediaIv,
+                      isStarred: m.isStarred,
+                      isPinned: pinnedMessages?.includes(m.id),
+                    }))}
+                    galleryIndex={gIdx}
+                  />
+                  {gIdx === 3 && extraCount > 0 && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none z-10 backdrop-blur-[1px]">
+                      <span className="text-white font-bold text-2xl">
+                        +{extraCount}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
 
-            {!allDownloaded && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-                {!forceDownload ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setForceDownload(true);
-                    }}
-                    className="w-14 h-14 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 transition-all shadow-2xl border border-white/20 hover:scale-105"
-                    title="Download All"
-                  >
-                    <Download size={26} />
-                  </button>
-                ) : (
-                  <div className="w-12 h-12 rounded-full border-[3.5px] border-white/30 border-t-white animate-spin shadow-2xl"></div>
-                )}
-              </div>
-            )}
-          </div>
+              {!allDownloaded && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+                  {!forceDownload ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setForceDownload(true);
+                      }}
+                      className="w-14 h-14 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/90 transition-all shadow-2xl border border-white/20 hover:scale-105"
+                      title="Download All"
+                    >
+                      <Download size={26} />
+                    </button>
+                  ) : (
+                    <div className="w-12 h-12 rounded-full border-[3.5px] border-white/30 border-t-white animate-spin shadow-2xl"></div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="absolute bottom-1 right-2 flex items-center gap-1 text-[10.5px] font-medium opacity-70 z-10 text-current">
@@ -479,119 +486,123 @@ export default function MediaGridGroup({
 
           {gridMenuOpen === msg.id && (
             <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
-              
-              {/* ── FIX: Agar expired hai toh Download All chupao ── */}
               {!msg.mediaDeletedAt && (
                 <>
                   <button
                     onClick={async (e) => {
-                  e.stopPropagation();
-                  setGridMenuOpen(null);
+                      e.stopPropagation();
+                      setGridMenuOpen(null);
 
-                  let missingFiles = false;
-                  group.forEach((m: any) => {
-                    if (m.mediaStorageId && !localMediaCache[m.mediaStorageId])
-                      missingFiles = true;
-                  });
+                      let missingFiles = false;
+                      group.forEach((m: any) => {
+                        if (
+                          m.mediaStorageId &&
+                          !localMediaCache[m.mediaStorageId]
+                        )
+                          missingFiles = true;
+                      });
 
-                  if (missingFiles) {
-                    setForceDownload(true);
-                    toast.info(
-                      "Decrypting secure files... Please click Download All again in a moment.",
-                    );
-                    return;
-                  }
-
-                  const toastId = toast.loading(
-                    `Saving ${group.length} files...`,
-                  );
-
-                  try {
-                    const selectedDirPath = await open({
-                      directory: true,
-                      multiple: false,
-                      title: "Select folder to save media files",
-                    });
-
-                    if (!selectedDirPath) {
-                      toast.dismiss(toastId);
-                      return;
-                    }
-
-                    const separator = (selectedDirPath as string).includes("\\")
-                      ? "\\"
-                      : "/";
-
-                    for (let i = 0; i < group.length; i++) {
-                      const m = group[i];
-                      if (
-                        m.mediaStorageId &&
-                        localMediaCache[m.mediaStorageId]
-                      ) {
-                        const url = localMediaCache[m.mediaStorageId];
-
-                        const originalName = m.mediaOriginalName || "";
-                        const extMatch = originalName.match(/\.([^.]+)$/);
-                        const ext = extMatch
-                          ? extMatch[1]
-                          : m.type === "image"
-                            ? "jpg"
-                            : m.type === "video"
-                              ? "mp4"
-                              : "bin";
-
-                        const randomStr = Math.random()
-                          .toString(36)
-                          .substring(2, 8);
-                        const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
-                        const filePath = `${selectedDirPath}${separator}${fileName}`;
-
-                        const response = await fetch(url);
-                        const arrayBuffer = await response.arrayBuffer();
-                        const uint8Array = new Uint8Array(arrayBuffer);
-
-                        await writeFile(filePath, uint8Array);
+                      if (missingFiles) {
+                        setForceDownload(true);
+                        toast.info(
+                          "Decrypting secure files... Please click Download All again in a moment.",
+                        );
+                        return;
                       }
-                    }
 
-                    toast.success("All files saved successfully!", {
-                      id: toastId,
-                    });
-                  } catch (error: any) {
-                    console.error("Native download failed:", error);
+                      const toastId = toast.loading(
+                        `Saving ${group.length} files...`,
+                      );
 
-                    toast.error(`Save Failed: ${error.message || error}`, {
-                      id: toastId,
-                      duration: 8000,
-                    });
+                      try {
+                        const selectedDirPath = await open({
+                          directory: true,
+                          multiple: false,
+                          title: "Select folder to save media files",
+                        });
 
-                    group.forEach((m: any, index: number) => {
-                      if (
-                        m.mediaStorageId &&
-                        localMediaCache[m.mediaStorageId]
-                      ) {
-                        setTimeout(() => {
-                          const a = document.createElement("a");
-                          a.href = localMediaCache[m.mediaStorageId];
-                          a.download =
-                            m.mediaOriginalName || `lunex-media-${index + 1}`;
-                          a.style.display = "none";
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                        }, index * 500);
+                        if (!selectedDirPath) {
+                          toast.dismiss(toastId);
+                          return;
+                        }
+
+                        const separator = (selectedDirPath as string).includes(
+                          "\\",
+                        )
+                          ? "\\"
+                          : "/";
+
+                        for (let i = 0; i < group.length; i++) {
+                          const m = group[i];
+                          if (
+                            m.mediaStorageId &&
+                            localMediaCache[m.mediaStorageId]
+                          ) {
+                            const url = localMediaCache[m.mediaStorageId];
+
+                            const originalName = m.mediaOriginalName || "";
+                            const extMatch = originalName.match(/\.([^.]+)$/);
+                            const ext = extMatch
+                              ? extMatch[1]
+                              : m.type === "image"
+                                ? "jpg"
+                                : m.type === "video"
+                                  ? "mp4"
+                                  : "bin";
+
+                            const randomStr = Math.random()
+                              .toString(36)
+                              .substring(2, 8);
+                            const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
+                            const filePath = `${selectedDirPath}${separator}${fileName}`;
+
+                            const response = await fetch(url);
+                            const arrayBuffer = await response.arrayBuffer();
+                            const uint8Array = new Uint8Array(arrayBuffer);
+
+                            await writeFile(filePath, uint8Array);
+                          }
+                        }
+
+                        toast.success("All files saved successfully!", {
+                          id: toastId,
+                        });
+                      } catch (error: any) {
+                        console.error("Native download failed:", error);
+
+                        toast.error(`Save Failed: ${error.message || error}`, {
+                          id: toastId,
+                          duration: 8000,
+                        });
+
+                        group.forEach((m: any, index: number) => {
+                          if (
+                            m.mediaStorageId &&
+                            localMediaCache[m.mediaStorageId]
+                          ) {
+                            setTimeout(() => {
+                              const a = document.createElement("a");
+                              a.href = localMediaCache[m.mediaStorageId];
+                              a.download =
+                                m.mediaOriginalName ||
+                                `lunex-media-${index + 1}`;
+                              a.style.display = "none";
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                            }, index * 500);
+                          }
+                        });
                       }
-                    });
-                  }
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors"
-              >
-                <Download size={14} className="text-muted-foreground" />{" "}
-                Download All
-              </button>
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors"
+                  >
+                    <Download size={14} className="text-muted-foreground" />{" "}
+                    Download All
+                  </button>
 
-              <div className="h-px bg-border w-full" />
-              </>
+                  <div className="h-px bg-border w-full" />
+                </>
               )}
 
               <button
@@ -653,17 +664,16 @@ export default function MediaGridGroup({
           )}
         </div>
 
-       <div
-          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-[9999] opacity-100" : "z-20 opacity-0 group-hover/grid:opacity-100"}`}
+        <div
+          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-9999 opacity-100" : "z-20 opacity-0 group-hover/grid:opacity-100"}`}
           ref={emojiPickerRef}
         >
           <button
             onClick={() => {
               if (!showQuickReact) {
-                // ── PRO FIX: Calculate space before opening! ──
                 if (emojiPickerRef.current) {
                   const rect = emojiPickerRef.current.getBoundingClientRect();
-                  setPickerPosition(rect.top < 150 ? "bottom" : "top"); // Agar top se bohot qareeb hai tou neechay kholo
+                  setPickerPosition(rect.top < 150 ? "bottom" : "top");
                 }
                 setShowQuickReact(true);
                 setShowEmojiPicker(false);
@@ -678,7 +688,7 @@ export default function MediaGridGroup({
 
           {showQuickReact && (
             <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-[9999] animate-in zoom-in-75 duration-200`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-9999 animate-in zoom-in-75 duration-200`}
             >
               {QUICK_EMOJIS.map((emoji) => (
                 <button
@@ -696,7 +706,6 @@ export default function MediaGridGroup({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  // ── PRO FIX: Full picker ko bohot zyada jagah chahiye hoti hai, is liye 400px pe check kiya ──
                   if (emojiPickerRef.current) {
                     const rect = emojiPickerRef.current.getBoundingClientRect();
                     setPickerPosition(rect.top < 400 ? "bottom" : "top");
@@ -713,9 +722,11 @@ export default function MediaGridGroup({
 
           {showEmojiPicker && (
             <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-[9999] animate-in zoom-in-75 duration-200`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-9999 animate-in zoom-in-75 duration-200`}
             >
-              <div className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}>
+              <div
+                className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}
+              >
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               </div>
             </div>

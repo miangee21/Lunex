@@ -1,12 +1,20 @@
 // src/components/sidebar/SettingsPanel.tsx
 import { useState } from "react";
-import { ArrowLeft, Wifi, Keyboard, CheckCheck, Timer, ChevronRight, Bell } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { Id } from "../../../convex/_generated/dataModel";
+import PrivacySelectorModal from "./PrivacySelectorModal";
 import { toast } from "sonner";
-import PrivacySelectorModal from "./PrivacySelectorModal"; // Yeh file hum next step mein banayenge!
+import {
+  ArrowLeft,
+  Wifi,
+  Keyboard,
+  CheckCheck,
+  Timer,
+  ChevronRight,
+  Bell,
+} from "lucide-react";
 
 const TIMER_LABELS: Record<string, string> = {
   off: "Off",
@@ -31,28 +39,35 @@ interface SettingsPanelProps {
   onBack: () => void;
 }
 
-export type PrivacyField = "privacyOnline" | "privacyTyping" | "privacyReadReceipts" | "privacyNotifications"; // ── STEP 16 ──
+export type PrivacyField =
+  | "privacyOnline"
+  | "privacyTyping"
+  | "privacyReadReceipts"
+  | "privacyNotifications";
 
 export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const userId = useAuthStore((s) => s.userId);
-  const updateGlobalDisappearingSetting = useMutation(api.users.updateGlobalDisappearingSetting);
+  const updateGlobalDisappearingSetting = useMutation(
+    api.users.updateGlobalDisappearingSetting,
+  );
 
   const userSettings = useQuery(
     api.presence.getUserSettings,
-    userId ? { userId: userId as Id<"users"> } : "skip"
+    userId ? { userId: userId as Id<"users"> } : "skip",
   );
 
-  // ── FIX: Fetch current user to apply the selected theme ──
   const currentUser = useQuery(
     api.users.getUserById,
-    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip"
+    userId
+      ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> }
+      : "skip",
   );
 
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [savingTimer, setSavingTimer] = useState(false);
-  
-  // Modal State
-  const [activePrivacyField, setActivePrivacyField] = useState<PrivacyField | null>(null);
+
+  const [activePrivacyField, setActivePrivacyField] =
+    useState<PrivacyField | null>(null);
 
   async function handleDisappearingChange(value: string) {
     if (!userId) return;
@@ -74,7 +89,6 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   const isLoading = userSettings === undefined;
 
-  // Agar userSettings load nahi hue tou default "everyone" dikhayenge temporarily
   const privacySettingsList = [
     {
       id: "privacyOnline" as PrivacyField,
@@ -105,10 +119,9 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   return (
     <>
-      {/* ── FIX: Added themeMode and themeClass, and changed to bg-sidebar to match About page ── */}
-      <div className={`flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200 ${themeMode} ${themeClass}`}>
-        
-        {/* ── Minimalist Header ── */}
+      <div
+        className={`flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200 ${themeMode} ${themeClass}`}
+      >
         <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
           <button
             onClick={onBack}
@@ -116,7 +129,9 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
           >
             <ArrowLeft size={18} />
           </button>
-          <h2 className="text-foreground font-semibold text-[15px]">Settings</h2>
+          <h2 className="text-foreground font-semibold text-[15px]">
+            Settings
+          </h2>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-5 custom-scrollbar">
@@ -126,8 +141,6 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              
-              {/* ── Privacy Section (New Minimalist Look) ── */}
               <div>
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                   Privacy
@@ -151,22 +164,24 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                               {setting.label}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-muted-foreground font-medium truncate max-w-[120px]">
+                            <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
                               {PRIVACY_LABELS[setting.currentValue]}
                             </span>
-                            <ChevronRight size={16} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                            <ChevronRight
+                              size={16}
+                              className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
+                            />
                           </div>
                         </button>
-                        {!isLast && <div className="h-[1px] bg-border/40 ml-12" />}
+                        {!isLast && <div className="h-px bg-border/40 ml-12" />}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* ── Security Section (Dropdown Style) ── */}
               <div>
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                   Security
@@ -174,10 +189,14 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                 <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
                   <div
                     className="flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors cursor-pointer"
-                    onClick={() => !savingTimer && setShowTimerPicker((v) => !v)}
+                    onClick={() =>
+                      !savingTimer && setShowTimerPicker((v) => !v)
+                    }
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`flex items-center justify-center w-7 h-7 rounded-md ${currentDisappearing !== "off" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      <div
+                        className={`flex items-center justify-center w-7 h-7 rounded-md ${currentDisappearing !== "off" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+                      >
                         <Timer size={15} />
                       </div>
                       <span className="text-[14px] font-medium text-foreground">
@@ -202,10 +221,11 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                     </div>
                   </div>
 
-                  {/* ── Sleek Dropdown ── */}
-                  <div className={`grid transition-all duration-200 ease-in-out ${showTimerPicker ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                  <div
+                    className={`grid transition-all duration-200 ease-in-out ${showTimerPicker ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+                  >
                     <div className="overflow-hidden bg-accent/5">
-                      <div className="h-[1px] bg-border/40 ml-12" />
+                      <div className="h-px bg-border/40 ml-12" />
                       {TIMER_OPTIONS.map((option) => {
                         const isSelected = currentDisappearing === option;
                         return (
@@ -214,10 +234,17 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                             onClick={() => handleDisappearingChange(option)}
                             className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/30 transition-colors"
                           >
-                            <span className={`text-[13px] ml-10 ${isSelected ? "text-primary font-medium" : "text-foreground"}`}>
+                            <span
+                              className={`text-[13px] ml-10 ${isSelected ? "text-primary font-medium" : "text-foreground"}`}
+                            >
                               {TIMER_LABELS[option]}
                             </span>
-                            {isSelected && <CheckCheck size={14} className="text-primary mr-1" />}
+                            {isSelected && (
+                              <CheckCheck
+                                size={14}
+                                className="text-primary mr-1"
+                              />
+                            )}
                           </button>
                         );
                       })}
@@ -226,14 +253,15 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                 </div>
               </div>
 
-              {/* ── STEP 16: Notifications (Active & Clickable) ── */}
               <div className="pb-6">
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                   App
                 </p>
                 <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
                   <button
-                    onClick={() => setActivePrivacyField("privacyNotifications")}
+                    onClick={() =>
+                      setActivePrivacyField("privacyNotifications")
+                    }
                     className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
                   >
                     <div className="flex items-center gap-3">
@@ -244,40 +272,50 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                         Notifications
                       </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-muted-foreground font-medium truncate max-w-[120px]">
-                        {PRIVACY_LABELS[userSettings?.privacyNotifications ?? "everyone"]}
+                      <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
+                        {
+                          PRIVACY_LABELS[
+                            userSettings?.privacyNotifications ?? "everyone"
+                          ]
+                        }
                       </span>
-                      <ChevronRight size={16} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                      <ChevronRight
+                        size={16}
+                        className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
+                      />
                     </div>
                   </button>
                 </div>
               </div>
-
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Render Modal Conditionally ── */}
       {activePrivacyField && userSettings && (
         <PrivacySelectorModal
           isOpen={!!activePrivacyField}
           onClose={() => setActivePrivacyField(null)}
           field={activePrivacyField}
-          // ── STEP 16: Pass Notifications state to Modal ──
           currentValue={
-            activePrivacyField === "privacyOnline" ? userSettings.privacyOnline :
-            activePrivacyField === "privacyTyping" ? userSettings.privacyTyping :
-            activePrivacyField === "privacyNotifications" ? userSettings.privacyNotifications :
-            userSettings.privacyReadReceipts
+            activePrivacyField === "privacyOnline"
+              ? userSettings.privacyOnline
+              : activePrivacyField === "privacyTyping"
+                ? userSettings.privacyTyping
+                : activePrivacyField === "privacyNotifications"
+                  ? userSettings.privacyNotifications
+                  : userSettings.privacyReadReceipts
           }
           currentExceptions={
-            activePrivacyField === "privacyOnline" ? userSettings.onlineExceptions :
-            activePrivacyField === "privacyTyping" ? userSettings.typingExceptions :
-            activePrivacyField === "privacyNotifications" ? userSettings.notificationExceptions :
-            userSettings.readReceiptsExceptions
+            activePrivacyField === "privacyOnline"
+              ? userSettings.onlineExceptions
+              : activePrivacyField === "privacyTyping"
+                ? userSettings.typingExceptions
+                : activePrivacyField === "privacyNotifications"
+                  ? userSettings.notificationExceptions
+                  : userSettings.readReceiptsExceptions
           }
         />
       )}

@@ -11,7 +11,7 @@ import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
 import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
-import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel"; // ── FIX: Imported Starred Panel ──
+import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel";
 import { useAppNotifications } from "@/hooks/useAppNotifications";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
@@ -29,7 +29,6 @@ export default function ChatPage() {
     selectedMessageForInfo,
   } = useChatStore();
 
-  // ── FIX 2: Real-time Smart Online/Offline Presence System with Debounce ──
   useEffect(() => {
     if (!userId) return;
 
@@ -38,12 +37,10 @@ export default function ChatPage() {
     let isProcessing = false;
 
     const updateOnlineStatus = async (isOnline: boolean) => {
-      // agar same status pending hai to duplicate request nai bhejo
       if (pendingStatus === isOnline) return;
 
       pendingStatus = isOnline;
 
-      // Debounce 500ms - jab user multiple events trigger kare
       clearTimeout(timeoutId!);
       timeoutId = setTimeout(async () => {
         if (isProcessing) return;
@@ -55,10 +52,7 @@ export default function ChatPage() {
             isOnline,
           });
         } catch (error) {
-          console.error(
-            `Failed to set online status to ${isOnline}:`,
-            error
-          );
+          console.error(`Failed to set online status to ${isOnline}:`, error);
         } finally {
           isProcessing = false;
           pendingStatus = null;
@@ -66,23 +60,19 @@ export default function ChatPage() {
       }, 500);
     };
 
-    // App khulte hi online ho jao
     updateOnlineStatus(true);
 
-    // ── ONLY close/logout events - focus/blur se toggle mat kar ──
-    const handleBeforeUnload = () => updateOnlineStatus(false); // App close ki
-    const handlePageHide = () => updateOnlineStatus(false); // Tab band kiya
+    const handleBeforeUnload = () => updateOnlineStatus(false);
+    const handlePageHide = () => updateOnlineStatus(false);
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("pagehide", handlePageHide);
 
     return () => {
-      // Cleanup: remove listeners
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handlePageHide);
       clearTimeout(timeoutId!);
 
-      // Flush pending status immediately on unmount
       if (pendingStatus !== null) {
         try {
           setOnlineStatus({
@@ -137,8 +127,12 @@ export default function ChatPage() {
       case "friends":
       case "blocked":
         return <MyProfilePanel />;
-      case "starred": // ── FIX: Added Starred Messages View ──
-        return <StarredMessagesPanel onBack={() => useChatStore.getState().setSidebarView("chats")} />;
+      case "starred":
+        return (
+          <StarredMessagesPanel
+            onBack={() => useChatStore.getState().setSidebarView("chats")}
+          />
+        );
       default:
         return <ChatList />;
     }
@@ -146,12 +140,10 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background relative z-0">
-      {/* ── PRO FIX: SlimBar Wrapper (Level 4: Highest Layer - z-[100]) ── */}
       <div className="relative z-100 h-full shrink-0 flex">
         <SlimBar />
       </div>
 
-      {/* ── PRO FIX: Left Sidebar (Level 3: Middle Layer - z-[90]) ── */}
       <div
         className={`
         relative z-90 shrink-0 border-r border-border bg-sidebar overflow-hidden
@@ -166,7 +158,6 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* ── PRO FIX: Main Chat Area (Level 1: Base Layer - z-[40]) ── */}
       <div className="relative z-40 flex-1 flex overflow-hidden min-w-0">
         {activeChat ? (
           <ChatArea />
@@ -192,7 +183,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* ── PRO FIX: Right Sidebar (Level 3: Middle Layer - z-[90]) ── */}
         {activeChat && profilePanelOpen && (
           <div className="relative z-90 w-72 shrink-0 border-l border-border bg-sidebar overflow-hidden">
             {selectedMessageForInfo ? (

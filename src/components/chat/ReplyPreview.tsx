@@ -10,12 +10,15 @@ import {
 } from "lucide-react";
 
 export default function ReplyPreview() {
-  const { replyingTo, setReplyingTo, activeChat, localMediaCache } = useChatStore();
+  const { replyingTo, setReplyingTo, activeChat, localMediaCache } =
+    useChatStore();
 
   if (!replyingTo) return null;
   const accentColor = activeChat?.myBubbleColor || "hsl(var(--primary))";
 
-  const thumbUrl = replyingTo.mediaStorageId ? localMediaCache[replyingTo.mediaStorageId] : null;
+  const thumbUrl = replyingTo.mediaStorageId
+    ? localMediaCache[replyingTo.mediaStorageId]
+    : null;
 
   const renderIcon = () => {
     switch (replyingTo.type) {
@@ -49,26 +52,36 @@ export default function ReplyPreview() {
         <div className="flex items-center mt-0.5 text-sm text-muted-foreground">
           {renderIcon()}
           <p className="truncate flex-1 min-w-0">
-            {replyingTo.type === "text" ? replyingTo.text : `${replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1)}`}
+            {replyingTo.type === "text"
+              ? replyingTo.text
+              : `${replyingTo.type.charAt(0).toUpperCase() + replyingTo.type.slice(1)}`}
           </p>
         </div>
       </div>
 
-      
-      {thumbUrl && replyingTo.type !== "file" && replyingTo.type !== "audio" && (
-        <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 ml-3 bg-black/10 border border-border/50 shadow-sm">
-          {replyingTo.type === "video" ? (
-            <>
-              <video src={thumbUrl} className="w-full h-full object-cover pointer-events-none" />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <Play size={12} fill="white" className="text-white" />
-              </div>
-            </>
-          ) : (
-            <img src={thumbUrl} className="w-full h-full object-cover pointer-events-none" alt="thumb" />
-          )}
-        </div>
-      )}
+      {thumbUrl &&
+        replyingTo.type !== "file" &&
+        replyingTo.type !== "audio" && (
+          <div className="relative w-10 h-10 rounded-md overflow-hidden shrink-0 ml-3 bg-black/10 border border-border/50 shadow-sm">
+            {replyingTo.type === "video" ? (
+              <>
+                <video
+                  src={thumbUrl}
+                  className="w-full h-full object-cover pointer-events-none"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Play size={12} fill="white" className="text-white" />
+                </div>
+              </>
+            ) : (
+              <img
+                src={thumbUrl}
+                className="w-full h-full object-cover pointer-events-none"
+                alt="thumb"
+              />
+            )}
+          </div>
+        )}
 
       <button
         onClick={() => setReplyingTo(null)}

@@ -8,12 +8,12 @@ import { useChatStore } from "@/store/chatStore";
 import { Id } from "../../../convex/_generated/dataModel";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import { toast } from "sonner";
 import PreSendMediaPreview from "@/components/chat/PreSendMediaPreview";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import ChatInputStatusBars from "@/components/chat/ChatInputStatusBars";
 import ReplyPreview from "@/components/chat/ReplyPreview";
 import EmojiPicker from "@/components/chat/EmojiPicker";
+import { toast } from "sonner";
 
 interface ChatInputProps {
   selectMode?: boolean;
@@ -54,7 +54,12 @@ export default function ChatInput({
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
+    activeChat?.userId && userId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: userId as Id<"users">,
+        }
+      : "skip",
   );
   const friends = useQuery(
     api.friends.getFriends,
@@ -201,13 +206,12 @@ export default function ChatInput({
     setShowEmojiPicker(false);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    // ── FIX: Send karte waqt har tarah ka typing data foran urra do ──
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    
+
     await clearTyping({
       conversationId: activeChat.conversationId as Id<"conversations">,
       userId: userId as Id<"users">,
-    }).catch(console.error); // Error aane pe message send hona nahi rukna chahiye
+    }).catch(console.error);
 
     try {
       if (!otherUser?.publicKey) {
@@ -358,13 +362,14 @@ export default function ChatInput({
           onChange={(e) => {
             const val = e.target.value;
             setMessage(val);
-            
-            // ── PRO FIX: Agar input khali ho gaya tou timer ka wait mat karo, foran clear karo ──
+
             if (val.trim() === "") {
-              if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+              if (typingTimeoutRef.current)
+                clearTimeout(typingTimeoutRef.current);
               if (activeChat?.conversationId && userId) {
                 clearTyping({
-                  conversationId: activeChat.conversationId as Id<"conversations">,
+                  conversationId:
+                    activeChat.conversationId as Id<"conversations">,
                   userId: userId as Id<"users">,
                 });
               }

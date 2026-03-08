@@ -7,7 +7,7 @@ import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { X, UserX, Shield, ShieldOff, Timer, Palette } from "lucide-react";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ChatThemeCustomizer from "@/components/chat/ChatThemeCustomizer";
 import DisappearingPicker from "@/components/chat/DisappearingPicker";
 import ConfirmModal from "@/components/shared/ConfirmModal";
@@ -16,8 +16,9 @@ export default function OtherUserPanel() {
   const { activeChat, setProfilePanelOpen, clearActiveChat } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
 
-  const [view, setView] = useState<"profile" | "theme" | "disappearing">("profile");
-  const [disappearing, setDisappearing] = useState(false);
+  const [view, setView] = useState<"profile" | "theme" | "disappearing">(
+    "profile",
+  );
 
   const unfriend = useMutation(api.friends.unfriend);
   const blockUser = useMutation(api.friends.blockUser);
@@ -25,17 +26,22 @@ export default function OtherUserPanel() {
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip"
+    activeChat && userId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: userId as Id<"users">,
+        }
+      : "skip",
   );
 
   const friends = useQuery(
     api.friends.getFriends,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   const blockedUsers = useQuery(
     api.friends.getBlockedUsers,
-    userId ? { userId } : "skip"
+    userId ? { userId } : "skip",
   );
 
   if (!activeChat) return null;
@@ -126,7 +132,9 @@ export default function OtherUserPanel() {
                   : "text-muted-foreground"
               }`}
             >
-              {(otherUser?.isOnline ?? activeChat.isOnline) ? "Online" : "Offline"}
+              {(otherUser?.isOnline ?? activeChat.isOnline)
+                ? "Online"
+                : "Offline"}
             </p>
           </div>
 
@@ -189,18 +197,26 @@ export default function OtherUserPanel() {
                 </span>
                 {activeChat.disappearingMode && (
                   <span className="text-xs text-primary font-medium">
-                    {activeChat.disappearingTimer === "1h" ? "1 hour"
-                      : activeChat.disappearingTimer === "6h" ? "6 hours"
-                      : activeChat.disappearingTimer === "12h" ? "12 hours"
-                      : activeChat.disappearingTimer === "1d" ? "1 day"
-                      : activeChat.disappearingTimer === "3d" ? "3 days"
-                      : activeChat.disappearingTimer === "7d" ? "7 days"
-                      : "On"}
+                    {activeChat.disappearingTimer === "1h"
+                      ? "1 hour"
+                      : activeChat.disappearingTimer === "6h"
+                        ? "6 hours"
+                        : activeChat.disappearingTimer === "12h"
+                          ? "12 hours"
+                          : activeChat.disappearingTimer === "1d"
+                            ? "1 day"
+                            : activeChat.disappearingTimer === "3d"
+                              ? "3 days"
+                              : activeChat.disappearingTimer === "7d"
+                                ? "7 days"
+                                : "On"}
                   </span>
                 )}
               </div>
             </div>
-            <div className={`w-2 h-2 rounded-full ${activeChat.disappearingMode ? "bg-primary" : "bg-muted-foreground/30"}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${activeChat.disappearingMode ? "bg-primary" : "bg-muted-foreground/30"}`}
+            />
           </button>
         </div>
 

@@ -11,7 +11,6 @@ export default function ChatHeader() {
   const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
   const currentUserId = useAuthStore((s) => s.userId);
 
-  // ── FIX: Real-time check karo ke samne wala type kar raha hai ya nahi ──
   const typingUsers = useQuery(
     api.typing.getTypingUsers,
     activeChat?.conversationId && currentUserId
@@ -19,19 +18,22 @@ export default function ChatHeader() {
           conversationId: activeChat.conversationId as Id<"conversations">,
           currentUserId: currentUserId as Id<"users">,
         }
-      : "skip"
+      : "skip",
   );
   const isTyping = typingUsers && typingUsers.length > 0;
 
-// ── PRO FIX: Header ko direct Convex se real-time connect karo ──
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId && currentUserId ? { userId: activeChat.userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
+    activeChat?.userId && currentUserId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: currentUserId as Id<"users">,
+        }
+      : "skip",
   );
 
   if (!activeChat) return null;
 
-  // Agar real-time data aa gaya hai tou wo use karo, warna store wala fallback
   const isOnlineRealtime = otherUser?.isOnline ?? activeChat.isOnline;
 
   return (
@@ -53,8 +55,7 @@ export default function ChatHeader() {
         <p className="text-foreground font-bold text-sm truncate">
           {activeChat.username}
         </p>
-        
-        {/* ── FIX: Agar type kar raha hai tou priority pe typing dikhao ── */}
+
         {isTyping ? (
           <p className="text-xs font-medium text-emerald-500 animate-pulse truncate tracking-wide">
             typing...
@@ -63,13 +64,20 @@ export default function ChatHeader() {
           <div className="flex items-center gap-1">
             <Timer size={10} className="text-primary shrink-0" />
             <p className="text-xs font-medium text-primary truncate">
-              Disappearing • {activeChat.disappearingTimer === "1h" ? "1 hour"
-                : activeChat.disappearingTimer === "6h" ? "6 hours"
-                : activeChat.disappearingTimer === "12h" ? "12 hours"
-                : activeChat.disappearingTimer === "1d" ? "1 day"
-                : activeChat.disappearingTimer === "3d" ? "3 days"
-                : activeChat.disappearingTimer === "7d" ? "7 days"
-                : ""}
+              Disappearing •{" "}
+              {activeChat.disappearingTimer === "1h"
+                ? "1 hour"
+                : activeChat.disappearingTimer === "6h"
+                  ? "6 hours"
+                  : activeChat.disappearingTimer === "12h"
+                    ? "12 hours"
+                    : activeChat.disappearingTimer === "1d"
+                      ? "1 day"
+                      : activeChat.disappearingTimer === "3d"
+                        ? "3 days"
+                        : activeChat.disappearingTimer === "7d"
+                          ? "7 days"
+                          : ""}
             </p>
           </div>
         ) : (

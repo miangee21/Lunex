@@ -14,9 +14,9 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { decryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import SettingsPanel from "../sidebar/SettingsPanel";
-import AboutPanel from "../sidebar/AboutPanel"; // ── STEP 16 ──
-import ConfirmModal from "@/components/shared/ConfirmModal"; // ── STEP 16 ──
-import { toast } from "sonner"; // ── STEP 16 ──
+import AboutPanel from "../sidebar/AboutPanel";
+import ConfirmModal from "@/components/shared/ConfirmModal";
+import { toast } from "sonner";
 
 export default function ChatList() {
   const {
@@ -32,10 +32,10 @@ export default function ChatList() {
     triggerScrollToBottom,
     markReactionAsSeen,
     setSidebarView,
-    isSelectionMode,       // ── STEP 16 ──
-    selectedChats,         // ── STEP 16 ──
+    isSelectionMode,
+    selectedChats,
     selectAll,
-    clearSelection,        // ── STEP 16 ──
+    clearSelection,
   } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const secretKey = useAuthStore((s) => s.secretKey);
@@ -57,11 +57,12 @@ export default function ChatList() {
   );
 
   const markAsDelivered = useMutation(api.messages.markAsDelivered);
-  
-  // ── STEP 16: Pinned Chats & Multi-Select Mutations ──
+
   const currentUser = useQuery(
     api.users.getUserById,
-    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip"
+    userId
+      ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> }
+      : "skip",
   );
   const pinnedChats = currentUser?.pinnedChats ?? [];
   const deleteChat = useMutation(api.conversations.deleteChat);
@@ -71,7 +72,12 @@ export default function ChatList() {
     if (!userId) return;
     try {
       await Promise.all(
-        selectedChats.map((id) => deleteChat({ conversationId: id as Id<"conversations">, userId: userId as Id<"users"> }))
+        selectedChats.map((id) =>
+          deleteChat({
+            conversationId: id as Id<"conversations">,
+            userId: userId as Id<"users">,
+          }),
+        ),
       );
       toast.success(`${selectedChats.length} chats deleted`);
       clearSelection();
@@ -86,12 +92,15 @@ export default function ChatList() {
       let pinCount = 0;
       let unpinCount = 0;
       for (const id of selectedChats) {
-        const res = await togglePinChat({ conversationId: id as Id<"conversations">, userId: userId as Id<"users"> });
+        const res = await togglePinChat({
+          conversationId: id as Id<"conversations">,
+          userId: userId as Id<"users">,
+        });
         if (res.success) {
           res.isPinned ? pinCount++ : unpinCount++;
         } else if (res.error) {
           toast.error(res.error);
-          break; // Limit reached (Max 3)
+          break;
         }
       }
       if (pinCount || unpinCount) toast.success(`Chats pinned/unpinned`);
@@ -116,10 +125,9 @@ export default function ChatList() {
 
   if (sidebarView === "requests") return <RequestsPanel />;
   if (sidebarView === "search") return <SearchUsers />;
-  if (sidebarView === "settings") 
+  if (sidebarView === "settings")
     return <SettingsPanel onBack={() => setSidebarView("chats")} />;
-  // ── STEP 16: About Panel ──
-  if (sidebarView === "about") 
+  if (sidebarView === "about")
     return <AboutPanel onBack={() => setSidebarView("chats")} />;
 
   async function handleOpenChat(friend: {
@@ -248,11 +256,9 @@ export default function ChatList() {
     c?.username.toLowerCase().includes(search.toLowerCase()),
   );
 
-  // ── FIX: Sort Selected Chats & Pinned Chats to Top ──
   const sortedConversations = [...filteredConversations].sort((a, b) => {
     if (!a || !b) return 0;
 
-    // 1. Agar Selection Mode on hai, tou Selected Chats sab se upar aayengi
     if (isSelectionMode) {
       const aSelected = selectedChats.includes(a.conversationId);
       const bSelected = selectedChats.includes(b.conversationId);
@@ -260,20 +266,16 @@ export default function ChatList() {
       if (!aSelected && bSelected) return 1;
     }
 
-    // 2. Uske baad Pinned Chats ki baari aayegi
     const aPinned = pinnedChats.includes(a.conversationId);
     const bPinned = pinnedChats.includes(b.conversationId);
     if (aPinned && !bPinned) return -1;
     if (!aPinned && bPinned) return 1;
 
-    // 3. Baqi list wese hi rahay gi (time-based jo backend se aati hai)
-    return 0; 
+    return 0;
   });
 
   return (
     <div className="flex flex-col h-full relative">
-      
-      {/* ── FIX: Selection Header with Select All Button ── */}
       {isSelectionMode ? (
         <div className="flex items-center justify-between px-4 pt-4 pb-2 bg-accent/30 border-b border-border/40">
           <div className="flex items-center gap-3">
@@ -287,19 +289,26 @@ export default function ChatList() {
               {selectedChats.length} Selected
             </h2>
           </div>
-          
+
           <button
             onClick={() => {
-              const allIds = conversations?.filter(c => c !== null).map(c => c.conversationId) || [];
+              const allIds =
+                conversations
+                  ?.filter((c) => c !== null)
+                  .map((c) => c.conversationId) || [];
               if (selectedChats.length === allIds.length && allIds.length > 0) {
-                selectAll([]); // Sirf deselect karega, mode on rahega
+                selectAll([]);
               } else {
-                selectAll(allIds); // Sab ko select kar lega
+                selectAll(allIds);
               }
             }}
             className="text-[13px] font-semibold text-primary hover:opacity-80 transition-opacity"
           >
-            {conversations && conversations.length > 0 && selectedChats.length === conversations.length ? "Deselect All" : "Select All"}
+            {conversations &&
+            conversations.length > 0 &&
+            selectedChats.length === conversations.length
+              ? "Deselect All"
+              : "Select All"}
           </button>
         </div>
       ) : (
@@ -316,14 +325,11 @@ export default function ChatList() {
             >
               <Plus size={18} />
             </button>
-            <DotsMenu
-              onSettingsClick={() => setSidebarView("settings")}
-            />
+            <DotsMenu onSettingsClick={() => setSidebarView("settings")} />
           </div>
         </div>
       )}
 
-      {/* ── FIX: Search bar ab Selection Mode mein bhi visible rahega ── */}
       <div className="px-3 pb-3 mt-1.5">
         <div className="flex items-center gap-2 bg-accent rounded-xl px-3 py-2">
           <Search size={15} className="text-muted-foreground shrink-0" />
@@ -521,7 +527,7 @@ export default function ChatList() {
                   unread={conv.unreadCount + (isReactionUnread ? 1 : 0)}
                   isOnline={conv.isOnline}
                   profilePicStorageId={conv.profilePicStorageId ?? null}
-                  isPinned={pinnedChats.includes(conv.conversationId)} // ── STEP 16 ──
+                  isPinned={pinnedChats.includes(conv.conversationId)}
                   chatPresetName={(conv as any).chatPresetName}
                   chatBgColor={(conv as any).chatBgColor}
                   myBubbleColor={(conv as any).myBubbleColor}
@@ -535,12 +541,13 @@ export default function ChatList() {
         )}
       </div>
 
-      {/* ── FIX: Bottom Action Bar with Pin Limit ── */}
       {isSelectionMode && selectedChats.length > 0 && (
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-card/80 backdrop-blur-xl border-t border-border/50 flex items-center justify-around animate-in slide-in-from-bottom-5 z-20">
-          
           {selectedChats.length > 3 ? (
-            <div className="flex flex-col items-center gap-1.5 text-muted-foreground opacity-40 cursor-not-allowed" title="You can only pin up to 3 chats">
+            <div
+              className="flex flex-col items-center gap-1.5 text-muted-foreground opacity-40 cursor-not-allowed"
+              title="You can only pin up to 3 chats"
+            >
               <Pin size={20} />
               <span className="text-[11px] font-semibold">Max 3 Pins</span>
             </div>
@@ -553,7 +560,7 @@ export default function ChatList() {
               <span className="text-[11px] font-semibold">Pin/Unpin</span>
             </button>
           )}
-          
+
           <ConfirmModal
             title="Delete Chats?"
             description={`Are you sure you want to delete ${selectedChats.length} selected chat(s)? This action cannot be undone.`}

@@ -4,11 +4,11 @@ import { useState } from "react";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import { MoreVertical, Trash2, Pin, Check } from "lucide-react";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import ConfirmModal from "@/components/shared/ConfirmModal"; // ── STEP 16 ──
 
 interface ChatListItemProps {
   id: string;
@@ -26,7 +26,7 @@ interface ChatListItemProps {
   myTextColor?: string;
   otherTextColor?: string;
   isRead?: "sent" | "delivered" | "read" | undefined;
-  isPinned?: boolean; // ── STEP 16 ──
+  isPinned?: boolean;
 }
 
 export default function ChatListItem({
@@ -45,23 +45,35 @@ export default function ChatListItem({
   myTextColor,
   otherTextColor,
   isRead,
-  isPinned, // ── STEP 16 ──
+  isPinned,
 }: ChatListItemProps) {
-  const { setActiveChat, setConversationId, activeChat, clearActiveChat, isSelectionMode, selectedChats, toggleChatSelection } =
-    useChatStore(); // ── STEP 16 ──
+  const {
+    setActiveChat,
+    setConversationId,
+    activeChat,
+    clearActiveChat,
+    isSelectionMode,
+    selectedChats,
+    toggleChatSelection,
+  } = useChatStore();
   const userId = useAuthStore((s) => s.userId);
   const [menuOpen, setMenuOpen] = useState(false);
-  const isActive = !isSelectionMode && activeChat?.userId === id; // Selection mode mein highlight off
+  const isActive = !isSelectionMode && activeChat?.userId === id;
   const deleteChat = useMutation(api.conversations.deleteChat);
-  const togglePinChat = useMutation(api.users.togglePinChat); // ── STEP 16 ──
+  const togglePinChat = useMutation(api.users.togglePinChat);
 
-  const isSelected = conversationId ? selectedChats.includes(conversationId) : false;
+  const isSelected = conversationId
+    ? selectedChats.includes(conversationId)
+    : false;
 
   async function handlePinChat(e: React.MouseEvent) {
     e.stopPropagation();
     if (!userId || !conversationId) return;
     try {
-      const res = await togglePinChat({ conversationId: conversationId as Id<"conversations">, userId: userId as Id<"users"> });
+      const res = await togglePinChat({
+        conversationId: conversationId as Id<"conversations">,
+        userId: userId as Id<"users">,
+      });
       if (res.success) {
         toast.success(res.isPinned ? "Chat pinned!" : "Chat unpinned!");
       } else if (res.error) {
@@ -73,7 +85,6 @@ export default function ChatListItem({
     }
   }
 
-  // ── STEP 16: e: React.MouseEvent hataya kyunki ConfirmModal se pass hoga ──
   async function handleDeleteChat() {
     if (!userId || !conversationId) return;
     try {
@@ -113,15 +124,26 @@ export default function ChatListItem({
         if (conversationId) setConversationId(conversationId);
       }}
       className={`relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors group ${
-        isActive ? "bg-accent" : isSelected ? "bg-primary/10" : "hover:bg-accent/50"
+        isActive
+          ? "bg-accent"
+          : isSelected
+            ? "bg-primary/10"
+            : "hover:bg-accent/50"
       }`}
     >
-      {/* ── STEP 16: Checkbox for Selection Mode ── */}
       {isSelectionMode && (
-        <div className={`shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-200
+        <div
+          className={`shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-200
           ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}
-        `}>
-          {isSelected && <Check size={12} strokeWidth={3} className="text-primary-foreground" />}
+        `}
+        >
+          {isSelected && (
+            <Check
+              size={12}
+              strokeWidth={3}
+              className="text-primary-foreground"
+            />
+          )}
         </div>
       )}
 
@@ -138,11 +160,10 @@ export default function ChatListItem({
             {username}
           </span>
           <div className="flex items-center gap-1.5 shrink-0 ml-1">
-            {/* ── STEP 16: Pin Icon ── */}
-            {isPinned && <Pin size={12} className="text-muted-foreground rotate-45" />}
-            <span className="text-muted-foreground text-xs">
-              {time}
-            </span>
+            {isPinned && (
+              <Pin size={12} className="text-muted-foreground rotate-45" />
+            )}
+            <span className="text-muted-foreground text-xs">{time}</span>
           </div>
         </div>
         <div className="flex items-center justify-between mt-0.5">
@@ -199,7 +220,6 @@ export default function ChatListItem({
         </div>
       </div>
 
-      {/* ── STEP 16: Hide Menu in Selection Mode ── */}
       {!isSelectionMode && (
         <div className="relative shrink-0">
           <button
@@ -214,18 +234,19 @@ export default function ChatListItem({
 
           {menuOpen && (
             <div className="absolute right-0 top-8 w-40 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-              
               <button
                 onClick={handlePinChat}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-foreground hover:bg-accent/50 transition-colors"
               >
-                <Pin size={15} className={isPinned ? "fill-muted-foreground" : ""} />
+                <Pin
+                  size={15}
+                  className={isPinned ? "fill-muted-foreground" : ""}
+                />
                 {isPinned ? "Unpin Chat" : "Pin Chat"}
               </button>
 
               <div className="h-px bg-border/40 mx-2" />
-              
-              {/* ── STEP 16: Confirm Modal for Individual Chat Delete ── */}
+
               <div onClick={(e) => e.stopPropagation()}>
                 <ConfirmModal
                   title="Delete Chat?"
@@ -237,9 +258,7 @@ export default function ChatListItem({
                     setMenuOpen(false);
                   }}
                 >
-                  <button
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors"
-                  >
+                  <button className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors">
                     <Trash2 size={15} />
                     Delete Chat
                   </button>

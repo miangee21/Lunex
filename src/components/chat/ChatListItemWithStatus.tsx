@@ -13,7 +13,7 @@ interface ChatListItemWithStatusProps {
   lastMessage: string | ReactNode;
   time: string;
   unread: number;
-  isOnline: boolean; // fallback
+  isOnline: boolean;
   profilePicStorageId?: string | null;
   chatPresetName?: string;
   chatBgColor?: string;
@@ -22,7 +22,7 @@ interface ChatListItemWithStatusProps {
   myTextColor?: string;
   otherTextColor?: string;
   isRead?: "sent" | "delivered" | "read" | undefined;
-  isPinned?: boolean; // ── STEP 16 ──
+  isPinned?: boolean;
 }
 
 export default function ChatListItemWithStatus({
@@ -34,16 +34,15 @@ export default function ChatListItemWithStatus({
 }: ChatListItemWithStatusProps) {
   const currentUserId = useAuthStore((s) => s.userId);
 
-  // ── Fetch real-time online status for this user ──
   const userStatus = useQuery(
     api.users.getUserOnlineStatus,
-    id && currentUserId ? { userId: id as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
+    id && currentUserId
+      ? { userId: id as Id<"users">, viewerId: currentUserId as Id<"users"> }
+      : "skip",
   );
 
-  // Use real-time data if available, fallback to stale data
   const isOnline = userStatus?.isOnline ?? fallbackIsOnline;
 
-  // ── FIX: Real-time check for sidebar typing indicator ──
   const typingUsers = useQuery(
     api.typing.getTypingUsers,
     conversationId && currentUserId
@@ -51,11 +50,10 @@ export default function ChatListItemWithStatus({
           conversationId: conversationId as Id<"conversations">,
           currentUserId: currentUserId as Id<"users">,
         }
-      : "skip"
+      : "skip",
   );
   const isTyping = typingUsers && typingUsers.length > 0;
 
-  // Agar typing chal rahi hai tou last message ki jagah typing dikhao
   const displayMessage = isTyping ? (
     <span className="text-emerald-500 animate-pulse font-medium tracking-wide">
       typing...

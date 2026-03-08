@@ -33,12 +33,10 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
   async function handleLogout() {
     try {
       if (userId) {
-        // ── Pehle user ko offline set kar, phir logout ker ──
         const typedUserId = userId as Id<"users">;
         await setOnlineStatus({ userId: typedUserId, isOnline: false });
-        
-        // Wait a bit to ensure mutation completes
-        await new Promise(resolve => setTimeout(resolve, 300));
+
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
     } catch (error) {
       console.error("Failed to set offline status:", error);

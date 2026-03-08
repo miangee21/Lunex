@@ -8,15 +8,12 @@ interface AboutPanelProps {
 }
 
 export default function AboutPanel({ onBack }: AboutPanelProps) {
-  
-  // ── FIX: Smart function jo Chrome aur Tauri dono ko handle karega ──
   const handleOpenLink = async (url: string) => {
     try {
-      // Check if running inside Tauri
       if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-        await open(url); // Desktop OS Browser mein kholay ga
+        await open(url);
       } else {
-        window.open(url, "_blank"); // Web/Chrome mein kholay ga
+        window.open(url, "_blank");
       }
     } catch (error) {
       console.error("Failed to open link:", error);
@@ -25,8 +22,6 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
 
   return (
     <div className="flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200">
-      
-      {/* ── Minimalist Header ── */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
         <button
           onClick={onBack}
@@ -38,10 +33,7 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-8 custom-scrollbar flex flex-col">
-        
-        {/* ── App Logo & Info ── */}
         <div className="flex flex-col items-center justify-center mb-10 mt-4">
-          {/* Logo ko circle bananay ke liye rounded-full aur scale use kiya hai */}
           <div className="w-24 h-24 mb-3 rounded-full overflow-hidden drop-shadow-xl ring-1 ring-border/50 flex items-center justify-center">
             <LunexLogo className="w-full h-full scale-[1.10]" />
           </div>
@@ -53,24 +45,23 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
           </p>
         </div>
 
-        {/* ── Description ── */}
         <div className="text-center px-2 mb-10">
           <p className="text-[14px] text-muted-foreground leading-relaxed">
-            A secure, fast, and beautifully minimalist desktop messenger. 
+            A secure, fast, and beautifully minimalist desktop messenger.
             Designed to keep your conversations private and your focus sharp.
           </p>
         </div>
 
-        {/* ── Links Section ── */}
         <div className="mb-auto">
           <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
             Community & Support
           </p>
           <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-            
             {/* GitHub Link */}
-            <button 
-              onClick={() => handleOpenLink('https://github.com/miangee21/Lunex')}
+            <button
+              onClick={() =>
+                handleOpenLink("https://github.com/miangee21/Lunex")
+              }
               className="w-full flex items-center justify-between px-4 py-3.5 bg-transparent hover:bg-accent/20 transition-colors group"
             >
               <div className="flex items-center gap-3">
@@ -83,11 +74,11 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
               </div>
             </button>
 
-            <div className="h-[1px] bg-border/40 ml-14" />
+            <div className="h-px bg-border/40 ml-14" />
 
             {/* Discord Link */}
-            <button 
-              onClick={() => handleOpenLink('https://discord.gg/Av8CPpQXkB')}
+            <button
+              onClick={() => handleOpenLink("https://discord.gg/Av8CPpQXkB")}
               className="w-full flex items-center justify-between px-4 py-3.5 bg-transparent hover:bg-accent/20 transition-colors group"
             >
               <div className="flex items-center gap-3">
@@ -99,17 +90,22 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
                 </span>
               </div>
             </button>
-
           </div>
         </div>
 
-        {/* ── Footer ── */}
         <div className="mt-10 flex items-center justify-center pb-2 opacity-80 hover:opacity-100 transition-opacity">
           <p className="text-[13px] text-muted-foreground flex items-center gap-1.5">
-            Made with <Heart size={14} className="text-red-500 fill-red-500 animate-pulse" /> by <span className="text-[14px] font-semibold text-foreground tracking-wide ml-0.5">Hassan</span>
+            Made with{" "}
+            <Heart
+              size={14}
+              className="text-red-500 fill-red-500 animate-pulse"
+            />{" "}
+            by{" "}
+            <span className="text-[14px] font-semibold text-foreground tracking-wide ml-0.5">
+              Hassan
+            </span>
           </p>
         </div>
-
       </div>
     </div>
   );

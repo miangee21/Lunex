@@ -1,4 +1,4 @@
-//src/components/profile/ProfileFriendsList.tsx
+//src/components/profile/ProfileBlockedList.tsx
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation } from "convex/react";

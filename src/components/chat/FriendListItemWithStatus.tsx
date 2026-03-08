@@ -9,7 +9,7 @@ interface FriendListItemProps {
   userId: string;
   username: string;
   profilePicStorageId: string | null;
-  isOnline: boolean; // fallback
+  isOnline: boolean;
   onSelect: (isOnline: boolean) => void;
 }
 
@@ -22,13 +22,16 @@ export default function FriendListItemWithStatus({
 }: FriendListItemProps) {
   const currentUserId = useAuthStore((s) => s.userId);
 
-// ── Fetch real-time online status for this user ──
   const userStatus = useQuery(
     api.users.getUserOnlineStatus,
-    userId && currentUserId ? { userId: userId as Id<"users">, viewerId: currentUserId as Id<"users"> } : "skip"
+    userId && currentUserId
+      ? {
+          userId: userId as Id<"users">,
+          viewerId: currentUserId as Id<"users">,
+        }
+      : "skip",
   );
 
-  // Use real-time data if available, fallback to stale data
   const isOnline = userStatus?.isOnline ?? fallbackIsOnline;
 
   return (

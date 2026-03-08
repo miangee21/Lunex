@@ -8,8 +8,12 @@ import { Id } from "../../../convex/_generated/dataModel";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/ChatInput";
 import MessageBubble from "@/components/chat/ChatBubble";
-import { CheckSquare, X, Pin } from "lucide-react"; // ── FIX: Added Pin for Pinned Bar ──
+import { CheckSquare, X, Pin } from "lucide-react";
 import { decryptMessage } from "@/crypto/encryption";
+import { base64ToKey } from "@/crypto/keyDerivation";
+import MediaGridGroup from "@/components/chat/MediaGridGroup";
+import PendingUploadsList from "@/components/chat/PendingUploadsList";
+import LunexLogo from "@/components/shared/LunexLogo";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -19,10 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { base64ToKey } from "@/crypto/keyDerivation";
-import MediaGridGroup from "@/components/chat/MediaGridGroup";
-import PendingUploadsList from "@/components/chat/PendingUploadsList";
-import LunexLogo from "@/components/shared/LunexLogo";
 
 export type DecryptedMessage = {
   id: string;
@@ -43,7 +43,7 @@ export type DecryptedMessage = {
   readBy: { userId: string; time: number }[];
   deliveredTo: { userId: string; time: number }[];
   replyToMessageId: string | null;
-  isStarred?: boolean; // ── FIX: Added isStarred ──
+  isStarred?: boolean;
 };
 
 export default function ChatArea() {
@@ -57,8 +57,8 @@ export default function ChatArea() {
     pendingUploads,
     jumpToMessageId,
     setJumpToMessageId,
-    markReactionAsSeen, 
-    scrollToBottomTrigger, 
+    markReactionAsSeen,
+    scrollToBottomTrigger,
   } = useChatStore();
 
   const userId = useAuthStore((s) => s.userId);
@@ -74,14 +74,14 @@ export default function ChatArea() {
     new Set(),
   );
   const [selectMode, setSelectMode] = useState(false);
-  const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0); // ── FIX: State for cycling Pinned Messages ──
+  const [currentPinnedIndex, setCurrentPinnedIndex] = useState(0);
 
   const [pendingPreviewIndex, setPendingPreviewIndex] = useState<number | null>(
     null,
   );
 
   function toggleSelectMessage(id: string) {
-    const msg = decryptedMessages.find(m => m.id === id);
+    const msg = decryptedMessages.find((m) => m.id === id);
     if (!msg) return;
 
     setSelectedMessages((prev) => {
@@ -89,8 +89,10 @@ export default function ChatArea() {
       const isAlreadySelected = next.has(id);
 
       if (msg.uploadBatchId) {
-        const batchMsgs = decryptedMessages.filter(m => m.uploadBatchId === msg.uploadBatchId);
-        batchMsgs.forEach(bm => {
+        const batchMsgs = decryptedMessages.filter(
+          (m) => m.uploadBatchId === msg.uploadBatchId,
+        );
+        batchMsgs.forEach((bm) => {
           if (isAlreadySelected) next.delete(bm.id);
           else next.add(bm.id);
         });
@@ -112,7 +114,11 @@ export default function ChatArea() {
       setIsDeleteDialogOpen(true);
     };
     window.addEventListener("open-delete-modal-for-single", handleSingleDelete);
-    return () => window.removeEventListener("open-delete-modal-for-single", handleSingleDelete);
+    return () =>
+      window.removeEventListener(
+        "open-delete-modal-for-single",
+        handleSingleDelete,
+      );
   }, []);
 
   useEffect(() => {
@@ -134,7 +140,6 @@ export default function ChatArea() {
       : "skip",
   );
 
-  // ── Conversation disappearing info fetch karo ──
   const conversationData = useQuery(
     api.conversations.getConversationById,
     activeChat?.conversationId
@@ -179,47 +184,61 @@ export default function ChatArea() {
 
   const markAsRead = useMutation(api.messages.markMessagesAsRead);
   const markAsDelivered = useMutation(api.messages.markAsDelivered);
-  
+
   const deleteMessageForMe = useMutation(api.messages.deleteMessageForMe);
-  const deleteMessageForEveryone = useMutation(api.messages.deleteMessageForEveryone);
+  const deleteMessageForEveryone = useMutation(
+    api.messages.deleteMessageForEveryone,
+  );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
+    activeChat?.userId && userId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: userId as Id<"users">,
+        }
+      : "skip",
   );
 
   const currentUser = useQuery(
- api.users.getUserById,
- userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
- );
+    api.users.getUserById,
+    userId
+      ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> }
+      : "skip",
+  );
 
- // ── PRO FIX: Effect ko yahan lagana hai taake variables pehle load ho chuke hon ──
- useEffect(() => {
-  if (conversationData !== undefined && currentUser !== undefined && otherUser !== undefined) {
- let effectiveMode = false;
- let effectiveTimer: string | undefined = undefined;
- let effectiveSetBy: string | undefined = undefined;
+  useEffect(() => {
+    if (
+      conversationData !== undefined &&
+      currentUser !== undefined &&
+      otherUser !== undefined
+    ) {
+      let effectiveMode = false;
+      let effectiveTimer: string | undefined = undefined;
+      let effectiveSetBy: string | undefined = undefined;
 
- if (conversationData?.disappearingMode && conversationData?.disappearingTimer) {
-  effectiveMode = true;
-  effectiveTimer = conversationData.disappearingTimer;
-  effectiveSetBy = conversationData.disappearingSetBy;
- } else if (currentUser?.settingDisappearing) {
- effectiveMode = true;
- effectiveTimer = currentUser.settingDisappearing;
-  effectiveSetBy = userId as string;
- } else if (otherUser?.settingDisappearing) {
-  effectiveMode = true;
-  effectiveTimer = otherUser.settingDisappearing;
-  effectiveSetBy = otherUser._id;
- }
+      if (
+        conversationData?.disappearingMode &&
+        conversationData?.disappearingTimer
+      ) {
+        effectiveMode = true;
+        effectiveTimer = conversationData.disappearingTimer;
+        effectiveSetBy = conversationData.disappearingSetBy;
+      } else if (currentUser?.settingDisappearing) {
+        effectiveMode = true;
+        effectiveTimer = currentUser.settingDisappearing;
+        effectiveSetBy = userId as string;
+      } else if (otherUser?.settingDisappearing) {
+        effectiveMode = true;
+        effectiveTimer = otherUser.settingDisappearing;
+        effectiveSetBy = otherUser._id;
+      }
 
- syncDisappearing(effectiveMode, effectiveTimer as any, effectiveSetBy);
- }
- }, [conversationData, currentUser, otherUser, syncDisappearing, userId]);
+      syncDisappearing(effectiveMode, effectiveTimer as any, effectiveSetBy);
+    }
+  }, [conversationData, currentUser, otherUser, syncDisappearing, userId]);
 
- // ── FIX: Typing Indicator Query ──
   const typingUsers = useQuery(
     api.typing.getTypingUsers,
     activeChat?.conversationId && userId
@@ -227,7 +246,7 @@ export default function ChatArea() {
           conversationId: activeChat.conversationId as Id<"conversations">,
           currentUserId: userId as Id<"users">,
         }
-      : "skip"
+      : "skip",
   );
   const isTyping = typingUsers && typingUsers.length > 0;
 
@@ -257,7 +276,6 @@ export default function ChatArea() {
         rawMessages!.map(async (msg) => {
           let text = "";
           try {
-            // ── System messages encrypted nahi hote ──
             if (msg.type === "system") {
               text = msg.encryptedContent;
             } else if (!otherUser?.publicKey) {
@@ -274,14 +292,19 @@ export default function ChatArea() {
             text = "🔒 Unable to decrypt message";
           }
 
-          let decryptedReactions: Array<{ userId: string; emoji: string }> = []; 
+          let decryptedReactions: Array<{ userId: string; emoji: string }> = [];
           if (msg.reactions && msg.reactions.length > 0) {
             decryptedReactions = msg.reactions.map((r: any) => {
-              if (r.emoji) return { userId: r.userId, emoji: r.emoji }; 
+              if (r.emoji) return { userId: r.userId, emoji: r.emoji };
               try {
-                if (!otherUser?.publicKey) return { userId: r.userId, emoji: "🔒" };
+                if (!otherUser?.publicKey)
+                  return { userId: r.userId, emoji: "🔒" };
                 const theirPublicKey = base64ToKey(otherUser.publicKey);
-                const decEmoji = decryptMessage({ encryptedContent: r.encryptedEmoji, iv: r.iv }, secretKey!, theirPublicKey);
+                const decEmoji = decryptMessage(
+                  { encryptedContent: r.encryptedEmoji, iv: r.iv },
+                  secretKey!,
+                  theirPublicKey,
+                );
                 return { userId: r.userId, emoji: decEmoji };
               } catch {
                 return { userId: r.userId, emoji: "🔒" };
@@ -312,7 +335,7 @@ export default function ChatArea() {
             readBy: msg.readBy,
             deliveredTo: msg.deliveredTo,
             replyToMessageId: msg.replyToMessageId ?? null,
-            isStarred: (msg as any).isStarred, // ── FIX: Pass isStarred from backend ──
+            isStarred: (msg as any).isStarred,
           };
         }),
       );
@@ -339,22 +362,20 @@ export default function ChatArea() {
     decryptAll();
   }, [rawMessages, secretKey, otherUser?.publicKey]);
 
-  // ── Client side disappearing & media cleanup ──
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       setDecryptedMessages((prev) =>
         prev
           .map((m) => {
-            // ── FIX 3: Agar media ko theek 6 ghante (21600000 ms) ho gaye hain, tou UI par foran hide kar do ──
-            if (m.mediaStorageId && (now - m.timestamp) >= 6 * 60 * 60 * 1000) {
+            if (m.mediaStorageId && now - m.timestamp >= 6 * 60 * 60 * 1000) {
               return { ...m, mediaStorageId: null, mediaDeletedAt: now };
             }
             return m;
           })
-          .filter((m) => !m.disappearsAt || m.disappearsAt > now) // Disappearing chat remove
+          .filter((m) => !m.disappearsAt || m.disappearsAt > now),
       );
-    }, 10000); // har 10 seconds check karo
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -373,7 +394,7 @@ export default function ChatArea() {
   }, [currentPending.length, pendingPreviewIndex]);
 
   const prevMsgCount = useRef(0);
-  const prevScrollTrigger = useRef(scrollToBottomTrigger); 
+  const prevScrollTrigger = useRef(scrollToBottomTrigger);
 
   useEffect(() => {
     if (jumpToMessageId && decryptedMessages.length > 0) {
@@ -381,28 +402,48 @@ export default function ChatArea() {
         const element = document.getElementById(`message-${jumpToMessageId}`);
         if (element) {
           element.scrollIntoView({ behavior: "smooth", block: "center" });
-          element.classList.add("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+          element.classList.add(
+            "ring-2",
+            "ring-primary",
+            "bg-primary/20",
+            "scale-[1.02]",
+          );
           setTimeout(() => {
-             element.classList.remove("ring-2", "ring-primary", "bg-primary/20", "scale-[1.02]");
+            element.classList.remove(
+              "ring-2",
+              "ring-primary",
+              "bg-primary/20",
+              "scale-[1.02]",
+            );
           }, 1200);
         }
-        // ── PRO FIX: Always clear jump ID after delay, whether it's a normal msg or inside a grid ──
         setJumpToMessageId(null);
-      }, 400); // Thora time badhaya taake grid ko process karne ka time mil jaye
+      }, 400);
       prevMsgCount.current = decryptedMessages.length;
-      return; 
+      return;
     }
-    
+
     if (!jumpToMessageId) {
-      const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current; 
-      if (decryptedMessages.length > prevMsgCount.current || currentPending.length > 0 || isManualTrigger) {
+      const isManualTrigger =
+        scrollToBottomTrigger !== prevScrollTrigger.current;
+      if (
+        decryptedMessages.length > prevMsgCount.current ||
+        currentPending.length > 0 ||
+        isManualTrigger
+      ) {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     }
-    
+
     prevMsgCount.current = decryptedMessages.length;
-    prevScrollTrigger.current = scrollToBottomTrigger; 
-  }, [decryptedMessages.length, currentPending.length, jumpToMessageId, setJumpToMessageId, scrollToBottomTrigger]); 
+    prevScrollTrigger.current = scrollToBottomTrigger;
+  }, [
+    decryptedMessages.length,
+    currentPending.length,
+    jumpToMessageId,
+    setJumpToMessageId,
+    scrollToBottomTrigger,
+  ]);
 
   if (!activeChat) return null;
 
@@ -455,7 +496,7 @@ export default function ChatArea() {
     while (i < visibleMessages.length) {
       const msg = visibleMessages[i];
 
-      if (msg.type !== "text" && msg.type !== "system") { 
+      if (msg.type !== "text" && msg.type !== "system") {
         const group: typeof visibleMessages = [];
         let j = i;
         while (
@@ -463,7 +504,9 @@ export default function ChatArea() {
           visibleMessages[j].type !== "text" &&
           visibleMessages[j].type !== "system" &&
           visibleMessages[j].senderId === msg.senderId &&
-          (j === i || (msg.uploadBatchId && visibleMessages[j].uploadBatchId === msg.uploadBatchId))
+          (j === i ||
+            (msg.uploadBatchId &&
+              visibleMessages[j].uploadBatchId === msg.uploadBatchId))
         ) {
           group.push(visibleMessages[j]);
           j++;
@@ -472,20 +515,34 @@ export default function ChatArea() {
         if (group.length > 1) {
           const displayGroup = group.slice(0, 4);
           const extraCount = group.length > 4 ? group.length - 4 : 0;
-          
+
           elements.push(
             <div
               key={`wrap-${msg.id}`}
-              id={`wrap-${msg.id}`} 
+              id={`wrap-${msg.id}`}
               onClick={() => selectMode && toggleSelectMessage(msg.id)}
               className={selectMode ? "cursor-pointer" : ""}
             >
               {selectMode && (
-                <div className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} mb-1`}>
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedMessages.has(msg.id) ? "bg-primary border-primary" : "border-muted-foreground"}`}>
+                <div
+                  className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} mb-1`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedMessages.has(msg.id) ? "bg-primary border-primary" : "border-muted-foreground"}`}
+                  >
                     {selectedMessages.has(msg.id) && (
-                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-3 h-3 text-primary-foreground"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     )}
                   </div>
@@ -499,7 +556,7 @@ export default function ChatArea() {
                   secretKey={secretKey}
                   otherUser={otherUser}
                   activeChat={activeChat}
-                  pinnedMessages={conversationData?.pinnedMessages || []} // ── PRO FIX: Passed pinned messages for Grid Preview ──
+                  pinnedMessages={conversationData?.pinnedMessages || []}
                   isGroupOwn={msg.isOwn}
                   setGridMenuOpen={setGridMenuOpen}
                   gridMenuOpen={gridMenuOpen}
@@ -514,7 +571,7 @@ export default function ChatArea() {
                   }}
                 />
               </div>
-            </div>
+            </div>,
           );
           i = j;
           continue;
@@ -568,25 +625,29 @@ export default function ChatArea() {
             readBy={msg.readBy}
             deliveredTo={msg.deliveredTo}
             otherUserId={activeChat?.userId}
-            sentAt={msg.timestamp} 
-            secretKey={secretKey} 
+            sentAt={msg.timestamp}
+            secretKey={secretKey}
             otherUserPublicKey={otherUser?.publicKey}
-            isStarred={msg.isStarred} // ── FIX: Pass isStarred ──
-            isPinned={conversationData?.pinnedMessages?.includes(msg.id as any)} // ── FIX: Type cast to fix string vs Id error ──
-            conversationId={activeChat?.conversationId ?? undefined} // ── FIX: Handle null gracefully ──
+            isStarred={msg.isStarred}
+            isPinned={conversationData?.pinnedMessages?.includes(msg.id as any)}
+            conversationId={activeChat?.conversationId ?? undefined}
             replyToMessage={(() => {
               if (!msg.replyToMessageId) return null;
-              const originalMsg = decryptedMessages.find(m => m.id === msg.replyToMessageId);
+              const originalMsg = decryptedMessages.find(
+                (m) => m.id === msg.replyToMessageId,
+              );
               if (!originalMsg) return null;
-              
-              const senderName = originalMsg.isOwn ? "You" : (activeChat?.username || "User");
-              
+
+              const senderName = originalMsg.isOwn
+                ? "You"
+                : activeChat?.username || "User";
+
               return {
-                id: originalMsg.id, 
+                id: originalMsg.id,
                 text: originalMsg.text,
                 senderName,
                 type: originalMsg.type,
-                mediaStorageId: originalMsg.mediaStorageId, 
+                mediaStorageId: originalMsg.mediaStorageId,
               };
             })()}
             onSelect={() => {
@@ -608,24 +669,31 @@ export default function ChatArea() {
     secretKey,
     otherUser,
     activeChat,
-    conversationData?.pinnedMessages, // ── PRO FIX: Added so Grid updates instantly on Pin/Unpin ──
+    conversationData?.pinnedMessages,
   ]);
 
   const selectedArray = Array.from(selectedMessages);
   let canDeleteForEveryone = false;
 
   if (selectedArray.length > 0) {
-    const selectedMsgs = selectedArray.map(id => decryptedMessages.find(m => m.id === id)).filter(Boolean);
+    const selectedMsgs = selectedArray
+      .map((id) => decryptedMessages.find((m) => m.id === id))
+      .filter(Boolean);
     const ONE_HOUR = 60 * 60 * 1000;
-    const allOwn = selectedMsgs.every(m => m!.isOwn);
-    const allWithinTime = selectedMsgs.every(m => Date.now() - m!.timestamp < ONE_HOUR);
+    const allOwn = selectedMsgs.every((m) => m!.isOwn);
+    const allWithinTime = selectedMsgs.every(
+      (m) => Date.now() - m!.timestamp < ONE_HOUR,
+    );
 
     if (allOwn && allWithinTime) {
       if (selectedArray.length === 1) {
         canDeleteForEveryone = true;
       } else {
         const firstBatchId = selectedMsgs[0]!.uploadBatchId;
-        if (firstBatchId && selectedMsgs.every(m => m!.uploadBatchId === firstBatchId)) {
+        if (
+          firstBatchId &&
+          selectedMsgs.every((m) => m!.uploadBatchId === firstBatchId)
+        ) {
           canDeleteForEveryone = true;
         }
       }
@@ -637,8 +705,11 @@ export default function ChatArea() {
     try {
       await Promise.all(
         selectedArray.map((msgId) =>
-          deleteMessageForMe({ messageId: msgId as Id<"messages">, userId: userId as Id<"users"> })
-        )
+          deleteMessageForMe({
+            messageId: msgId as Id<"messages">,
+            userId: userId as Id<"users">,
+          }),
+        ),
       );
       toast.success("Messages deleted for you");
       setIsDeleteDialogOpen(false);
@@ -656,9 +727,9 @@ export default function ChatArea() {
         selectedArray.map((msgId) =>
           deleteMessageForEveryone({
             messageId: msgId as Id<"messages">,
-            userId: userId as Id<"users">
-          })
-        )
+            userId: userId as Id<"users">,
+          }),
+        ),
       );
 
       toast.success("Messages deleted for everyone");
@@ -669,7 +740,6 @@ export default function ChatArea() {
     }
   };
 
-  // ── FIX: Bouncing Dots Animation Component ──
   const TypingBubble = () => (
     <div className="flex justify-start mb-1 animate-in slide-in-from-bottom-2 fade-in duration-300">
       <div className="bg-secondary text-secondary-foreground px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5 h-10">
@@ -682,54 +752,58 @@ export default function ChatArea() {
 
   return (
     <div
-      /* ── PRO FIX: Raised main container z-index so popups can overlay Sidebar ── */
-      className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative z-[60] ${themeClass}`}
+      className={`flex-1 flex flex-col min-w-0 bg-background transition-colors duration-300 relative z-60 ${themeClass}`}
       style={customThemeStyles}
       onContextMenu={(e) => e.preventDefault()}
     >
       <ChatHeader />
 
-      {/* ── PRO FIX: Pinned Messages Bar ── */}
-      {conversationData?.pinnedMessages && conversationData.pinnedMessages.length > 0 && (
-        <div 
-          className="bg-accent/40 backdrop-blur-md border-b border-border/50 px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-accent/60 transition-colors z-10 shadow-sm"
-          onClick={() => {
-            const pinnedIds = conversationData.pinnedMessages!;
-            const targetId = pinnedIds[currentPinnedIndex % pinnedIds.length];
-            setJumpToMessageId(targetId);
-            // Agar 1 se zyada pinned hain, tou agle click par next message par cycle karo
-            if (pinnedIds.length > 1) {
-              setCurrentPinnedIndex((prev) => (prev + 1) % pinnedIds.length);
-            }
-          }}
-        >
-          <div className="flex items-center gap-3 overflow-hidden">
-            <Pin size={16} className="text-primary shrink-0" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[12px] font-bold text-primary leading-tight">Pinned Message</span>
-              <span className="text-[13px] text-muted-foreground truncate leading-tight">
-                {(() => {
-                  const pinnedIds = conversationData.pinnedMessages!;
-                  const targetId = pinnedIds[currentPinnedIndex % pinnedIds.length];
-                  const pMsg = decryptedMessages.find(m => m.id === targetId);
-                  if (!pMsg) return "Tap to view message...";
-                  if (pMsg.type === "text") return pMsg.text;
-                  return `Attachment: ${pMsg.type}`;
-                })()}
-              </span>
+      {conversationData?.pinnedMessages &&
+        conversationData.pinnedMessages.length > 0 && (
+          <div
+            className="bg-accent/40 backdrop-blur-md border-b border-border/50 px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-accent/60 transition-colors z-10 shadow-sm"
+            onClick={() => {
+              const pinnedIds = conversationData.pinnedMessages!;
+              const targetId = pinnedIds[currentPinnedIndex % pinnedIds.length];
+              setJumpToMessageId(targetId);
+              if (pinnedIds.length > 1) {
+                setCurrentPinnedIndex((prev) => (prev + 1) % pinnedIds.length);
+              }
+            }}
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <Pin size={16} className="text-primary shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[12px] font-bold text-primary leading-tight">
+                  Pinned Message
+                </span>
+                <span className="text-[13px] text-muted-foreground truncate leading-tight">
+                  {(() => {
+                    const pinnedIds = conversationData.pinnedMessages!;
+                    const targetId =
+                      pinnedIds[currentPinnedIndex % pinnedIds.length];
+                    const pMsg = decryptedMessages.find(
+                      (m) => m.id === targetId,
+                    );
+                    if (!pMsg) return "Tap to view message...";
+                    if (pMsg.type === "text") return pMsg.text;
+                    return `Attachment: ${pMsg.type}`;
+                  })()}
+                </span>
+              </div>
             </div>
+            {conversationData.pinnedMessages.length > 1 && (
+              <div className="text-[11px] font-semibold text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full shrink-0">
+                {(currentPinnedIndex % conversationData.pinnedMessages.length) +
+                  1}
+                /{conversationData.pinnedMessages.length}
+              </div>
+            )}
           </div>
-          {conversationData.pinnedMessages.length > 1 && (
-            <div className="text-[11px] font-semibold text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full shrink-0">
-              {(currentPinnedIndex % conversationData.pinnedMessages.length) + 1}/{conversationData.pinnedMessages.length}
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
       <div
-        /* ── PRO FIX: Raised messages list z-index to overlap ChatInput shadows/borders ── */
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2 relative z-[50]"
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2 relative z-50"
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -770,7 +844,6 @@ export default function ChatArea() {
           memoizedMessages
         )}
 
-        {/* ── FIX: Show Animated Typing Bubble at the bottom ── */}
         {isTyping && <TypingBubble />}
 
         <PendingUploadsList
@@ -781,8 +854,7 @@ export default function ChatArea() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── PRO FIX: ChatInput ko z-[70] diya taake iska apna emoji picker messages (z-[50]) ke ooper khulay ── */}
-      <div className="relative z-[70] shrink-0">
+      <div className="relative z-70 shrink-0">
         <ChatInput
           selectMode={selectMode}
           selectedCount={selectedMessages.size}
@@ -791,36 +863,41 @@ export default function ChatArea() {
         />
       </div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="rounded-2xl shadow-xl border-border sm:max-w-100">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground font-bold">
-              {selectedArray.length > 1 ? `Delete ${selectedArray.length} messages?` : "Delete message?"}
+              {selectedArray.length > 1
+                ? `Delete ${selectedArray.length} messages?`
+                : "Delete message?"}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground text-[15px] leading-relaxed">
-              {canDeleteForEveryone 
-                ? "You can delete this message for everyone or just for yourself." 
-                : selectedArray.length > 1 
+              {canDeleteForEveryone
+                ? "You can delete this message for everyone or just for yourself."
+                : selectedArray.length > 1
                   ? "Are you sure you want to delete these messages for yourself? This cannot be undone."
                   : "Are you sure you want to delete this message for yourself? This cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          
+
           <AlertDialogFooter className="mt-4 flex-col sm:flex-row gap-2">
-            <button 
+            <button
               onClick={() => setIsDeleteDialogOpen(false)}
               className="px-4 py-2 rounded-xl text-sm font-semibold hover:bg-accent border border-transparent hover:border-border transition-colors w-full sm:w-auto text-foreground"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={handleBulkDeleteForMe}
               className="px-4 py-2 rounded-xl text-sm font-semibold border border-border bg-transparent hover:bg-accent transition-colors w-full sm:w-auto text-foreground"
             >
               Delete for me
             </button>
             {canDeleteForEveryone && (
-              <button 
+              <button
                 onClick={handleBulkDeleteForEveryone}
                 className="px-4 py-2 rounded-xl text-sm font-semibold bg-destructive text-white hover:bg-destructive/90 transition-colors w-full sm:w-auto"
               >

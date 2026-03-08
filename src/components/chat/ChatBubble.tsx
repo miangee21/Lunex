@@ -6,13 +6,12 @@ import { useAuthStore } from "@/store/authStore";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import BubbleMenu from "@/components/chat/BubbleMenu";
 import BubbleMedia from "@/components/chat/BubbleMedia";
-
 import EmojiPicker from "@/components/chat/EmojiPicker";
-import { Smile, Plus, Play, Star, Pin } from "lucide-react"; // ── PRO FIX: Added Pin icon ──
-import { toast } from "sonner";
+import { Smile, Plus, Play, Star, Pin } from "lucide-react";
 import { useChatStore } from "@/store/chatStore";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import { toast } from "sonner";
 
 interface MessageBubbleProps {
   messageId: string;
@@ -41,9 +40,9 @@ interface MessageBubbleProps {
   sentAt?: number;
   secretKey?: Uint8Array | null;
   otherUserPublicKey?: string;
-  isStarred?: boolean; // ── FIX: Added Star state ──
-  isPinned?: boolean; // ── FIX: Added Pin state ──
-  conversationId?: string; // ── FIX: Added Conversation ID ──
+  isStarred?: boolean;
+  isPinned?: boolean;
+  conversationId?: string;
 }
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
@@ -77,7 +76,7 @@ export default function MessageBubble({
   const [showQuickReact, setShowQuickReact] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top"); // ── PRO FIX: Viewport awareness state ──
+  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top");
   const isMedia = type !== "text";
   const currentUserId = useAuthStore((s) => s.userId);
   const localMediaCache = useChatStore((s) => s.localMediaCache);
@@ -119,7 +118,7 @@ export default function MessageBubble({
           emoji,
           secretKey,
           theirPublicKeyBytes,
-        ); // ── FIX: secretKey direct pass ki ──
+        );
 
         await addReaction({
           messageId: messageId as never,
@@ -185,7 +184,6 @@ export default function MessageBubble({
     ? deliveredTo?.some((d) => d.userId === otherUserId)
     : false;
 
-  // ── FIX: System message ko saare hooks chalne ke baad return karna hai ──
   if (type === "system") {
     return (
       <div className="flex justify-center my-2 w-full">
@@ -197,10 +195,9 @@ export default function MessageBubble({
   }
 
   return (
-    /* ── PRO FIX: Jab reaction menu khulay tou puray bubble container ko doosri chats se upar utha do ── */
     <div
       id={`message-${messageId}`}
-      className={`flex w-full group py-1.5 transition-all duration-500 rounded-lg ${isOwn ? "justify-end" : "justify-start"} ${showQuickReact || showEmojiPicker ? "relative z-[100]" : "z-10"}`}
+      className={`flex w-full group py-1.5 transition-all duration-500 rounded-lg ${isOwn ? "justify-end" : "justify-start"} ${showQuickReact || showEmojiPicker ? "relative z-100" : "z-10"}`}
     >
       <div
         className={`relative flex max-w-[75%] md:max-w-[65%] items-start gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
@@ -284,7 +281,7 @@ export default function MessageBubble({
                 </button>
               )}
             </div>
-           )}
+          )}
 
           {reactions.length > 0 && (
             <div
@@ -324,17 +321,25 @@ export default function MessageBubble({
           <div className="flex justify-end items-center gap-1 mt-1 -mb-0.5 text-[10.5px] font-medium tracking-wide opacity-70">
             {editedAt && <span>edited</span>}
             {disappearsAt && (
-              <svg className="w-3 h-3 opacity-70" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg
+                className="w-3 h-3 opacity-70"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
                 <circle cx="12" cy="12" r="10" />
                 <path strokeLinecap="round" d="M12 6v6l4 2" />
               </svg>
             )}
-            
-            {/* ── PRO FIX: Show Star and Pin icons ── */}
-            {isStarred && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 -mt-px" />}
-            {/* ── PRO FIX: Use 'current' color so it adapts to any bubble background automatically ── */}
-            {isPinned && <Pin className="w-3 h-3 fill-current text-current opacity-90 -mt-px" />}
-            
+
+            {isStarred && (
+              <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 -mt-px" />
+            )}
+            {isPinned && (
+              <Pin className="w-3 h-3 fill-current text-current opacity-90 -mt-px" />
+            )}
+
             <span>{time}</span>
             {isOwn && (
               <MessageStatusTick isSeen={isSeen} isDelivered={isDelivered} />
@@ -360,16 +365,15 @@ export default function MessageBubble({
         </div>
 
         <div
-          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-[9999] opacity-100" : "z-20 opacity-0 group-hover:opacity-100"}`}
+          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-9999 opacity-100" : "z-20 opacity-0 group-hover:opacity-100"}`}
           ref={emojiPickerRef}
         >
           <button
             onClick={() => {
               if (!showQuickReact) {
-                // ── PRO FIX: Calculate space before opening! ──
                 if (emojiPickerRef.current) {
                   const rect = emojiPickerRef.current.getBoundingClientRect();
-                  setPickerPosition(rect.top < 150 ? "bottom" : "top"); // Agar top se bohot qareeb hai tou neechay kholo
+                  setPickerPosition(rect.top < 150 ? "bottom" : "top");
                 }
                 setShowQuickReact(true);
                 setShowEmojiPicker(false);
@@ -384,7 +388,7 @@ export default function MessageBubble({
 
           {showQuickReact && (
             <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-[9999] animate-in zoom-in-75 duration-200`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-9999 animate-in zoom-in-75 duration-200`}
             >
               {QUICK_EMOJIS.map((emoji) => (
                 <button
@@ -398,7 +402,6 @@ export default function MessageBubble({
               <div className="w-px h-5 bg-border mx-1 shrink-0" />
               <button
                 onClick={() => {
-                  // ── PRO FIX: Full picker ko bohot zyada jagah chahiye hoti hai, is liye 400px pe check kiya ──
                   if (emojiPickerRef.current) {
                     const rect = emojiPickerRef.current.getBoundingClientRect();
                     setPickerPosition(rect.top < 400 ? "bottom" : "top");
@@ -415,9 +418,11 @@ export default function MessageBubble({
 
           {showEmojiPicker && (
             <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-[9999] animate-in zoom-in-75 duration-200`}
+              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-9999 animate-in zoom-in-75 duration-200`}
             >
-              <div className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}>
+              <div
+                className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}
+              >
                 <EmojiPicker onEmojiSelect={handleEmojiSelect} />
               </div>
             </div>

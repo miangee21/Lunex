@@ -16,13 +16,11 @@ export function useSecureAvatar(avatarUrl: string | undefined | null) {
 
     async function fetchAndDecrypt() {
       try {
-        // Encrypted kachra (blob) database se download karo
         const response = await fetch(avatarUrl as string);
         const encryptedBlob = await response.blob();
-        
-        // Decrypt kar ke original picture nikalo
+
         objectUrl = await decryptDP(encryptedBlob);
-        
+
         if (isMounted) setSecureUrl(objectUrl);
       } catch (error) {
         console.error("DP Decryption failed:", error);
@@ -32,7 +30,6 @@ export function useSecureAvatar(avatarUrl: string | undefined | null) {
 
     fetchAndDecrypt();
 
-    // Memory leak se bachne ke liye clean up
     return () => {
       isMounted = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);

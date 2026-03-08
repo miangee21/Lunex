@@ -181,7 +181,6 @@ export function useMediaUpload({
     }
 
     if (readyToSend.length > 0) {
-
       await Promise.all(
         readyToSend.map((readyItem) => sendMessage(readyItem.messageData)),
       );
@@ -196,7 +195,7 @@ export function useMediaUpload({
         text: lastItemWrap.originalFileNameForCache,
         senderId: userId!,
         sentAt: now,
-        type: lastItemWrap.messageData.type, 
+        type: lastItemWrap.messageData.type,
       });
       updateReadByCache(conversationId, [{ userId: userId!, time: now }]);
     }

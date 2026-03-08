@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import MediaPreview from "@/components/chat/MediaPreview";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
@@ -18,7 +19,6 @@ import {
   Image as ImageIcon,
   Film,
 } from "lucide-react";
-import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 
 interface BubbleMediaProps {
   messageId: string;
@@ -63,7 +63,12 @@ export default function BubbleMedia({
   const userId = useAuthStore((s) => s.userId);
   const otherUser = useQuery(
     api.users.getUserById,
-    activeChat?.userId && userId ? { userId: activeChat.userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
+    activeChat?.userId && userId
+      ? {
+          userId: activeChat.userId as Id<"users">,
+          viewerId: userId as Id<"users">,
+        }
+      : "skip",
   );
 
   const instantUrl = useChatStore((s) =>
@@ -122,7 +127,6 @@ export default function BubbleMedia({
     mediaStorageId,
   ]);
 
-  // ── FIX: Deleted Placeholder hamesha saare hooks ke baad aana chahiye ──
   if (mediaDeletedAt || !mediaStorageId) {
     return <DeletedMediaPlaceholder type={type} isOwn={isOwn} />;
   }
