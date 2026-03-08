@@ -4,10 +4,9 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// ── Every 30 minutes: Har tarah ka expired data saaf karo (Chat + Media) ──
 crons.interval(
   "delete-expired-messages-and-media",
-  { minutes: 30 }, // ── Sirf yahan 30 karna tha ──
+  { minutes: 30 },
   internal.cleanup.deleteExpiredMessages,
 );
 

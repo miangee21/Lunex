@@ -98,14 +98,15 @@ export const getConversationsList = query({
                 sentAt: lastMessage.sentAt,
                 senderId: lastMessage.senderId,
                 type: lastMessage.type,
-                // ── POINT-IN-TIME FIX: Sidebar mein se Ghost Reads (time: -1) nikal do ──
-                readBy: (lastMessage.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
+                readBy: (lastMessage.readBy ?? []).filter(
+                  (r: any) => r.userId === args.userId || r.time !== -1,
+                ),
                 deliveredTo: lastMessage.deliveredTo ?? [],
               }
             : null,
           unreadCount,
           lastMessageAt: conv.lastMessageAt ?? conv.createdAt,
-          pinnedMessages: conv.pinnedMessages ?? [], // ── FIX: Frontend ko pinned messages bhejein ──
+          pinnedMessages: conv.pinnedMessages ?? [],
         };
       }),
     );
@@ -201,7 +202,6 @@ export const updateLastMessageAt = mutation({
   },
 });
 
-// ── SET DISAPPEARING MESSAGES ──
 export const setDisappearing = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -223,7 +223,6 @@ export const setDisappearing = mutation({
     if (!conv.participantIds.includes(args.userId))
       throw new Error("Not a participant");
 
-    // Agar koi aur pehle se on kar chuka hai tu sirf wahi off kar sakta hai
     if (
       conv.disappearingMode &&
       conv.disappearingSetBy !== args.userId &&

@@ -35,7 +35,6 @@ export const getMessages = query({
         if (m.deletedForSender && m.senderId === args.userId) return false;
         if (m.deletedForReceiver && m.senderId !== args.userId) return false;
 
-        // ── PRO FIX 1: Frontend ko expired message dena hi nahi, zero flicker ──
         if (
           m.disappearsAt !== undefined &&
           m.disappearsAt !== null &&
@@ -48,7 +47,6 @@ export const getMessages = query({
         return true;
       })
       .map((m) => {
-        // ── PRO FIX 2: Expired media ko server se hi block kar do ──
         const isMediaExpired =
           m.mediaExpiresAt !== undefined &&
           m.mediaExpiresAt !== null &&
@@ -73,12 +71,12 @@ export const getMessages = query({
           editedAt: m.editedAt ?? null,
           disappearsAt: m.disappearsAt ?? null,
           sentAt: m.sentAt,
-          // ── POINT-IN-TIME FIX: Agar time -1 hai, toh wo "Ghost Read" hai, usay chupa do ──
-          readBy: (m.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
+          readBy: (m.readBy ?? []).filter(
+            (r: any) => r.userId === args.userId || r.time !== -1,
+          ),
           deliveredTo: m.deliveredTo ?? [],
           isOwn: m.senderId === args.userId,
-          // ── FIX: Frontend ko batana ke yeh message starred hai ya nahi ──
-          starredBy: m.starredBy ?? [], 
+          starredBy: m.starredBy ?? [],
           isStarred: (m.starredBy ?? []).includes(args.userId),
         };
       });
@@ -109,32 +107,24 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // ── PRO FIX: Backend automatically Disappearing Time calculate karega (Override Logic) ──
     const conv = await ctx.db.get(args.conversationId);
     const currentUser = await ctx.db.get(args.senderId);
     const otherUserId = conv?.participantIds.find((id) => id !== args.senderId);
     const otherUser = otherUserId ? await ctx.db.get(otherUserId) : null;
-    
+
     let calculatedDisappearsAt: number | undefined = undefined;
 
-    // System messages par timer apply nahi hota
     if (args.type !== "system") {
       let effectiveTimer: string | undefined = undefined;
 
-      // Priority 1: Chat ka apna Individual Timer
       if (conv?.disappearingMode && conv?.disappearingTimer) {
         effectiveTimer = conv.disappearingTimer;
-      } 
-      // Priority 2: Sender ka apna Global Timer (Settings se)
-      else if (currentUser?.settingDisappearing) {
+      } else if (currentUser?.settingDisappearing) {
         effectiveTimer = currentUser.settingDisappearing as string;
-      }
-      // Priority 3: Receiver ka apna Global Timer (Symmetric Fix - Dono k liye)
-      else if (otherUser?.settingDisappearing) {
+      } else if (otherUser?.settingDisappearing) {
         effectiveTimer = otherUser.settingDisappearing as string;
       }
 
-      // Agar koi bhi timer mila hai, tou usay apply kar do
       if (effectiveTimer) {
         const timerMap: Record<string, number> = {
           "1h": 1 * 60 * 60 * 1000,
@@ -162,8 +152,6 @@ export const sendMessage = mutation({
       mediaOriginalName: args.mediaOriginalName,
       uploadBatchId: args.uploadBatchId,
       replyToMessageId: args.replyToMessageId,
-
-      // ── FIX 2: Hamara calculated timer yahan assign hoga ──
       disappearsAt: calculatedDisappearsAt,
       mediaExpiresAt: args.mediaStorageId
         ? now + 6 * 60 * 60 * 1000
@@ -187,8 +175,6 @@ export const markMessagesAsRead = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     const conv = await ctx.db.get(args.conversationId);
-
-    // ── PRO FIX: 4-Option Read Receipts Privacy Logic ──
     let sendReceipts = true;
 
     if (user) {
@@ -197,16 +183,18 @@ export const markMessagesAsRead = mutation({
 
       if (privacy === "nobody") {
         sendReceipts = false;
-      } else if ((privacy === "only_these" || privacy === "all_except") && conv) {
-        // Pata lagao ke saamne wala banda (jisne message bheja tha) kon hai
-        const otherUserId = conv.participantIds.find((id: string) => id !== args.userId);
+      } else if (
+        (privacy === "only_these" || privacy === "all_except") &&
+        conv
+      ) {
+        const otherUserId = conv.participantIds.find(
+          (id: string) => id !== args.userId,
+        );
 
         if (otherUserId) {
           if (privacy === "only_these") {
-            // Whitelist: Sirf unko blue ticks bhejo jo list mein HAIN
             sendReceipts = exceptions.includes(otherUserId);
           } else if (privacy === "all_except") {
-            // Blacklist: Unko blue ticks MAT bhejo jo list mein hain
             sendReceipts = !exceptions.includes(otherUserId);
           }
         }
@@ -230,8 +218,10 @@ export const markMessagesAsRead = mutation({
     await Promise.all(
       unread.map((m) =>
         ctx.db.patch(m._id, {
-          // ── POINT-IN-TIME FIX: Agar setting OFF thi toh Ghost Mark (-1) lagao ──
-          readBy: [...(m.readBy ?? []), { userId: args.userId, time: sendReceipts ? now : -1 }],
+          readBy: [
+            ...(m.readBy ?? []),
+            { userId: args.userId, time: sendReceipts ? now : -1 },
+          ],
         }),
       ),
     );
@@ -247,11 +237,12 @@ export const deleteMessageForMe = mutation({
     const message = await ctx.db.get(args.messageId);
     if (!message) throw new Error("Message not found");
 
-    // ── PRO FIX: Remove from Pinned Messages array if deleted ──
     const conv = await ctx.db.get(message.conversationId);
     if (conv && conv.pinnedMessages?.includes(args.messageId)) {
       await ctx.db.patch(message.conversationId, {
-        pinnedMessages: conv.pinnedMessages.filter((id: string) => id !== args.messageId),
+        pinnedMessages: conv.pinnedMessages.filter(
+          (id: string) => id !== args.messageId,
+        ),
       });
     }
 
@@ -286,11 +277,12 @@ export const deleteMessageForEveryone = mutation({
     if (message.senderId !== args.userId)
       throw new Error("Only sender can delete for everyone");
 
-    // ── PRO FIX: Remove from Pinned Messages array if deleted for everyone ──
     const conv = await ctx.db.get(message.conversationId);
     if (conv && conv.pinnedMessages?.includes(args.messageId)) {
       await ctx.db.patch(message.conversationId, {
-        pinnedMessages: conv.pinnedMessages.filter((id: string) => id !== args.messageId),
+        pinnedMessages: conv.pinnedMessages.filter(
+          (id: string) => id !== args.messageId,
+        ),
       });
     }
 
@@ -453,8 +445,6 @@ export const markAsDelivered = mutation({
   },
 });
 
-// ── PRO FIX: Star & Pin Messages APIs ──
-
 export const toggleStarMessage = mutation({
   args: {
     messageId: v.id("messages"),
@@ -471,12 +461,12 @@ export const toggleStarMessage = mutation({
       await ctx.db.patch(args.messageId, {
         starredBy: starredBy.filter((id) => id !== args.userId),
       });
-      return false; // Unstarred ho gaya
+      return false;
     } else {
       await ctx.db.patch(args.messageId, {
         starredBy: [...starredBy, args.userId],
       });
-      return true; // Star ho gaya
+      return true;
     }
   },
 });
@@ -497,7 +487,7 @@ export const togglePinMessage = mutation({
       await ctx.db.patch(args.conversationId, {
         pinnedMessages: pinnedMessages.filter((id) => id !== args.messageId),
       });
-      return false; // Unpinned ho gaya
+      return false;
     } else {
       if (pinnedMessages.length >= 3) {
         throw new Error("You can only pin up to 3 messages in a chat.");
@@ -505,7 +495,7 @@ export const togglePinMessage = mutation({
       await ctx.db.patch(args.conversationId, {
         pinnedMessages: [...pinnedMessages, args.messageId],
       });
-      return true; // Pinned ho gaya
+      return true;
     }
   },
 });
@@ -513,39 +503,47 @@ export const togglePinMessage = mutation({
 export const getStarredMessages = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    // 1. User ki saari conversations fetch karein
     const convos = await ctx.db.query("conversations").collect();
-    const userConvos = convos.filter(c => c.participantIds.includes(args.userId));
-    const convoIds = userConvos.map(c => c._id);
+    const userConvos = convos.filter((c) =>
+      c.participantIds.includes(args.userId),
+    );
+    const convoIds = userConvos.map((c) => c._id);
 
     let starredMessages: any[] = [];
     const now = Date.now();
 
-    // 2. Un conversations ke messages mein se sirf starred nikalen
     for (const cid of convoIds) {
       const msgs = await ctx.db
         .query("messages")
         .withIndex("by_conversation", (q) => q.eq("conversationId", cid))
         .collect();
-      
-      const filtered = msgs.filter(m => {
-        if (!m.starredBy?.includes(args.userId)) return false; // Must be starred
+
+      const filtered = msgs.filter((m) => {
+        if (!m.starredBy?.includes(args.userId)) return false;
         if (m.deletedForEveryone) return false;
         if (m.deletedForSender && m.senderId === args.userId) return false;
         if (m.deletedForReceiver && m.senderId !== args.userId) return false;
-        if (m.disappearsAt !== undefined && m.disappearsAt !== null && m.disappearsAt !== 0 && m.disappearsAt <= now) return false;
+        if (
+          m.disappearsAt !== undefined &&
+          m.disappearsAt !== null &&
+          m.disappearsAt !== 0 &&
+          m.disappearsAt <= now
+        )
+          return false;
         return true;
       });
 
       starredMessages.push(...filtered);
     }
 
-    // 3. Time ke hisaab se sort karein (Newest first)
     starredMessages.sort((a, b) => b.sentAt - a.sentAt);
 
-    // 4. Frontend friendly format mein return karein
     return starredMessages.map((m) => {
-      const isMediaExpired = m.mediaExpiresAt !== undefined && m.mediaExpiresAt !== null && m.mediaExpiresAt !== 0 && m.mediaExpiresAt <= now;
+      const isMediaExpired =
+        m.mediaExpiresAt !== undefined &&
+        m.mediaExpiresAt !== null &&
+        m.mediaExpiresAt !== 0 &&
+        m.mediaExpiresAt <= now;
       return {
         id: m._id,
         conversationId: m.conversationId,
@@ -555,7 +553,9 @@ export const getStarredMessages = query({
         type: m.type,
         mediaStorageId: isMediaExpired ? null : (m.mediaStorageId ?? null),
         mediaIv: isMediaExpired ? null : (m.mediaIv ?? null),
-        mediaOriginalName: isMediaExpired ? null : (m.mediaOriginalName ?? null),
+        mediaOriginalName: isMediaExpired
+          ? null
+          : (m.mediaOriginalName ?? null),
         mediaDeletedAt: isMediaExpired ? now : (m.mediaDeletedAt ?? null),
         uploadBatchId: m.uploadBatchId ?? null,
         replyToMessageId: m.replyToMessageId ?? null,
@@ -563,7 +563,9 @@ export const getStarredMessages = query({
         editedAt: m.editedAt ?? null,
         disappearsAt: m.disappearsAt ?? null,
         sentAt: m.sentAt,
-        readBy: (m.readBy ?? []).filter((r: any) => r.userId === args.userId || r.time !== -1),
+        readBy: (m.readBy ?? []).filter(
+          (r: any) => r.userId === args.userId || r.time !== -1,
+        ),
         deliveredTo: m.deliveredTo ?? [],
         isOwn: m.senderId === args.userId,
         isStarred: true,

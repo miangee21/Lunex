@@ -12,7 +12,6 @@ export const setTyping = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) return;
 
-    // ── PRO FIX: 4-Option Typing Privacy Logic ──
     let canSendTyping = true;
     const privacy = user.privacyTyping ?? "everyone";
     const exceptions = user.typingExceptions ?? [];
@@ -20,24 +19,22 @@ export const setTyping = mutation({
     if (privacy === "nobody") {
       canSendTyping = false;
     } else if (privacy === "only_these" || privacy === "all_except") {
-      // Humein dekhna hoga ke doosra banda (viewer) kaun hai
       const conv = await ctx.db.get(args.conversationId);
       if (conv) {
-        const otherUserId = conv.participantIds.find((id) => id !== args.userId);
-        
+        const otherUserId = conv.participantIds.find(
+          (id) => id !== args.userId,
+        );
+
         if (otherUserId) {
           if (privacy === "only_these") {
-            // Whitelist: Sirf tab bhejo agar doosra banda list mein HAI
             canSendTyping = exceptions.includes(otherUserId);
           } else if (privacy === "all_except") {
-            // Blacklist: Sirf tab bhejo agar doosra banda list mein NAHI hai
             canSendTyping = !exceptions.includes(otherUserId);
           }
         }
       }
     }
 
-    // Agar privacy allow nahi karti, tou typing event send hi mat karo
     if (!canSendTyping) return;
 
     const existing = await ctx.db
@@ -48,7 +45,6 @@ export const setTyping = mutation({
       .filter((q) => q.eq(q.field("userId"), args.userId))
       .unique();
 
-    // ── PRO FIX: Zombie data ko delete karo bajaye 'false' set karne ke ──
     if (existing) {
       if (args.isTyping) {
         await ctx.db.patch(existing._id, {
@@ -56,7 +52,6 @@ export const setTyping = mutation({
           updatedAt: Date.now(),
         });
       } else {
-        // Typing ruki tou row hi delete kar do
         await ctx.db.delete(existing._id);
       }
     } else if (args.isTyping) {

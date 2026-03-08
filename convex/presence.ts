@@ -2,23 +2,48 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// ── Privacy settings update karo ──
 export const updatePrivacySettings = mutation({
   args: {
     userId: v.id("users"),
-    
-    // ── PRO FIX: 4-Option Privacy System ──
-    privacyOnline: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyOnline: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     onlineExceptions: v.optional(v.array(v.id("users"))),
-    
-    privacyTyping: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyTyping: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     typingExceptions: v.optional(v.array(v.id("users"))),
-    
-    privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyReadReceipts: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     readReceiptsExceptions: v.optional(v.array(v.id("users"))),
-    
-    // ── STEP 16: Notifications Privacy Args ──
-    privacyNotifications: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyNotifications: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     notificationExceptions: v.optional(v.array(v.id("users"))),
 
     settingDisappearing: v.optional(
@@ -38,19 +63,25 @@ export const updatePrivacySettings = mutation({
 
     const patch: Record<string, unknown> = {};
 
-    // ── PRO FIX: Map New Settings to Database Patch ──
-    if (settings.privacyOnline !== undefined) patch.privacyOnline = settings.privacyOnline;
-    if (settings.onlineExceptions !== undefined) patch.onlineExceptions = settings.onlineExceptions;
+    if (settings.privacyOnline !== undefined)
+      patch.privacyOnline = settings.privacyOnline;
+    if (settings.onlineExceptions !== undefined)
+      patch.onlineExceptions = settings.onlineExceptions;
 
-    if (settings.privacyTyping !== undefined) patch.privacyTyping = settings.privacyTyping;
-    if (settings.typingExceptions !== undefined) patch.typingExceptions = settings.typingExceptions;
+    if (settings.privacyTyping !== undefined)
+      patch.privacyTyping = settings.privacyTyping;
+    if (settings.typingExceptions !== undefined)
+      patch.typingExceptions = settings.typingExceptions;
 
-    if (settings.privacyReadReceipts !== undefined) patch.privacyReadReceipts = settings.privacyReadReceipts;
-    if (settings.readReceiptsExceptions !== undefined) patch.readReceiptsExceptions = settings.readReceiptsExceptions;
+    if (settings.privacyReadReceipts !== undefined)
+      patch.privacyReadReceipts = settings.privacyReadReceipts;
+    if (settings.readReceiptsExceptions !== undefined)
+      patch.readReceiptsExceptions = settings.readReceiptsExceptions;
 
-    // ── STEP 16: Map Notifications Privacy to Patch ──
-    if (settings.privacyNotifications !== undefined) patch.privacyNotifications = settings.privacyNotifications;
-    if (settings.notificationExceptions !== undefined) patch.notificationExceptions = settings.notificationExceptions;
+    if (settings.privacyNotifications !== undefined)
+      patch.privacyNotifications = settings.privacyNotifications;
+    if (settings.notificationExceptions !== undefined)
+      patch.notificationExceptions = settings.notificationExceptions;
 
     if (settings.settingDisappearing !== undefined)
       patch.settingDisappearing =
@@ -62,10 +93,13 @@ export const updatePrivacySettings = mutation({
       await ctx.db.patch(userId, patch);
     }
 
-    // ── FIX 1: Jab Online status set ho, isOnline table mein physical force update check karo ──
     if (settings.privacyOnline === "nobody") {
       await ctx.db.patch(userId, { isOnline: false, lastSeen: Date.now() });
-    } else if (settings.privacyOnline === "everyone" || settings.privacyOnline === "only_these" || settings.privacyOnline === "all_except") {
+    } else if (
+      settings.privacyOnline === "everyone" ||
+      settings.privacyOnline === "only_these" ||
+      settings.privacyOnline === "all_except"
+    ) {
       await ctx.db.patch(userId, { isOnline: true, lastSeen: Date.now() });
     }
 
@@ -73,7 +107,6 @@ export const updatePrivacySettings = mutation({
   },
 });
 
-// ── User ki privacy settings fetch karo ──
 export const getUserSettings = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -83,14 +116,13 @@ export const getUserSettings = query({
     return {
       privacyOnline: user.privacyOnline ?? "everyone",
       onlineExceptions: user.onlineExceptions ?? [],
-      
+
       privacyTyping: user.privacyTyping ?? "everyone",
       typingExceptions: user.typingExceptions ?? [],
-      
+
       privacyReadReceipts: user.privacyReadReceipts ?? "everyone",
       readReceiptsExceptions: user.readReceiptsExceptions ?? [],
-      
-      // ── STEP 16: Return Notifications Privacy ──
+
       privacyNotifications: user.privacyNotifications ?? "everyone",
       notificationExceptions: user.notificationExceptions ?? [],
 

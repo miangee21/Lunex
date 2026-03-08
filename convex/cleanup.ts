@@ -6,11 +6,9 @@ export const deleteExpiredMessages = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
 
-    // 1. Saare messages DB se nikal lo
     const messages = await ctx.db.query("messages").collect();
 
     for (const msg of messages) {
-      // ── CASE 1: DISAPPEARING CHAT (Whole Message Deletion) ──
       if (
         msg.disappearsAt !== undefined &&
         msg.disappearsAt !== null &&
@@ -21,10 +19,9 @@ export const deleteExpiredMessages = internalMutation({
           await ctx.storage.delete(msg.mediaStorageId).catch(() => {});
         }
         await ctx.db.delete(msg._id);
-        continue; 
+        continue;
       }
 
-      // ── CASE 2: MEDIA AUTO-DELETE (6 Hours Rule) ──
       if (
         msg.mediaExpiresAt !== undefined &&
         msg.mediaExpiresAt !== null &&
@@ -39,8 +36,8 @@ export const deleteExpiredMessages = internalMutation({
           mediaStorageId: undefined,
           mediaIv: undefined,
           mediaOriginalName: undefined,
-          mediaExpiresAt: undefined, 
-          mediaDeletedAt: now,       
+          mediaExpiresAt: undefined,
+          mediaDeletedAt: now,
         });
       }
     }

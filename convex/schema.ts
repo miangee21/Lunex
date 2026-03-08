@@ -13,19 +13,45 @@ export default defineSchema({
 
     theme: v.optional(v.union(v.literal("light"), v.literal("dark"))),
     globalPreset: v.optional(v.string()),
-    
-    // ── PRO FIX: WhatsApp-Style Privacy System (4 Options) ──
-    privacyOnline: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyOnline: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     onlineExceptions: v.optional(v.array(v.id("users"))),
-    
-    privacyTyping: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyTyping: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     typingExceptions: v.optional(v.array(v.id("users"))),
-    
-    privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+
+    privacyReadReceipts: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     readReceiptsExceptions: v.optional(v.array(v.id("users"))),
 
-    // ── STEP 16: Notifications Privacy & Pinned Chats ──
-    privacyNotifications: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    privacyNotifications: v.optional(
+      v.union(
+        v.literal("everyone"),
+        v.literal("nobody"),
+        v.literal("only_these"),
+        v.literal("all_except"),
+      ),
+    ),
     notificationExceptions: v.optional(v.array(v.id("users"))),
     pinnedChats: v.optional(v.array(v.id("conversations"))),
 
@@ -70,18 +96,20 @@ export default defineSchema({
     participantIds: v.array(v.id("users")),
     disappearingMode: v.optional(v.boolean()),
     disappearingSetBy: v.optional(v.id("users")),
-    disappearingTimer: v.optional(v.union(
-      v.literal("1h"),
-      v.literal("6h"),
-      v.literal("12h"),
-      v.literal("1d"),
-      v.literal("3d"),
-      v.literal("7d"),
-    )),
+    disappearingTimer: v.optional(
+      v.union(
+        v.literal("1h"),
+        v.literal("6h"),
+        v.literal("12h"),
+        v.literal("1d"),
+        v.literal("3d"),
+        v.literal("7d"),
+      ),
+    ),
     createdAt: v.number(),
     lastMessageAt: v.optional(v.number()),
-    pinnedMessages: v.optional(v.array(v.id("messages"))), // ── FIX: Pinned Messages Array (Max 3) ──
-    
+    pinnedMessages: v.optional(v.array(v.id("messages"))),
+
     lastReaction: v.optional(
       v.object({
         messageId: v.id("messages"),
@@ -113,7 +141,7 @@ export default defineSchema({
     mediaOriginalName: v.optional(v.string()),
     uploadBatchId: v.optional(v.string()),
     replyToMessageId: v.optional(v.id("messages")),
-    starredBy: v.optional(v.array(v.id("users"))), // ── FIX: Starred Messages by Users ──
+    starredBy: v.optional(v.array(v.id("users"))),
     reactions: v.optional(
       v.array(
         v.object({

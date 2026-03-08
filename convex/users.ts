@@ -97,8 +97,8 @@ export const setOnlineStatus = mutation({
       throw new Error("User not found");
     }
 
-    // ── PRO FIX: Agar privacy 'nobody' hai tou hamesha offline physical state ──
-    const effectiveOnline = user.privacyOnline === "nobody" ? false : args.isOnline;
+    const effectiveOnline =
+      user.privacyOnline === "nobody" ? false : args.isOnline;
 
     await ctx.db.patch(args.userId, {
       isOnline: effectiveOnline,
@@ -117,15 +117,14 @@ export const getProfilePicUrl = query({
 });
 
 export const getUserById = query({
-  args: { 
+  args: {
     userId: v.id("users"),
-    viewerId: v.optional(v.id("users")) // Viewer ID zaroori hai
+    viewerId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // ── PRO FIX: 4-Option Privacy Logic (Whitelist & Blacklist) ──
     let canSee = true;
     const privacy = user.privacyOnline ?? "everyone";
     const exceptions = user.onlineExceptions ?? [];
@@ -133,10 +132,8 @@ export const getUserById = query({
     if (privacy === "nobody") {
       canSee = false;
     } else if (privacy === "only_these") {
-      // Whitelist: Sirf unko dikhao jo list mein hain
       canSee = args.viewerId ? exceptions.includes(args.viewerId) : false;
     } else if (privacy === "all_except") {
-      // Blacklist: Unko chhupao jo list mein hain
       canSee = args.viewerId ? !exceptions.includes(args.viewerId) : true;
     }
 
@@ -148,17 +145,15 @@ export const getUserById = query({
   },
 });
 
-// ── Get user online status real-time (lightweight query) ──
 export const getUserOnlineStatus = query({
-  args: { 
+  args: {
     userId: v.id("users"),
-    viewerId: v.optional(v.id("users")) 
+    viewerId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // ── PRO FIX: 4-Option Privacy Logic (Whitelist & Blacklist) ──
     let canSee = true;
     const privacy = user.privacyOnline ?? "everyone";
     const exceptions = user.onlineExceptions ?? [];
@@ -186,7 +181,6 @@ export const removeProfilePic = mutation({
   },
 });
 
-// ── Online status setting respect karo ──
 export const setOnlineStatusWithSetting = mutation({
   args: {
     userId: v.id("users"),
@@ -196,8 +190,8 @@ export const setOnlineStatusWithSetting = mutation({
     const user = await ctx.db.get(args.userId);
     if (!user) return;
 
-    // ── PRO FIX: 'nobody' par hamesha false rakho ──
-    const effectiveOnline = user.privacyOnline === "nobody" ? false : args.isOnline;
+    const effectiveOnline =
+      user.privacyOnline === "nobody" ? false : args.isOnline;
 
     await ctx.db.patch(args.userId, {
       isOnline: effectiveOnline,
@@ -206,7 +200,6 @@ export const setOnlineStatusWithSetting = mutation({
   },
 });
 
-// ── PRO FIX: Global Disappearing Messages Setting (Settings Panel ke liye) ──
 export const updateGlobalDisappearingSetting = mutation({
   args: {
     userId: v.id("users"),
@@ -222,15 +215,12 @@ export const updateGlobalDisappearingSetting = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    // Agar timer pass hoga tou set ho jayega, undefined hoga tou OFF ho jayega
     await ctx.db.patch(args.userId, {
       settingDisappearing: args.timer,
     });
   },
 });
 
-
-// ── STEP 16: Pin / Unpin Chat (Max 3) ──
 export const togglePinChat = mutation({
   args: {
     userId: v.id("users"),
@@ -244,10 +234,8 @@ export const togglePinChat = mutation({
     const isPinned = currentPins.includes(args.conversationId);
 
     if (isPinned) {
-      // Unpin: array se nikal do
       currentPins = currentPins.filter((id) => id !== args.conversationId);
     } else {
-      // Pin: limit check karo (Max 3)
       if (currentPins.length >= 3) {
         return { success: false, error: "Maximum 3 chats can be pinned." };
       }
