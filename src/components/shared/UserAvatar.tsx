@@ -2,6 +2,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useSecureAvatar } from "@/hooks/useSecureAvatar";
 
 interface UserAvatarProps {
   username: string;
@@ -29,6 +30,8 @@ export default function UserAvatar({
     profilePicStorageId ? { storageId: profilePicStorageId } : "skip",
   );
 
+  const secureAvatarUrl = useSecureAvatar(avatarUrl);
+
   return (
     <div className="relative shrink-0">
       <div
@@ -41,14 +44,14 @@ export default function UserAvatar({
         }
       `}
       >
-        {avatarUrl ? (
+        {secureAvatarUrl ? (
           <img
-            src={avatarUrl}
+            src={secureAvatarUrl}
             alt={username}
             className={`w-full h-full object-cover ${isGrayedOut ? "opacity-50 grayscale" : ""}`}
           />
         ) : (
-          <span>{username[0].toUpperCase()}</span>
+          <span>{username?.[0]?.toUpperCase() ?? "?"}</span>
         )}
       </div>
 

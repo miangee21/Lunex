@@ -6,6 +6,8 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { encryptDP } from "@/crypto";
+import { useSecureAvatar } from "@/hooks/useSecureAvatar";
 
 export default function AvatarUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +23,9 @@ export default function AvatarUpload() {
 
   const userRecord = useQuery(
     api.users.getUserById,
-    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip",
+    userId
+      ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> }
+      : "skip",
   );
 
   const avatarUrl = useQuery(
@@ -30,6 +34,8 @@ export default function AvatarUpload() {
       ? { storageId: userRecord.profilePicStorageId }
       : "skip",
   );
+
+  const secureAvatarUrl = useSecureAvatar(avatarUrl);
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -54,10 +60,12 @@ export default function AvatarUpload() {
 
       const uploadUrl = await generateUploadUrl();
 
+      const encryptedBlob = await encryptDP(file);
+
       const response = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": "application/octet-stream" },
+        body: encryptedBlob,
       });
 
       if (!response.ok) throw new Error("Upload failed");
@@ -96,9 +104,9 @@ export default function AvatarUpload() {
         disabled={uploading}
         className="w-20 h-20 rounded-3xl overflow-hidden bg-primary flex items-center justify-center relative group"
       >
-        {avatarUrl ? (
+        {secureAvatarUrl ? (
           <img
-            src={avatarUrl}
+            src={secureAvatarUrl}
             alt="avatar"
             className="w-full h-full object-cover"
           />
