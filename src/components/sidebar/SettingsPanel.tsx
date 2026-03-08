@@ -94,7 +94,7 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-background/95 backdrop-blur-md animate-in slide-in-from-left-4 duration-200">
+      <div className="flex flex-col h-full bg-card backdrop-blur-md animate-in slide-in-from-left-4 duration-200">
         
         {/* ── Minimalist Header ── */}
         <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
