@@ -21,6 +21,7 @@ const HEADER_LABELS: Record<PrivacyField, string> = {
   privacyOnline: "Online Status",
   privacyTyping: "Typing Indicator",
   privacyReadReceipts: "Read Receipts",
+  privacyNotifications: "Notifications", // ── STEP 16 ──
 };
 
 const OPTIONS = [
@@ -64,6 +65,7 @@ export default function PrivacySelectorModal({
       const exceptionField = 
         field === "privacyOnline" ? "onlineExceptions" :
         field === "privacyTyping" ? "typingExceptions" : 
+        field === "privacyNotifications" ? "notificationExceptions" : // ── STEP 16 ──
         "readReceiptsExceptions";
 
       await updatePrivacySettings({

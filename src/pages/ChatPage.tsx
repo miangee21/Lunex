@@ -11,10 +11,12 @@ import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
 import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
+import { useAppNotifications } from "@/hooks/useAppNotifications";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
 export default function ChatPage() {
+  useAppNotifications();
   const userId = useAuthStore((s) => s.userId);
   const setOnlineStatus = useMutation(api.users.setOnlineStatus);
 

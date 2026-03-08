@@ -22,6 +22,7 @@ interface ChatListItemWithStatusProps {
   myTextColor?: string;
   otherTextColor?: string;
   isRead?: "sent" | "delivered" | "read" | undefined;
+  isPinned?: boolean; // ── STEP 16 ──
 }
 
 export default function ChatListItemWithStatus({

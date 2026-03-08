@@ -1,6 +1,7 @@
 // src/components/sidebar/DotsMenu.tsx
 import { useState, useRef, useEffect } from "react";
 import { MoreVertical, Settings, Star, CheckSquare, RefreshCw, Info } from "lucide-react";
+import { useChatStore } from "@/store/chatStore"; // ── STEP 16: Import Store ──
 
 interface DotsMenuProps {
   onSettingsClick: () => void;
@@ -9,6 +10,9 @@ interface DotsMenuProps {
 export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  
+  // ── STEP 16: Extract actions from store ──
+  const { setSidebarView, setIsSelectionMode } = useChatStore();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -24,8 +28,11 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
     {
       icon: CheckSquare,
       label: "Select Chats",
-      onClick: () => setOpen(false),
-      active: false,
+      onClick: () => {
+        setIsSelectionMode(true);
+        setOpen(false);
+      },
+      active: true, // ── STEP 16: Enabled Select Chats ──
     },
     {
       icon: Star,
@@ -51,8 +58,11 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
     {
       icon: Info,
       label: "About",
-      onClick: () => setOpen(false),
-      active: false,
+      onClick: () => {
+        setSidebarView("about");
+        setOpen(false);
+      },
+      active: true, // ── STEP 16: Enabled About Panel ──
     },
   ];
 

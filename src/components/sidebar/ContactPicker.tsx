@@ -21,6 +21,7 @@ const HEADER_LABELS: Record<PrivacyField, string> = {
   privacyOnline: "Online Status",
   privacyTyping: "Typing Indicator",
   privacyReadReceipts: "Read Receipts",
+  privacyNotifications: "Notifications", // ── STEP 16 ──
 };
 
 export default function ContactPicker({
@@ -66,6 +67,7 @@ export default function ContactPicker({
       const exceptionField = 
         field === "privacyOnline" ? "onlineExceptions" :
         field === "privacyTyping" ? "typingExceptions" : 
+        field === "privacyNotifications" ? "notificationExceptions" : // ── STEP 16 ──
         "readReceiptsExceptions";
 
       await updatePrivacySettings({
@@ -116,9 +118,25 @@ export default function ContactPicker({
             </button>
           </div>
           
-          <p className="text-[13px] text-muted-foreground font-medium px-1">
-            {subtitle}
-          </p>
+          {/* ── FIX: Added Select All / Deselect All Button ── */}
+          <div className="flex items-center justify-between px-1">
+            <p className="text-[13px] text-muted-foreground font-medium">
+              {subtitle}
+            </p>
+            <button
+              onClick={() => {
+                const allIds = friends?.filter(f => f !== null).map(f => f.userId) || [];
+                if (selectedIds.size === allIds.length && allIds.length > 0) {
+                  setSelectedIds(new Set()); // Deselect All
+                } else {
+                  setSelectedIds(new Set(allIds)); // Select All
+                }
+              }}
+              className="text-[12px] font-semibold text-primary hover:opacity-80 transition-opacity"
+            >
+              {friends && friends.length > 0 && selectedIds.size === friends.length ? "Deselect All" : "Select All"}
+            </button>
+          </div>
         </div>
 
         {/* ── Search Bar ── */}
@@ -136,7 +154,7 @@ export default function ContactPicker({
         </div>
 
         {/* ── Contacts List ── */}
-        <div className="flex-1 overflow-y-auto px-2 pb-2 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-2 pb-2 custom-scrollbar mt-2">
           {friends === undefined ? (
             <div className="flex items-center justify-center h-32">
               <div className="w-5 h-5 rounded-full border-[2px] border-primary border-t-transparent animate-spin" />
@@ -148,7 +166,17 @@ export default function ContactPicker({
             </div>
           ) : (
             <div className="space-y-1">
-              {filteredFriends?.map((friend) => {
+              {/* ── FIX: Sort selected contacts to the top ── */}
+              {[...(filteredFriends || [])]
+                .sort((a, b) => {
+                  if (!a || !b) return 0;
+                  const aSelected = selectedIds.has(a.userId);
+                  const bSelected = selectedIds.has(b.userId);
+                  if (aSelected && !bSelected) return -1;
+                  if (!aSelected && bSelected) return 1;
+                  return 0; // Baqi same order mein rahenge
+                })
+                .map((friend) => {
                 if (!friend) return null; // PRO FIX: Null check for TypeScript
                 const isSelected = Array.from(selectedIds).includes(friend.userId);
 

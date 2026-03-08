@@ -11,7 +11,8 @@ type SidebarView =
   | "friends"
   | "blocked"
   | "search"
-  | "settings";
+  | "settings"
+  | "about"; // ── STEP 16: Added 'about' view ──
 
 interface ActiveChat {
   userId: string;
@@ -75,6 +76,14 @@ interface ChatState {
   toggleSidebar: () => void;
   setSidebarView: (view: SidebarView) => void;
   setSidebarOpen: (open: boolean) => void;
+
+  // ── STEP 16: Multi-Select State ──
+  isSelectionMode: boolean;
+  selectedChats: string[];
+  setIsSelectionMode: (isSelectionMode: boolean) => void;
+  toggleChatSelection: (conversationId: string) => void;
+  clearSelection: () => void;
+  selectAll: (ids: string[]) => void; // ── FIX: Added selectAll ──
 
   activeChat: ActiveChat | null;
   localThemes: Record<string, Record<string, ThemeOptions>>;
@@ -178,6 +187,20 @@ export const useChatStore = create<ChatState>()(
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarView: (view) => set({ sidebarView: view, sidebarOpen: true }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      // ── STEP 16: Multi-Select Implementation ──
+      isSelectionMode: false,
+      selectedChats: [],
+      setIsSelectionMode: (isSelectionMode) => 
+        set((s) => ({ isSelectionMode, selectedChats: isSelectionMode ? s.selectedChats : [] })),
+      toggleChatSelection: (conversationId) => 
+        set((s) => ({
+          selectedChats: s.selectedChats.includes(conversationId)
+            ? s.selectedChats.filter((id) => id !== conversationId)
+            : [...s.selectedChats, conversationId]
+        })),
+      clearSelection: () => set({ selectedChats: [], isSelectionMode: false }),
+      selectAll: (ids) => set({ selectedChats: ids }), // ── FIX: Select All Logic ──
 
       replyingTo: null,
       setReplyingTo: (msg) => set({ replyingTo: msg, editingMessage: null }),

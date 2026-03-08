@@ -11,9 +11,15 @@
     "dialog:default",
     "fs:default",
     "fs:allow-write-file",
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
         {
-          "identifier": "fs:allow-write-file",
-          "allow": [{ "path": "**" }]
+          "path": "**"
         }
+      ]
+    },
+    "notification:default",
+    "shell:default"
   ]
 }

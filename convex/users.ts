@@ -228,3 +228,33 @@ export const updateGlobalDisappearingSetting = mutation({
     });
   },
 });
+
+
+// ── STEP 16: Pin / Unpin Chat (Max 3) ──
+export const togglePinChat = mutation({
+  args: {
+    userId: v.id("users"),
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    let currentPins = user.pinnedChats ?? [];
+    const isPinned = currentPins.includes(args.conversationId);
+
+    if (isPinned) {
+      // Unpin: array se nikal do
+      currentPins = currentPins.filter((id) => id !== args.conversationId);
+    } else {
+      // Pin: limit check karo (Max 3)
+      if (currentPins.length >= 3) {
+        return { success: false, error: "Maximum 3 chats can be pinned." };
+      }
+      currentPins.push(args.conversationId);
+    }
+
+    await ctx.db.patch(args.userId, { pinnedChats: currentPins });
+    return { success: true, isPinned: !isPinned };
+  },
+});

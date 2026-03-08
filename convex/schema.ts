@@ -24,6 +24,11 @@ export default defineSchema({
     privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
     readReceiptsExceptions: v.optional(v.array(v.id("users"))),
 
+    // ── STEP 16: Notifications Privacy & Pinned Chats ──
+    privacyNotifications: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    notificationExceptions: v.optional(v.array(v.id("users"))),
+    pinnedChats: v.optional(v.array(v.id("conversations"))),
+
     settingDisappearing: v.optional(
       v.union(
         v.literal("1h"),

@@ -17,6 +17,10 @@ export const updatePrivacySettings = mutation({
     privacyReadReceipts: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
     readReceiptsExceptions: v.optional(v.array(v.id("users"))),
     
+    // ── STEP 16: Notifications Privacy Args ──
+    privacyNotifications: v.optional(v.union(v.literal("everyone"), v.literal("nobody"), v.literal("only_these"), v.literal("all_except"))),
+    notificationExceptions: v.optional(v.array(v.id("users"))),
+
     settingDisappearing: v.optional(
       v.union(
         v.literal("off"),
@@ -43,6 +47,10 @@ export const updatePrivacySettings = mutation({
 
     if (settings.privacyReadReceipts !== undefined) patch.privacyReadReceipts = settings.privacyReadReceipts;
     if (settings.readReceiptsExceptions !== undefined) patch.readReceiptsExceptions = settings.readReceiptsExceptions;
+
+    // ── STEP 16: Map Notifications Privacy to Patch ──
+    if (settings.privacyNotifications !== undefined) patch.privacyNotifications = settings.privacyNotifications;
+    if (settings.notificationExceptions !== undefined) patch.notificationExceptions = settings.notificationExceptions;
 
     if (settings.settingDisappearing !== undefined)
       patch.settingDisappearing =
@@ -82,6 +90,10 @@ export const getUserSettings = query({
       privacyReadReceipts: user.privacyReadReceipts ?? "everyone",
       readReceiptsExceptions: user.readReceiptsExceptions ?? [],
       
+      // ── STEP 16: Return Notifications Privacy ──
+      privacyNotifications: user.privacyNotifications ?? "everyone",
+      notificationExceptions: user.notificationExceptions ?? [],
+
       settingDisappearing: user.settingDisappearing ?? "off",
     };
   },

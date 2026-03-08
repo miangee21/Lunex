@@ -3,11 +3,12 @@ import { useChatStore } from "@/store/chatStore";
 import { useState } from "react";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
-import { MoreVertical, Trash2 } from "lucide-react";
+import { MoreVertical, Trash2, Pin, Check } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
+import ConfirmModal from "@/components/shared/ConfirmModal"; // ── STEP 16 ──
 
 interface ChatListItemProps {
   id: string;
@@ -25,6 +26,7 @@ interface ChatListItemProps {
   myTextColor?: string;
   otherTextColor?: string;
   isRead?: "sent" | "delivered" | "read" | undefined;
+  isPinned?: boolean; // ── STEP 16 ──
 }
 
 export default function ChatListItem({
@@ -43,17 +45,36 @@ export default function ChatListItem({
   myTextColor,
   otherTextColor,
   isRead,
+  isPinned, // ── STEP 16 ──
 }: ChatListItemProps) {
-  const { setActiveChat, setConversationId, activeChat, clearActiveChat } =
-    useChatStore();
+  const { setActiveChat, setConversationId, activeChat, clearActiveChat, isSelectionMode, selectedChats, toggleChatSelection } =
+    useChatStore(); // ── STEP 16 ──
   const userId = useAuthStore((s) => s.userId);
   const [menuOpen, setMenuOpen] = useState(false);
-  const isActive = activeChat?.userId === id;
-
+  const isActive = !isSelectionMode && activeChat?.userId === id; // Selection mode mein highlight off
   const deleteChat = useMutation(api.conversations.deleteChat);
+  const togglePinChat = useMutation(api.users.togglePinChat); // ── STEP 16 ──
 
-  async function handleDeleteChat(e: React.MouseEvent) {
+  const isSelected = conversationId ? selectedChats.includes(conversationId) : false;
+
+  async function handlePinChat(e: React.MouseEvent) {
     e.stopPropagation();
+    if (!userId || !conversationId) return;
+    try {
+      const res = await togglePinChat({ conversationId: conversationId as Id<"conversations">, userId: userId as Id<"users"> });
+      if (res.success) {
+        toast.success(res.isPinned ? "Chat pinned!" : "Chat unpinned!");
+      } else if (res.error) {
+        toast.error(res.error);
+      }
+      setMenuOpen(false);
+    } catch {
+      toast.error("Failed to pin chat.");
+    }
+  }
+
+  // ── STEP 16: e: React.MouseEvent hataya kyunki ConfirmModal se pass hoga ──
+  async function handleDeleteChat() {
     if (!userId || !conversationId) return;
     try {
       await deleteChat({
@@ -72,6 +93,10 @@ export default function ChatListItem({
   return (
     <div
       onClick={() => {
+        if (isSelectionMode) {
+          if (conversationId) toggleChatSelection(conversationId);
+          return;
+        }
         setActiveChat({
           userId: id,
           username,
@@ -88,9 +113,18 @@ export default function ChatListItem({
         if (conversationId) setConversationId(conversationId);
       }}
       className={`relative flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors group ${
-        isActive ? "bg-accent" : "hover:bg-accent/50"
+        isActive ? "bg-accent" : isSelected ? "bg-primary/10" : "hover:bg-accent/50"
       }`}
     >
+      {/* ── STEP 16: Checkbox for Selection Mode ── */}
+      {isSelectionMode && (
+        <div className={`shrink-0 w-5 h-5 rounded-full border-[1.5px] flex items-center justify-center transition-all duration-200
+          ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}
+        `}>
+          {isSelected && <Check size={12} strokeWidth={3} className="text-primary-foreground" />}
+        </div>
+      )}
+
       <UserAvatar
         username={username}
         profilePicStorageId={profilePicStorageId as Id<"_storage"> | null}
@@ -103,9 +137,13 @@ export default function ChatListItem({
           <span className="text-foreground font-semibold text-sm truncate">
             {username}
           </span>
-          <span className="text-muted-foreground text-xs shrink-0 ml-1">
-            {time}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0 ml-1">
+            {/* ── STEP 16: Pin Icon ── */}
+            {isPinned && <Pin size={12} className="text-muted-foreground rotate-45" />}
+            <span className="text-muted-foreground text-xs">
+              {time}
+            </span>
+          </div>
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <span className="text-muted-foreground text-xs truncate flex items-center gap-1">
@@ -161,29 +199,56 @@ export default function ChatListItem({
         </div>
       </div>
 
-      <div className="relative shrink-0">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((v) => !v);
-          }}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"
-        >
-          <MoreVertical size={15} />
-        </button>
+      {/* ── STEP 16: Hide Menu in Selection Mode ── */}
+      {!isSelectionMode && (
+        <div className="relative shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <MoreVertical size={15} />
+          </button>
 
-        {menuOpen && (
-          <div className="absolute right-0 top-8 w-36 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
-            <button
-              onClick={handleDeleteChat}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <Trash2 size={14} />
-              Delete Chat
-            </button>
-          </div>
-        )}
-      </div>
+          {menuOpen && (
+            <div className="absolute right-0 top-8 w-40 bg-card border border-border/50 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+              
+              <button
+                onClick={handlePinChat}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-foreground hover:bg-accent/50 transition-colors"
+              >
+                <Pin size={15} className={isPinned ? "fill-muted-foreground" : ""} />
+                {isPinned ? "Unpin Chat" : "Pin Chat"}
+              </button>
+
+              <div className="h-px bg-border/40 mx-2" />
+              
+              {/* ── STEP 16: Confirm Modal for Individual Chat Delete ── */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <ConfirmModal
+                  title="Delete Chat?"
+                  description="Are you sure you want to delete this chat? This action cannot be undone."
+                  isDestructive={true}
+                  confirmText="Delete"
+                  onConfirm={() => {
+                    handleDeleteChat();
+                    setMenuOpen(false);
+                  }}
+                >
+                  <button
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <Trash2 size={15} />
+                    Delete Chat
+                  </button>
+                </ConfirmModal>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {menuOpen && (
         <div

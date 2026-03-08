@@ -31,7 +31,7 @@ interface SettingsPanelProps {
   onBack: () => void;
 }
 
-export type PrivacyField = "privacyOnline" | "privacyTyping" | "privacyReadReceipts";
+export type PrivacyField = "privacyOnline" | "privacyTyping" | "privacyReadReceipts" | "privacyNotifications"; // ── STEP 16 ──
 
 export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const userId = useAuthStore((s) => s.userId);
@@ -40,6 +40,12 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const userSettings = useQuery(
     api.presence.getUserSettings,
     userId ? { userId: userId as Id<"users"> } : "skip"
+  );
+
+  // ── FIX: Fetch current user to apply the selected theme ──
+  const currentUser = useQuery(
+    api.users.getUserById,
+    userId ? { userId: userId as Id<"users">, viewerId: userId as Id<"users"> } : "skip"
   );
 
   const [showTimerPicker, setShowTimerPicker] = useState(false);
@@ -92,9 +98,15 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   const currentDisappearing = userSettings?.settingDisappearing ?? "off";
 
+  const themeMode = currentUser?.theme === "dark" ? "dark" : "light";
+  const themeClass = currentUser?.globalPreset
+    ? `theme-${currentUser.globalPreset.toLowerCase()}`
+    : "";
+
   return (
     <>
-      <div className="flex flex-col h-full bg-card backdrop-blur-md animate-in slide-in-from-left-4 duration-200">
+      {/* ── FIX: Added themeMode and themeClass, and changed to bg-sidebar to match About page ── */}
+      <div className={`flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200 ${themeMode} ${themeClass}`}>
         
         {/* ── Minimalist Header ── */}
         <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
@@ -214,26 +226,32 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                 </div>
               </div>
 
-              {/* ── Notifications (Grayed Out) ── */}
-              <div className="opacity-50 pointer-events-none pb-6">
+              {/* ── STEP 16: Notifications (Active & Clickable) ── */}
+              <div className="pb-6">
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                   App
                 </p>
-                <div className="bg-card/30 border border-border/30 rounded-xl overflow-hidden shadow-sm">
-                  <div className="flex items-center justify-between px-3 py-3">
+                <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+                  <button
+                    onClick={() => setActivePrivacyField("privacyNotifications")}
+                    className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted text-muted-foreground">
+                      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary">
                         <Bell size={15} />
                       </div>
                       <span className="text-[14px] font-medium text-foreground">
                         Notifications
                       </span>
                     </div>
-                    {/* Dummy Disabled Toggle */}
-                    <div className="relative w-9 h-5 rounded-full bg-muted-foreground/30 opacity-50">
-                      <div className="absolute top-[2px] left-[2px] w-4 h-4 rounded-full bg-white shadow-sm" />
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] text-muted-foreground font-medium truncate max-w-[120px]">
+                        {PRIVACY_LABELS[userSettings?.privacyNotifications ?? "everyone"]}
+                      </span>
+                      <ChevronRight size={16} className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
 
@@ -248,14 +266,17 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
           isOpen={!!activePrivacyField}
           onClose={() => setActivePrivacyField(null)}
           field={activePrivacyField}
+          // ── STEP 16: Pass Notifications state to Modal ──
           currentValue={
             activePrivacyField === "privacyOnline" ? userSettings.privacyOnline :
             activePrivacyField === "privacyTyping" ? userSettings.privacyTyping :
+            activePrivacyField === "privacyNotifications" ? userSettings.privacyNotifications :
             userSettings.privacyReadReceipts
           }
           currentExceptions={
             activePrivacyField === "privacyOnline" ? userSettings.onlineExceptions :
             activePrivacyField === "privacyTyping" ? userSettings.typingExceptions :
+            activePrivacyField === "privacyNotifications" ? userSettings.notificationExceptions :
             userSettings.readReceiptsExceptions
           }
         />
