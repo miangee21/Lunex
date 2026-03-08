@@ -4,7 +4,7 @@ import { useConvex } from "convex/react";
 import { useState } from "react";
 import { api } from "../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import {
@@ -21,6 +21,7 @@ export default function LoginPage() {
 
   const [words, setWords] = useState<string[]>(Array(12).fill(""));
   const [isLoading, setIsLoading] = useState(false);
+  const [showWords, setShowWords] = useState(false);
 
   const allFilled = words.every((w) => w.trim() !== "");
   const enteredMnemonic = words.join(" ").trim();
@@ -109,7 +110,7 @@ export default function LoginPage() {
       <div className="absolute bottom-1/4 right-1/4 w-100 h-100 bg-purple-500/10 dark:bg-purple-500/5 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-lg z-10 flex flex-col items-center gap-8">
-        <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide uppercase self-start">
+        <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 tracking-wide uppercase w-full text-center">
           Enter Recovery Phrase
         </label>
 
@@ -117,22 +118,33 @@ export default function LoginPage() {
           {words.map((word, i) => (
             <div
               key={i}
-              className="flex items-center gap-2 bg-white/60 dark:bg-[#121215]/60 border border-slate-200 dark:border-slate-800/80 rounded-xl backdrop-blur-xl shadow-sm transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10"
+              className="relative flex items-center gap-2 bg-white/60 dark:bg-[#121215]/60 border border-slate-200 dark:border-slate-800/80 rounded-xl backdrop-blur-xl shadow-sm transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10"
             >
               <span className="text-slate-400 dark:text-slate-500 text-xs font-bold pl-3 shrink-0">
                 {i + 1}.
               </span>
               <input
+                type={showWords ? "text" : "password"}
                 id={`word-${i}`}
                 value={word}
                 onChange={(e) => handleWordChange(i, e.target.value)}
                 onPaste={(e) => handlePaste(e, i)}
                 onKeyDown={(e) => handleKeyDown(e, i)}
-                className="flex-1 bg-transparent py-3 pr-3 outline-none text-slate-900 dark:text-white text-sm font-medium placeholder:text-slate-300 dark:placeholder:text-slate-700 min-w-0"
+                className={`flex-1 bg-transparent py-3 outline-none text-slate-900 dark:text-white text-sm font-medium placeholder:text-slate-300 dark:placeholder:text-slate-700 min-w-0 ${i === 0 ? "pr-8" : "pr-3"}`}
                 placeholder="word"
                 autoComplete="off"
                 spellCheck={false}
               />
+
+              {i === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowWords(!showWords)}
+                  className="absolute right-3 text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors focus:outline-none"
+                >
+                  {showWords ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              )}
             </div>
           ))}
         </div>
