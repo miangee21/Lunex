@@ -8,7 +8,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import SlimBar from "@/components/sidebar/SlimBar";
 import ChatList from "@/components/chat/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
-import ChatArea from "@/components/chat/ChatArea";
+import ChatArea from "@/components/chat/area/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
 import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
 import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel";

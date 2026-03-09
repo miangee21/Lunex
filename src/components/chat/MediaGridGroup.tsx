@@ -9,7 +9,7 @@ import MediaPreview from "@/components/chat/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
-import { type DecryptedMessage } from "@/components/chat/ChatArea";
+import { type DecryptedMessage } from "@/types/chat";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { toast } from "sonner";
