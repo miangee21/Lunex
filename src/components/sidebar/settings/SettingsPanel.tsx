@@ -1,30 +1,25 @@
-// src/components/sidebar/SettingsPanel.tsx
+// src/components/sidebar/settings/SettingsPanel.tsx
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import PrivacySelectorModal from "./PrivacySelectorModal";
+import SettingsPrivacySection from "./SettingsPrivacySection";
+import SettingsTimerSection from "./SettingsTimerSection";
 import { toast } from "sonner";
 import {
   ArrowLeft,
   Wifi,
   Keyboard,
   CheckCheck,
-  Timer,
-  ChevronRight,
   Bell,
+  ChevronRight,
 } from "lucide-react";
 
-const TIMER_LABELS: Record<string, string> = {
-  off: "Off",
-  "1h": "1 Hour",
-  "6h": "6 Hours",
-  "12h": "12 Hours",
-  "1d": "1 Day",
-  "3d": "3 Days",
-  "7d": "7 Days",
-};
+interface SettingsPanelProps {
+  onBack: () => void;
+}
 
 const PRIVACY_LABELS: Record<string, string> = {
   everyone: "Everyone",
@@ -32,12 +27,6 @@ const PRIVACY_LABELS: Record<string, string> = {
   only_these: "Only these contacts",
   all_except: "All except...",
 };
-
-const TIMER_OPTIONS = ["off", "1h", "6h", "12h", "1d", "3d", "7d"] as const;
-
-interface SettingsPanelProps {
-  onBack: () => void;
-}
 
 export type PrivacyField =
   | "privacyOnline"
@@ -65,13 +54,11 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   const [showTimerPicker, setShowTimerPicker] = useState(false);
   const [savingTimer, setSavingTimer] = useState(false);
-
   const [activePrivacyField, setActivePrivacyField] =
     useState<PrivacyField | null>(null);
 
   async function handleDisappearingChange(value: string) {
     if (!userId) return;
-
     setShowTimerPicker(false);
     setSavingTimer(true);
     try {
@@ -79,7 +66,19 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
         userId: userId as Id<"users">,
         timer: value === "off" ? undefined : (value as any),
       });
-      toast.success(`Default timer set to ${TIMER_LABELS[value]}`);
+      toast.success(
+        `Default timer set to ${
+          {
+            off: "Off",
+            "1h": "1 Hour",
+            "6h": "6 Hours",
+            "12h": "12 Hours",
+            "1d": "1 Day",
+            "3d": "3 Days",
+            "7d": "7 Days",
+          }[value]
+        }`,
+      );
     } catch {
       toast.error("Failed to update setting");
     } finally {
@@ -111,7 +110,6 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   ];
 
   const currentDisappearing = userSettings?.settingDisappearing ?? "off";
-
   const themeMode = currentUser?.theme === "dark" ? "dark" : "light";
   const themeClass = currentUser?.globalPreset
     ? `theme-${currentUser.globalPreset.toLowerCase()}`
@@ -141,118 +139,17 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
             </div>
           ) : (
             <div className="space-y-6">
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
-                  Privacy
-                </p>
-                <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-                  {privacySettingsList.map((setting, index) => {
-                    const Icon = setting.icon;
-                    const isLast = index === privacySettingsList.length - 1;
-
-                    return (
-                      <div key={setting.id}>
-                        <button
-                          onClick={() => setActivePrivacyField(setting.id)}
-                          className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary">
-                              <Icon size={15} />
-                            </div>
-                            <span className="text-[14px] font-medium text-foreground">
-                              {setting.label}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
-                              {PRIVACY_LABELS[setting.currentValue]}
-                            </span>
-                            <ChevronRight
-                              size={16}
-                              className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
-                            />
-                          </div>
-                        </button>
-                        {!isLast && <div className="h-px bg-border/40 ml-12" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
-                  Security
-                </p>
-                <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-                  <div
-                    className="flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors cursor-pointer"
-                    onClick={() =>
-                      !savingTimer && setShowTimerPicker((v) => !v)
-                    }
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex items-center justify-center w-7 h-7 rounded-md ${currentDisappearing !== "off" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
-                      >
-                        <Timer size={15} />
-                      </div>
-                      <span className="text-[14px] font-medium text-foreground">
-                        Message Timer
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {savingTimer ? (
-                        <div className="w-4 h-4 rounded-full border-[1.5px] border-primary border-t-transparent animate-spin" />
-                      ) : (
-                        <>
-                          <span className="text-[12px] text-muted-foreground font-medium">
-                            {TIMER_LABELS[currentDisappearing]}
-                          </span>
-                          <ChevronRight
-                            size={16}
-                            className={`text-muted-foreground transition-transform duration-200 ${showTimerPicker ? "rotate-90" : ""}`}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div
-                    className={`grid transition-all duration-200 ease-in-out ${showTimerPicker ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                  >
-                    <div className="overflow-hidden bg-accent/5">
-                      <div className="h-px bg-border/40 ml-12" />
-                      {TIMER_OPTIONS.map((option) => {
-                        const isSelected = currentDisappearing === option;
-                        return (
-                          <button
-                            key={option}
-                            onClick={() => handleDisappearingChange(option)}
-                            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent/30 transition-colors"
-                          >
-                            <span
-                              className={`text-[13px] ml-10 ${isSelected ? "text-primary font-medium" : "text-foreground"}`}
-                            >
-                              {TIMER_LABELS[option]}
-                            </span>
-                            {isSelected && (
-                              <CheckCheck
-                                size={14}
-                                className="text-primary mr-1"
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+              <SettingsPrivacySection
+                privacySettingsList={privacySettingsList}
+                onOpenPrivacy={setActivePrivacyField}
+              />
+              <SettingsTimerSection
+                currentDisappearing={currentDisappearing}
+                showTimerPicker={showTimerPicker}
+                savingTimer={savingTimer}
+                onTogglePicker={() => setShowTimerPicker((v) => !v)}
+                onSelectTimer={handleDisappearingChange}
+              />
               <div className="pb-6">
                 <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                   App
@@ -272,7 +169,6 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                         Notifications
                       </span>
                     </div>
-
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
                         {

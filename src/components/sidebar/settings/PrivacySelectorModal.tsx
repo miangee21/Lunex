@@ -1,14 +1,14 @@
-// src/components/sidebar/PrivacySelectorModal.tsx
+// src/components/sidebar/settings/PrivacySelectorModal.tsx
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Check, Shield } from "lucide-react";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import { Id } from "../../../convex/_generated/dataModel";
-import { toast } from "sonner";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { PrivacyField } from "./SettingsPanel";
 import ContactPicker from "./ContactPicker";
+import { toast } from "sonner";
 
 interface PrivacySelectorModalProps {
   isOpen: boolean;

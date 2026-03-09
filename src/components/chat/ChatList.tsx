@@ -13,7 +13,7 @@ import DotsMenu from "@/components/sidebar/DotsMenu";
 import { Id } from "../../../convex/_generated/dataModel";
 import { decryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import SettingsPanel from "../sidebar/SettingsPanel";
+import SettingsPanel from "../sidebar/settings/SettingsPanel";
 import AboutPanel from "../sidebar/AboutPanel";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { toast } from "sonner";

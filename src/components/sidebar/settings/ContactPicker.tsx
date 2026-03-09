@@ -1,13 +1,14 @@
-// src/components/sidebar/ContactPicker.tsx
+// src/components/sidebar/settings/ContactPicker.tsx
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft, Search, Check, X } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import { Id } from "../../../convex/_generated/dataModel";
-import { toast } from "sonner";
+import { Id } from "../../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { PrivacyField } from "./SettingsPanel";
+import { toast } from "sonner";
 
 interface ContactPickerProps {
   field: PrivacyField;
@@ -93,11 +94,11 @@ export default function ContactPicker({
     ? "Share with selected contacts"
     : "Hide from selected contacts";
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="absolute inset-0" onClick={onClose} />
 
-      <div className="relative w-full max-w-85 h-125 max-h-[85vh] flex flex-col bg-card border border-border/50 rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-right-8 duration-300 m-4">
+      <div className="relative w-full max-w-85 h-125 max-h-[85vh] flex flex-col bg-card border border-border/50 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 m-4">
         <div className="flex flex-col px-4 pt-4 pb-3 border-b border-border/40 bg-muted/20 shrink-0">
           <div className="flex items-center justify-between mb-3">
             <button
@@ -242,6 +243,7 @@ export default function ContactPicker({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
