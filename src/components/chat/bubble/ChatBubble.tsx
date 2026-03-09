@@ -1,17 +1,18 @@
 // src/components/chat/bubble/ChatBubble.tsx
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import { Smile, Plus, Star, Pin } from "lucide-react";
+import { Star, Pin } from "lucide-react";
+import { toast } from "sonner";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import BubbleMenu from "@/components/chat/bubble/BubbleMenu";
 import BubbleMedia from "@/components/chat/bubble/BubbleMedia";
-import EmojiPicker from "@/components/chat/EmojiPicker";
 import BubbleReplyPreview from "@/components/chat/bubble/BubbleReplyPreview";
-import { toast } from "sonner";
+import BubbleReactions from "@/components/chat/bubble/BubbleReactions";
+import BubbleEmojiReact from "@/components/chat/bubble/BubbleEmojiReact";
 
 interface MessageBubbleProps {
   messageId: string;
@@ -45,8 +46,6 @@ interface MessageBubbleProps {
   conversationId?: string;
 }
 
-const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
 export default function MessageBubble({
   messageId,
   text,
@@ -73,29 +72,10 @@ export default function MessageBubble({
   conversationId,
 }: MessageBubbleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showQuickReact, setShowQuickReact] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top");
   const isMedia = type !== "text";
   const currentUserId = useAuthStore((s) => s.userId);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        setShowQuickReact(false);
-        setShowEmojiPicker(false);
-      }
-    }
-    if (showQuickReact || showEmojiPicker)
-      document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showQuickReact, showEmojiPicker]);
 
   const handleEmojiSelect = async (emoji: string) => {
     if (!currentUserId || !secretKey || !otherUserPublicKey) {
@@ -128,8 +108,6 @@ export default function MessageBubble({
     } catch (error) {
       console.error(error);
     }
-    setShowQuickReact(false);
-    setShowEmojiPicker(false);
   };
 
   const handleScrollToOriginal = () => {
@@ -192,7 +170,8 @@ export default function MessageBubble({
   return (
     <div
       id={`message-${messageId}`}
-      className={`flex w-full group py-1.5 transition-all duration-500 rounded-lg ${isOwn ? "justify-end" : "justify-start"} ${showQuickReact || showEmojiPicker ? "relative z-100" : "z-10"}`}
+      className={`flex w-full group py-1.5 transition-all duration-500 rounded-lg ${isOwn ? "justify-end" : "justify-start"}`}
+      style={{ zIndex: 10 }}
     >
       <div
         className={`relative flex max-w-[75%] md:max-w-[65%] items-start gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
@@ -238,40 +217,13 @@ export default function MessageBubble({
             </div>
           )}
 
-          {reactions.length > 0 && (
-            <div
-              className={`absolute -bottom-5 ${isOwn ? "right-2" : "left-2"} flex flex-wrap gap-1 z-10 bg-background dark:bg-sidebar border border-border rounded-full p-0.5 shadow-sm`}
-            >
-              {Object.entries(
-                reactions.reduce(
-                  (acc, r) => {
-                    if (!acc[r.emoji])
-                      acc[r.emoji] = { count: 0, hasMine: false };
-                    acc[r.emoji].count += 1;
-                    if (r.userId === currentUserId) acc[r.emoji].hasMine = true;
-                    return acc;
-                  },
-                  {} as Record<string, { count: number; hasMine: boolean }>,
-                ),
-              ).map(([emoji, data]) => (
-                <button
-                  key={emoji}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEmojiSelect(emoji);
-                  }}
-                  className={`text-[11px] font-medium rounded-full px-1.5 py-0.5 flex items-center gap-1 transition-colors ${
-                    data.hasMine
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground hover:bg-accent"
-                  }`}
-                >
-                  <span>{emoji}</span>
-                  {data.count > 1 && <span>{data.count}</span>}
-                </button>
-              ))}
-            </div>
-          )}
+          <BubbleReactions
+            messageId={messageId}
+            reactions={reactions}
+            isOwn={isOwn}
+            secretKey={secretKey}
+            otherUserPublicKey={otherUserPublicKey}
+          />
 
           <div className="flex justify-end items-center gap-1 mt-1 -mb-0.5 text-[10.5px] font-medium tracking-wide opacity-70">
             {editedAt && <span>edited</span>}
@@ -317,70 +269,7 @@ export default function MessageBubble({
           </div>
         </div>
 
-        <div
-          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-9999 opacity-100" : "z-20 opacity-0 group-hover:opacity-100"}`}
-          ref={emojiPickerRef}
-        >
-          <button
-            onClick={() => {
-              if (!showQuickReact) {
-                if (emojiPickerRef.current) {
-                  const rect = emojiPickerRef.current.getBoundingClientRect();
-                  setPickerPosition(rect.top < 150 ? "bottom" : "top");
-                }
-                setShowQuickReact(true);
-                setShowEmojiPicker(false);
-              } else {
-                setShowQuickReact(false);
-              }
-            }}
-            className={`p-1.5 rounded-full transition-colors ${showQuickReact || showEmojiPicker ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
-          >
-            <Smile size={18} />
-          </button>
-
-          {showQuickReact && (
-            <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-9999 animate-in zoom-in-75 duration-200`}
-            >
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleEmojiSelect(emoji)}
-                  className="hover:scale-125 transition-transform text-xl px-1.5 shrink-0"
-                >
-                  {emoji}
-                </button>
-              ))}
-              <div className="w-px h-5 bg-border mx-1 shrink-0" />
-              <button
-                onClick={() => {
-                  if (emojiPickerRef.current) {
-                    const rect = emojiPickerRef.current.getBoundingClientRect();
-                    setPickerPosition(rect.top < 400 ? "bottom" : "top");
-                  }
-                  setShowQuickReact(false);
-                  setShowEmojiPicker(true);
-                }}
-                className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground shrink-0"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          )}
-
-          {showEmojiPicker && (
-            <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-9999 animate-in zoom-in-75 duration-200`}
-            >
-              <div
-                className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}
-              >
-                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-              </div>
-            </div>
-          )}
-        </div>
+        <BubbleEmojiReact onEmojiSelect={handleEmojiSelect} />
       </div>
     </div>
   );
