@@ -7,7 +7,7 @@ import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import MediaPreview from "@/components/chat/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
-import EmojiPicker from "@/components/chat/EmojiPicker";
+import EmojiPicker from "@/components/chat/input/EmojiPicker";
 import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
 import { type DecryptedMessage } from "@/types/chat";
 import { open } from "@tauri-apps/plugin-dialog";

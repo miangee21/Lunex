@@ -1,4 +1,4 @@
-// src/components/chat/ChatInputStatusBars.tsx
+// src/components/chat/input/ChatInputStatusBars.tsx
 import { Shield, ShieldOff, UserX } from "lucide-react";
 
 interface ChatInputStatusBarsProps {

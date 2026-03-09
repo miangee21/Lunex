@@ -1,18 +1,19 @@
-//src/components/chat/ChatInput.tsx
+// src/components/chat/input/ChatInput.tsx
 import { useState, useRef, useEffect } from "react";
-import { Smile, Paperclip, Send, Check, X } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import PreSendMediaPreview from "@/components/chat/PreSendMediaPreview";
+import PreSendMediaPreview from "@/components/chat/input/PreSendMediaPreview";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
-import ChatInputStatusBars from "@/components/chat/ChatInputStatusBars";
+import ChatInputStatusBars from "@/components/chat/input/ChatInputStatusBars";
 import ReplyPreview from "@/components/chat/bubble/ReplyPreview";
-import EmojiPicker from "@/components/chat/EmojiPicker";
+import EmojiPicker from "@/components/chat/input/EmojiPicker";
+import ChatInputToolbar from "@/components/chat/input/ChatInputToolbar";
+import ChatInputEditingBar from "@/components/chat/input/ChatInputEditingBar";
 import { toast } from "sonner";
 
 interface ChatInputProps {
@@ -49,7 +50,6 @@ export default function ChatInput({
 
   const sendMessage = useMutation(api.messages.sendMessage);
   const editMessage = useMutation(api.messages.editMessage);
-  const setTyping = useMutation(api.typing.setTyping);
   const clearTyping = useMutation(api.typing.clearTyping);
 
   const otherUser = useQuery(
@@ -77,8 +77,6 @@ export default function ChatInput({
   const hasBlockedMe = friendship?.hasBlockedMe ?? false;
   const areFriends = !!friendship && !iBlockedThem && !hasBlockedMe;
   const isLoadingFriends = friends === undefined || blockedUsers === undefined;
-
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     selectedFiles,
@@ -126,14 +124,8 @@ export default function ChatInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmojiPicker]);
 
-  const handleEmojiSelect = (emoji: string) => {
-    setMessage((prev) => prev + emoji);
-    textareaRef.current?.focus();
-  };
-
   useEffect(() => {
     return () => {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (activeChat?.conversationId && userId) {
         clearTyping({
           conversationId: activeChat.conversationId as Id<"conversations">,
@@ -175,27 +167,13 @@ export default function ChatInput({
     processBackgroundUploads,
   ]);
 
-  async function handleTyping() {
-    if (!activeChat?.conversationId || !userId) return;
-
-    await setTyping({
-      conversationId: activeChat.conversationId as Id<"conversations">,
-      userId: userId as Id<"users">,
-      isTyping: true,
-    });
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(async () => {
-      await clearTyping({
-        conversationId: activeChat.conversationId as Id<"conversations">,
-        userId: userId as Id<"users">,
-      });
-    }, 5000);
-  }
+  const handleEmojiSelect = (emoji: string) => {
+    setMessage((prev) => prev + emoji);
+    textareaRef.current?.focus();
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
-
     if (!userId || !secretKey || !activeChat?.conversationId) {
       toast.error("Cannot send message — missing required data.");
       return;
@@ -205,8 +183,6 @@ export default function ChatInput({
     setMessage("");
     setShowEmojiPicker(false);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     await clearTyping({
       conversationId: activeChat.conversationId as Id<"conversations">,
@@ -256,7 +232,7 @@ export default function ChatInput({
       updateReadByCache(activeChat.conversationId, [
         { userId: userId, time: Date.now() },
       ]);
-    } catch (err) {
+    } catch {
       toast.error("Failed to send message.");
       setMessage(text);
     }
@@ -321,21 +297,12 @@ export default function ChatInput({
       <ReplyPreview />
 
       {editingMessage && (
-        <div className="flex items-center justify-between px-4 py-2 bg-background/95 backdrop-blur-sm border-t border-border shadow-sm mb-2 rounded-xl mx-4">
-          <div className="flex-1 min-w-0 flex items-center gap-2 text-primary">
-            <Check size={14} />
-            <span className="text-sm font-semibold">Editing Message</span>
-          </div>
-          <button
-            onClick={() => {
-              setEditingMessage(null);
-              setMessage("");
-            }}
-            className="w-7 h-7 flex shrink-0 items-center justify-center rounded-full hover:bg-muted text-muted-foreground transition-colors ml-3"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        <ChatInputEditingBar
+          onCancel={() => {
+            setEditingMessage(null);
+            setMessage("");
+          }}
+        />
       )}
 
       <input
@@ -347,84 +314,15 @@ export default function ChatInput({
         onChange={handleFileChange}
       />
 
-      <div className="flex items-end gap-2 bg-background border border-border/50 rounded-2xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-primary/50 transition-all shadow-sm">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
-          title="Attach file"
-        >
-          <Paperclip size={20} />
-        </button>
-
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => {
-            const val = e.target.value;
-            setMessage(val);
-
-            if (val.trim() === "") {
-              if (typingTimeoutRef.current)
-                clearTimeout(typingTimeoutRef.current);
-              if (activeChat?.conversationId && userId) {
-                clearTyping({
-                  conversationId:
-                    activeChat.conversationId as Id<"conversations">,
-                  userId: userId as Id<"users">,
-                });
-              }
-            } else {
-              handleTyping();
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          onBlur={() => {
-            if (activeChat?.conversationId && userId) {
-              clearTyping({
-                conversationId:
-                  activeChat.conversationId as Id<"conversations">,
-                userId: userId as Id<"users">,
-              });
-            }
-          }}
-          placeholder="Write a message..."
-          className="flex-1 max-h-30 min-h-6 bg-transparent outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground py-2.5 px-2 overflow-y-auto"
-          rows={1}
-        />
-
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 mb-0.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
-          title="Choose emoji"
-        >
-          <Smile size={20} className={showEmojiPicker ? "text-primary" : ""} />
-        </button>
-
-        <button
-          onClick={handleSend}
-          disabled={!message.trim()}
-          title={editingMessage ? "Update message" : "Send message"}
-          className={`p-2 mb-0.5 rounded-xl shrink-0 transition-all duration-200 ${
-            message.trim()
-              ? "bg-primary text-primary-foreground shadow-sm hover:opacity-90 scale-100"
-              : "bg-transparent text-muted-foreground opacity-50 cursor-not-allowed scale-95"
-          }`}
-        >
-          {editingMessage ? (
-            <Check size={18} strokeWidth={3} />
-          ) : (
-            <Send
-              size={18}
-              className={message.trim() ? "translate-x-0.5" : ""}
-            />
-          )}
-        </button>
-      </div>
+      <ChatInputToolbar
+        message={message}
+        onMessageChange={setMessage}
+        onSend={handleSend}
+        onEmojiToggle={() => setShowEmojiPicker(!showEmojiPicker)}
+        onFileClick={() => fileInputRef.current?.click()}
+        showEmojiPicker={showEmojiPicker}
+        textareaRef={textareaRef}
+      />
     </div>
   );
 }

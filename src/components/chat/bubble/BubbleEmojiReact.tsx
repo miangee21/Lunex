@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Smile, Plus } from "lucide-react";
-import EmojiPicker from "@/components/chat/EmojiPicker";
+import EmojiPicker from "@/components/chat/input/EmojiPicker";
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 

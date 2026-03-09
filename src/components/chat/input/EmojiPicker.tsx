@@ -1,4 +1,4 @@
-//src/components/chat/EmojiPicker.tsx
+//src/components/chat/input/EmojiPicker.tsx
 import { useEffect, useState } from "react";
 import Picker, { Theme, EmojiStyle } from "emoji-picker-react";
 
