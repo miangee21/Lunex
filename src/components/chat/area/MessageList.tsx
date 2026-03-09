@@ -192,6 +192,7 @@ export default function MessageList({
             isStarred={msg.isStarred}
             isPinned={pinnedMessages?.includes(msg.id as any)}
             conversationId={activeChat?.conversationId ?? undefined}
+            otherUserName={activeChat?.username}
             replyToMessage={(() => {
               if (!msg.replyToMessageId) return null;
               const originalMsg = decryptedMessages.find(

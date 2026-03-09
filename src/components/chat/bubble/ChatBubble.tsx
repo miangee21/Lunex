@@ -44,6 +44,7 @@ interface MessageBubbleProps {
   isStarred?: boolean;
   isPinned?: boolean;
   conversationId?: string;
+  otherUserName?: string;
 }
 
 export default function MessageBubble({
@@ -70,6 +71,7 @@ export default function MessageBubble({
   isStarred = false,
   isPinned = false,
   conversationId,
+  otherUserName = "User",
 }: MessageBubbleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isMedia = type !== "text";
@@ -258,7 +260,7 @@ export default function MessageBubble({
               type={type}
               isOwn={isOwn}
               onSelect={onSelect}
-              senderName={isOwn ? "You" : "User"}
+              senderName={isOwn ? "You" : otherUserName}
               sentAt={sentAt}
               mediaStorageId={mediaStorageId ?? undefined}
               mediaOriginalName={mediaOriginalName ?? undefined}
