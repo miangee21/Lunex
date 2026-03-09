@@ -1,14 +1,14 @@
-//src/components/chat/MediaGridGroup.tsx
+//src/components/chat/media/MediaGridGroup.tsx
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import MediaPreview from "@/components/chat/MediaPreview";
+import MediaPreview from "@/components/chat/media/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/input/EmojiPicker";
-import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
+import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
 import { type DecryptedMessage } from "@/types/chat";
 import { open } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";

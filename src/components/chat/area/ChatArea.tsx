@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatInput from "@/components/chat/input/ChatInput";
 import LunexLogo from "@/components/shared/LunexLogo";
-import PendingUploadsList from "@/components/chat/PendingUploadsList";
+import PendingUploadsList from "@/components/chat/media/PendingUploadsList";
 import { useChatData } from "@/hooks/useChatData";
 import { useDecryptMessages } from "@/hooks/useDecryptMessages";
 import { useChatScroll } from "@/hooks/useChatScroll";

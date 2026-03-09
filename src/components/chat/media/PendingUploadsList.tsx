@@ -1,4 +1,4 @@
-//src/components/chat/PendingUploadsList.tsx
+//src/components/chat/media/PendingUploadsList.tsx
 import { FileText, RotateCw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useChatStore } from "@/store/chatStore";

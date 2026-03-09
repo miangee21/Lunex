@@ -5,9 +5,9 @@ import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import MediaPreview from "@/components/chat/MediaPreview";
+import MediaPreview from "@/components/chat/media/MediaPreview";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
+import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
@@ -29,6 +29,9 @@ interface BubbleMediaProps {
   mediaIv: string | null;
   mediaOriginalName: string | null;
   mediaDeletedAt?: number | null;
+  isStarred?: boolean;
+  isPinned?: boolean;
+  conversationId?: string;
 }
 
 export default function BubbleMedia({
@@ -40,6 +43,9 @@ export default function BubbleMedia({
   mediaIv,
   mediaOriginalName,
   mediaDeletedAt = null,
+  isStarred,
+  isPinned,
+  conversationId,
 }: BubbleMediaProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -172,6 +178,9 @@ export default function BubbleMedia({
           decryptedUrl={finalUrl}
           type={type}
           originalName={mediaOriginalName}
+          isStarred={isStarred}
+          isPinned={isPinned}
+          conversationId={conversationId}
           onClose={() => setPreviewOpen(false)}
         />
       )}

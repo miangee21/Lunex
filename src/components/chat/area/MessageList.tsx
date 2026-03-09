@@ -1,7 +1,7 @@
 //src/components/chat/area/MessageList.tsx
 import { useMemo } from "react";
 import MessageBubble from "@/components/chat/bubble/ChatBubble";
-import MediaGridGroup from "@/components/chat/MediaGridGroup";
+import MediaGridGroup from "@/components/chat/media/MediaGridGroup";
 import { DecryptedMessage } from "@/types/chat";
 
 type ActiveChat = {

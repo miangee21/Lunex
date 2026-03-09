@@ -1,4 +1,4 @@
-//src/components/chat/DeletedMediaPlaceholder.tsx
+//src/components/chat/media/DeletedMediaPlaceholder.tsx
 import { ImageOff, VideoOff, FileX, LayoutGrid } from "lucide-react";
 
 interface DeletedMediaPlaceholderProps {

@@ -1,4 +1,4 @@
-//src/components/chat/MediaUploadProgress.tsx
+//src/components/chat/media/MediaUploadProgress.tsx
 interface MediaUploadProgressProps {
   fileName: string;
   progress: number;

@@ -199,6 +199,9 @@ export default function MessageBubble({
               mediaIv={mediaIv ?? null}
               mediaOriginalName={mediaOriginalName ?? null}
               mediaDeletedAt={mediaDeletedAt}
+              isStarred={isStarred}
+              isPinned={isPinned}
+              conversationId={conversationId}
             />
           )}
 

@@ -6,7 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { base64ToKey } from "@/crypto/keyDerivation";
-import DeletedMediaPlaceholder from "@/components/chat/DeletedMediaPlaceholder";
+import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
