@@ -1,4 +1,4 @@
-//src/components/chat/ReplyPreview.tsx
+//src/components/chat/bubble/ReplyPreview.tsx
 import { useChatStore } from "@/store/chatStore";
 import {
   X,

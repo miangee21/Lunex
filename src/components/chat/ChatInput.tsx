@@ -11,7 +11,7 @@ import { base64ToKey } from "@/crypto/keyDerivation";
 import PreSendMediaPreview from "@/components/chat/PreSendMediaPreview";
 import { useMediaUpload } from "@/hooks/useMediaUpload";
 import ChatInputStatusBars from "@/components/chat/ChatInputStatusBars";
-import ReplyPreview from "@/components/chat/ReplyPreview";
+import ReplyPreview from "@/components/chat/bubble/ReplyPreview";
 import EmojiPicker from "@/components/chat/EmojiPicker";
 import { toast } from "sonner";
 

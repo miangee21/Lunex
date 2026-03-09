@@ -1,8 +1,8 @@
-//src/components/chat/BubbleMedia.tsx
+//src/components/chat/bubble/BubbleMedia.tsx
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
 import MediaPreview from "@/components/chat/MediaPreview";

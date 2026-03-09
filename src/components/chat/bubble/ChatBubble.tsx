@@ -1,16 +1,16 @@
-//src/components/chat/ChatBubble.tsx
+// src/components/chat/bubble/ChatBubble.tsx
 import { useState, useRef, useEffect } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
-import MessageStatusTick from "@/components/chat/MessageStatusTick";
-import BubbleMenu from "@/components/chat/BubbleMenu";
-import BubbleMedia from "@/components/chat/BubbleMedia";
-import EmojiPicker from "@/components/chat/EmojiPicker";
-import { Smile, Plus, Play, Star, Pin } from "lucide-react";
-import { useChatStore } from "@/store/chatStore";
 import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
+import { Smile, Plus, Star, Pin } from "lucide-react";
+import MessageStatusTick from "@/components/chat/MessageStatusTick";
+import BubbleMenu from "@/components/chat/bubble/BubbleMenu";
+import BubbleMedia from "@/components/chat/bubble/BubbleMedia";
+import EmojiPicker from "@/components/chat/EmojiPicker";
+import BubbleReplyPreview from "@/components/chat/bubble/BubbleReplyPreview";
 import { toast } from "sonner";
 
 interface MessageBubbleProps {
@@ -79,7 +79,6 @@ export default function MessageBubble({
   const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top");
   const isMedia = type !== "text";
   const currentUserId = useAuthStore((s) => s.userId);
-  const localMediaCache = useChatStore((s) => s.localMediaCache);
   const addReaction = useMutation(api.messages.addReaction);
   const removeReaction = useMutation(api.messages.removeReaction);
 
@@ -119,7 +118,6 @@ export default function MessageBubble({
           secretKey,
           theirPublicKeyBytes,
         );
-
         await addReaction({
           messageId: messageId as never,
           userId: currentUserId as never,
@@ -136,7 +134,6 @@ export default function MessageBubble({
 
   const handleScrollToOriginal = () => {
     if (!replyToMessage?.id) return;
-
     if (replyToMessage.type !== "text") {
       window.dispatchEvent(
         new CustomEvent("reopen-preview", {
@@ -144,11 +141,9 @@ export default function MessageBubble({
         }),
       );
     }
-
     const element =
       document.getElementById(`message-${replyToMessage.id}`) ||
       document.getElementById(`wrap-${replyToMessage.id}`);
-
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
       element.classList.add(
@@ -206,51 +201,11 @@ export default function MessageBubble({
           className={`relative flex flex-col px-4 pt-2.5 pb-2 rounded-2xl shadow-sm text-[15px] transition-all duration-200 ${replyToMessage ? "min-w-30" : ""} ${isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary border border-border/50 text-secondary-foreground rounded-bl-sm"}`}
         >
           {replyToMessage && (
-            <div
-              onClick={handleScrollToOriginal}
-              className={`mb-1.5 px-2.5 py-1.5 rounded-lg text-sm border-l-4 opacity-90 overflow-hidden cursor-pointer hover:opacity-100 transition-opacity flex flex-row items-center gap-2 w-0 min-w-full ${isOwn ? "bg-primary-foreground/20 border-primary-foreground text-primary-foreground" : "bg-primary/10 border-primary text-foreground"}`}
-            >
-              <div className="flex flex-col flex-1 min-w-0">
-                <p className="font-bold text-[12px] truncate mb-0.5 w-full">
-                  {replyToMessage.senderName}
-                </p>
-                <p
-                  className={`opacity-80 text-[11px] leading-tight line-clamp-2 wrap-break-word whitespace-pre-wrap w-full ${!replyToMessage.text && !replyToMessage.mediaStorageId ? "italic opacity-60" : ""}`}
-                >
-                  {!replyToMessage.text && !replyToMessage.mediaStorageId
-                    ? "🚫 This message was deleted"
-                    : replyToMessage.type === "text"
-                      ? replyToMessage.text
-                      : `Attachment: ${replyToMessage.type}`}
-                </p>
-              </div>
-
-              {replyToMessage.mediaStorageId &&
-                replyToMessage.text !== "" &&
-                localMediaCache[replyToMessage.mediaStorageId] &&
-                replyToMessage.type !== "file" &&
-                replyToMessage.type !== "audio" && (
-                  <div className="relative w-9 h-9 rounded bg-black/10 shrink-0 overflow-hidden border border-border/50">
-                    {replyToMessage.type === "video" ? (
-                      <>
-                        <video
-                          src={localMediaCache[replyToMessage.mediaStorageId]}
-                          className="w-full h-full object-cover pointer-events-none"
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <Play size={10} fill="white" className="text-white" />
-                        </div>
-                      </>
-                    ) : (
-                      <img
-                        src={localMediaCache[replyToMessage.mediaStorageId]}
-                        className="w-full h-full object-cover pointer-events-none"
-                        alt="thumb"
-                      />
-                    )}
-                  </div>
-                )}
-            </div>
+            <BubbleReplyPreview
+              replyToMessage={replyToMessage}
+              isOwn={isOwn}
+              onScrollToOriginal={handleScrollToOriginal}
+            />
           )}
 
           {isMedia && (
@@ -332,14 +287,12 @@ export default function MessageBubble({
                 <path strokeLinecap="round" d="M12 6v6l4 2" />
               </svg>
             )}
-
             {isStarred && (
               <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 -mt-px" />
             )}
             {isPinned && (
               <Pin className="w-3 h-3 fill-current text-current opacity-90 -mt-px" />
             )}
-
             <span>{time}</span>
             {isOwn && (
               <MessageStatusTick isSeen={isSeen} isDelivered={isDelivered} />
