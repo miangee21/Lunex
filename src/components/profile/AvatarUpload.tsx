@@ -5,9 +5,9 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Camera, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import { encryptDP } from "@/crypto";
 import { useSecureAvatar } from "@/hooks/useSecureAvatar";
+import { encryptDP } from "@/crypto";
+import { toast } from "sonner";
 
 export default function AvatarUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);

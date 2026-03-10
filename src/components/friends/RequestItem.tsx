@@ -4,11 +4,11 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
 import ReceivedRequestsTab from "@/components/friends/ReceivedRequestsTab";
 import SentRequestsTab from "@/components/friends/SentRequestsTab";
 import FindUsersTab from "@/components/friends/FindUsersTab";
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 type Tab = "received" | "sent" | "find";
 

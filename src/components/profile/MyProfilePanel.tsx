@@ -5,12 +5,12 @@ import { useChatStore } from "@/store/chatStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
 import GlobalThemeCustomizer from "@/components/profile/GlobalThemeCustomizer";
 import ProfileFriendsList from "@/components/profile/ProfileFriendsList";
 import ProfileBlockedList from "@/components/profile/ProfileBlockedList";
 import { ArrowLeft, Users, Ban, Palette } from "lucide-react";
+import { toast } from "sonner";
 
 type ProfileView = "main" | "friends" | "blocked" | "theme";
 

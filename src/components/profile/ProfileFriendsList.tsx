@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { toast } from "sonner";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../convex/_generated/dataModel";
 import { ArrowLeft, Search, MoreVertical, UserX, Shield } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ProfileFriendsList({ onBack }: { onBack: () => void }) {
   const userId = useAuthStore((s) => s.userId);
