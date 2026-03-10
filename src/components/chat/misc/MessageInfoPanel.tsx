@@ -1,17 +1,17 @@
-//src/components/chat/MessageInfoPanel.tsx
+//src/components/chat/misc/MessageInfoPanel.tsx
 import { useState, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
+import { X, CalendarDays, Clock, Play, FileText } from "lucide-react";
 import {
   decryptMediaFile,
   getMimeTypeFromName,
 } from "@/crypto/mediaEncryption";
-import { X, CalendarDays, Clock, Play, FileText } from "lucide-react";
 
 function MiniMediaThumbnail({ msg }: { msg: any }) {
   const localMediaCache = useChatStore((s) => s.localMediaCache);

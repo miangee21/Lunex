@@ -7,7 +7,7 @@ import { encryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import { Star, Pin } from "lucide-react";
 import { toast } from "sonner";
-import MessageStatusTick from "@/components/chat/MessageStatusTick";
+import MessageStatusTick from "@/components/chat/misc/MessageStatusTick";
 import BubbleMenu from "@/components/chat/bubble/BubbleMenu";
 import BubbleMedia from "@/components/chat/bubble/BubbleMedia";
 import BubbleReplyPreview from "@/components/chat/bubble/BubbleReplyPreview";

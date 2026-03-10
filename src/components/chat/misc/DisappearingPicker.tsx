@@ -1,11 +1,11 @@
-//src/components/chat/DisappearingPicker.tsx
+//src/components/chat/misc/DisappearingPicker.tsx
 import { useState } from "react";
 import { ArrowLeft, Timer, Check } from "lucide-react";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { toast } from "sonner";
 
 type TimerOption = "1h" | "6h" | "12h" | "1d" | "3d" | "7d";

@@ -1,4 +1,4 @@
-//src/components/chat/MessageStatusTick.tsx
+//src/components/chat/misc/MessageStatusTick.tsx
 export default function MessageStatusTick({
   isSeen,
   isDelivered,

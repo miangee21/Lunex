@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import ChatHeader from "@/components/chat/ChatHeader";
+import ChatHeader from "@/components/chat/misc/ChatHeader";
 import ChatInput from "@/components/chat/input/ChatInput";
 import LunexLogo from "@/components/shared/LunexLogo";
 import PendingUploadsList from "@/components/chat/media/PendingUploadsList";

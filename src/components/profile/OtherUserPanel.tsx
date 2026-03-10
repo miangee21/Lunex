@@ -1,4 +1,5 @@
 //src/components/profile/OtherUserPanel.tsx
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
@@ -6,11 +7,10 @@ import { useChatStore } from "@/store/chatStore";
 import { Id } from "../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { X, UserX, Shield, ShieldOff, Timer, Palette } from "lucide-react";
-import { toast } from "sonner";
-import { useState } from "react";
-import ChatThemeCustomizer from "@/components/chat/ChatThemeCustomizer";
-import DisappearingPicker from "@/components/chat/DisappearingPicker";
+import ChatThemeCustomizer from "@/components/chat/misc/ChatThemeCustomizer";
+import DisappearingPicker from "@/components/chat/misc/DisappearingPicker";
 import ConfirmModal from "@/components/shared/ConfirmModal";
+import { toast } from "sonner";
 
 export default function OtherUserPanel() {
   const { activeChat, setProfilePanelOpen, clearActiveChat } = useChatStore();

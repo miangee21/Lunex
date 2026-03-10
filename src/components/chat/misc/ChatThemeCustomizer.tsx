@@ -1,10 +1,10 @@
-//src/components/chat/ChatThemeCustomizer.tsx
+//src/components/chat/misc/ChatThemeCustomizer.tsx
 import { useChatStore } from "@/store/chatStore";
 import { ArrowLeft, RefreshCcw } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 
 interface ChatThemeCustomizerProps {
   onBack: () => void;

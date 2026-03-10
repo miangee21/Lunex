@@ -10,7 +10,7 @@ import ChatList from "@/components/chat/list/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/area/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
-import MessageInfoPanel from "@/components/chat/MessageInfoPanel";
+import MessageInfoPanel from "@/components/chat/misc/MessageInfoPanel";
 import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel";
 import { useAppNotifications } from "@/hooks/useAppNotifications";
 import { MessageSquare } from "lucide-react";

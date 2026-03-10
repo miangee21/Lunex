@@ -4,7 +4,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import MessageStatusTick from "@/components/chat/MessageStatusTick";
+import MessageStatusTick from "@/components/chat/misc/MessageStatusTick";
 import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
 import MediaGridItem from "@/components/chat/media/MediaGridItem";
 import MediaGridMenu from "@/components/chat/media/MediaGridMenu";

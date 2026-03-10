@@ -1,10 +1,10 @@
-//src/components/chat/ChatHeader.tsx
+//src/components/chat/misc/ChatHeader.tsx
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { MoreVertical, Timer } from "lucide-react";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 
 export default function ChatHeader() {
