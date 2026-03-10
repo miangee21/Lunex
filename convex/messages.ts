@@ -1,6 +1,7 @@
 // convex/messages.ts
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { ConvexError } from "convex/values";
 
 export const getMessages = query({
   args: {
@@ -490,7 +491,7 @@ export const togglePinMessage = mutation({
       return false;
     } else {
       if (pinnedMessages.length >= 3) {
-        throw new Error("You can only pin up to 3 messages in a chat.");
+        throw new ConvexError("You can only pin up to 3 messages in a chat.");
       }
       await ctx.db.patch(args.conversationId, {
         pinnedMessages: [...pinnedMessages, args.messageId],
