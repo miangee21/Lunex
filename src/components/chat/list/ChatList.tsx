@@ -4,9 +4,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
-import ChatListItemWithStatus from "@/components/chat/list/ChatListItemWithStatus";
 import ChatListHeader from "@/components/chat/list/ChatListHeader";
 import ChatListFriends from "@/components/chat/list/ChatListFriends";
+import ChatListConversationItem from "@/components/chat/list/ChatListConversationItem";
 import RequestsPanel from "@/components/friends/RequestItem";
 import SearchUsers from "@/components/friends/SearchUsers";
 import SettingsPanel from "@/components/sidebar/settings/SettingsPanel";
@@ -256,7 +256,6 @@ export default function ChatList() {
             const msgSentAt = cached?.sentAt ?? conv.lastMessage?.sentAt ?? 0;
             const isReactionLatest =
               conv.lastReaction && conv.lastReaction.timestamp >= msgSentAt;
-
             const seenReactTs = conv.conversationId
               ? seenReactions[conv.conversationId] || 0
               : 0;
@@ -266,9 +265,40 @@ export default function ChatList() {
               conv.lastReaction.userId !== userId &&
               conv.lastReaction.timestamp > seenReactTs;
 
+            let decryptedEmoji = "👍";
+            if (
+              isReactionLatest &&
+              conv.lastReaction &&
+              activeChat?.conversationId === conv.conversationId &&
+              secretKey &&
+              conv.publicKey
+            ) {
+              try {
+                const theirPublicKey = base64ToKey(conv.publicKey);
+                decryptedEmoji = decryptMessage(
+                  {
+                    encryptedContent: conv.lastReaction.encryptedEmoji,
+                    iv: conv.lastReaction.iv,
+                  },
+                  secretKey,
+                  theirPublicKey,
+                );
+              } catch {}
+            }
+
             return (
-              <div
+              <ChatListConversationItem
                 key={conv.conversationId}
+                conv={conv as any}
+                userId={userId}
+                pinnedChats={pinnedChats}
+                lastMessageCache={lastMessageCache}
+                readByCache={readByCache}
+                deliveredToCache={deliveredToCache}
+                seenReactions={seenReactions}
+                isReactionLatest={!!isReactionLatest}
+                isReactionUnread={isReactionUnread}
+                decryptedEmoji={decryptedEmoji}
                 onClickCapture={() => {
                   if (isReactionUnread && conv.lastReaction) {
                     setJumpToMessageId(conv.lastReaction.messageId);
@@ -280,130 +310,7 @@ export default function ChatList() {
                     }
                   }
                 }}
-              >
-                <ChatListItemWithStatus
-                  id={conv.otherUserId}
-                  conversationId={conv.conversationId}
-                  username={conv.username}
-                  lastMessage={(() => {
-                    if (isReactionLatest && conv.lastReaction) {
-                      let emoji = "👍";
-                      if (
-                        activeChat?.conversationId === conv.conversationId &&
-                        secretKey &&
-                        conv.publicKey
-                      ) {
-                        try {
-                          const theirPublicKey = base64ToKey(conv.publicKey);
-                          emoji = decryptMessage(
-                            {
-                              encryptedContent:
-                                conv.lastReaction.encryptedEmoji,
-                              iv: conv.lastReaction.iv,
-                            },
-                            secretKey,
-                            theirPublicKey,
-                          );
-                        } catch {}
-                      }
-                      return conv.lastReaction.userId === userId
-                        ? `You: Reacted ${emoji} to a message`
-                        : `${emoji} Reacted to a message`;
-                    }
-                    if (cached) {
-                      if (cached.type === "image")
-                        return cached.senderId === userId
-                          ? "You: 📷 New photo"
-                          : "📷 New photo";
-                      if (cached.type === "video")
-                        return cached.senderId === userId
-                          ? "You: 🎥 New video"
-                          : "🎥 New video";
-                      if (cached.type === "audio")
-                        return cached.senderId === userId
-                          ? "You: 🎵 New audio"
-                          : "🎵 New audio";
-                      if (cached.type === "file")
-                        return cached.senderId === userId
-                          ? "You: 📎 New document"
-                          : "📎 New document";
-                      const preview =
-                        cached.text.length > 40
-                          ? cached.text.slice(0, 40) + "..."
-                          : cached.text;
-                      return cached.senderId === userId
-                        ? `You: ${preview}`
-                        : preview;
-                    }
-                    if (conv.lastMessage) {
-                      if (conv.lastMessage.type === "image")
-                        return conv.lastMessage.senderId === userId
-                          ? "You: 📷 New photo"
-                          : "📷 New photo";
-                      if (conv.lastMessage.type === "video")
-                        return conv.lastMessage.senderId === userId
-                          ? "You: 🎥 New video"
-                          : "🎥 New video";
-                      if (conv.lastMessage.type === "audio")
-                        return conv.lastMessage.senderId === userId
-                          ? "You: 🎵 New audio"
-                          : "🎵 New audio";
-                      if (conv.lastMessage.type === "file")
-                        return conv.lastMessage.senderId === userId
-                          ? "You: 📎 New document"
-                          : "📎 New document";
-                      return conv.lastMessage.senderId === userId
-                        ? "You: New message"
-                        : "New message 📩";
-                    }
-                    return "Say hello! 👋";
-                  })()}
-                  time={(() => {
-                    if (isReactionLatest && conv.lastReaction) {
-                      return new Date(
-                        conv.lastReaction.timestamp,
-                      ).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      });
-                    }
-                    const sentAt = cached?.sentAt ?? conv.lastMessage?.sentAt;
-                    return sentAt
-                      ? new Date(sentAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })
-                      : "";
-                  })()}
-                  isRead={(() => {
-                    if (!cached || cached.senderId !== userId) return undefined;
-                    const readBy = conv.conversationId
-                      ? readByCache[conv.conversationId]
-                      : [];
-                    const deliveredTo = conv.conversationId
-                      ? deliveredToCache[conv.conversationId]
-                      : [];
-                    const otherUserId = conv.otherUserId;
-                    if (readBy?.some((r) => r.userId === otherUserId))
-                      return "read";
-                    if (deliveredTo?.some((d) => d.userId === otherUserId))
-                      return "delivered";
-                    return "sent";
-                  })()}
-                  unread={conv.unreadCount + (isReactionUnread ? 1 : 0)}
-                  isOnline={conv.isOnline}
-                  profilePicStorageId={conv.profilePicStorageId ?? null}
-                  isPinned={pinnedChats.includes(conv.conversationId)}
-                  chatPresetName={(conv as any).chatPresetName}
-                  chatBgColor={(conv as any).chatBgColor}
-                  myBubbleColor={(conv as any).myBubbleColor}
-                  otherBubbleColor={(conv as any).otherBubbleColor}
-                  myTextColor={(conv as any).myTextColor}
-                  otherTextColor={(conv as any).otherTextColor}
-                />
-              </div>
+              />
             );
           })
         )}
