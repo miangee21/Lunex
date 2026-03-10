@@ -10,10 +10,32 @@ import { encryptMediaFile } from "@/crypto/mediaEncryption";
 import { toast } from "sonner";
 import { validateFile, type AllowedFileType } from "@/lib/fileValidation";
 
+interface ActiveChatForUpload {
+  conversationId?: string | null;
+  userId?: string;
+}
+
+interface ReadyToSendItem {
+  itemId: string;
+  previewUrl: string;
+  originalFileNameForCache: string;
+  messageData: {
+    conversationId: Id<"conversations">;
+    senderId: Id<"users">;
+    encryptedContent: string;
+    iv: string;
+    type: AllowedFileType;
+    mediaStorageId: Id<"_storage">;
+    mediaIv: string;
+    mediaOriginalName: string;
+    uploadBatchId: string;
+  };
+}
+
 interface UseMediaUploadProps {
   userId: string | null;
-  secretKey: any;
-  activeChat: any;
+  secretKey: Uint8Array | null;
+  activeChat: ActiveChatForUpload | null;
   otherUserPublicKey?: string;
 }
 
@@ -92,7 +114,7 @@ export function useMediaUpload({
     conversationId: string,
     theirPublicKey: Uint8Array,
   ) => {
-    const readyToSend: any[] = [];
+    const readyToSend: ReadyToSendItem[] = [];
 
     const uploadBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
