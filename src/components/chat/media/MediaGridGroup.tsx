@@ -1,17 +1,17 @@
 // src/components/chat/media/MediaGridGroup.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
-import EmojiPicker from "@/components/chat/input/EmojiPicker";
 import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
 import MediaGridItem from "@/components/chat/media/MediaGridItem";
 import MediaGridMenu from "@/components/chat/media/MediaGridMenu";
+import MediaGridReactBar from "@/components/chat/media/MediaGridReactBar";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import { encryptMessage } from "@/crypto/encryption";
-import { Download, ChevronDown, Smile, Plus } from "lucide-react";
+import { Download, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 export default function MediaGridGroup({
@@ -38,10 +38,6 @@ export default function MediaGridGroup({
   const removeReaction = useMutation(api.messages.removeReaction);
 
   const [forceDownload, setForceDownload] = useState(false);
-  const [showQuickReact, setShowQuickReact] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const [pickerPosition, setPickerPosition] = useState<"top" | "bottom">("top");
 
   const allDownloaded =
     isGroupOwn ||
@@ -50,7 +46,6 @@ export default function MediaGridGroup({
     );
 
   const msg = group[group.length - 1];
-  const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
   const isGridSelected = group.some((m: any) => selectedMessages.has(m.id));
 
   useEffect(() => {
@@ -98,21 +93,6 @@ export default function MediaGridGroup({
     });
   };
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        setShowQuickReact(false);
-        setShowEmojiPicker(false);
-      }
-    }
-    if (showQuickReact || showEmojiPicker)
-      document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showQuickReact, showEmojiPicker]);
-
   const handleEmojiSelect = async (emoji: string) => {
     if (!currentUserId || !secretKey || !otherUser?.publicKey) {
       toast.error("Encryption keys missing!");
@@ -144,13 +124,11 @@ export default function MediaGridGroup({
     } catch (error) {
       console.error(error);
     }
-    setShowQuickReact(false);
-    setShowEmojiPicker(false);
   };
 
   return (
     <div
-      className={`flex w-full group/grid py-1 transition-all duration-500 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""} ${showQuickReact || showEmojiPicker ? "relative z-100" : "z-10"}`}
+      className={`flex w-full group/grid py-1 transition-all duration-500 ${isGroupOwn ? "justify-end" : "justify-start"} ${selectMode ? "cursor-pointer" : ""}`}
       onClick={() => selectMode && handleSelectGrid()}
     >
       {selectMode && (
@@ -329,74 +307,7 @@ export default function MediaGridGroup({
           )}
         </div>
 
-        <div
-          className={`relative self-center transition-opacity ${showQuickReact || showEmojiPicker ? "z-9999 opacity-100" : "z-20 opacity-0 group-hover/grid:opacity-100"}`}
-          ref={emojiPickerRef}
-        >
-          <button
-            onClick={() => {
-              if (!showQuickReact) {
-                if (emojiPickerRef.current) {
-                  const rect = emojiPickerRef.current.getBoundingClientRect();
-                  setPickerPosition(rect.top < 150 ? "bottom" : "top");
-                }
-                setShowQuickReact(true);
-                setShowEmojiPicker(false);
-              } else {
-                setShowQuickReact(false);
-              }
-            }}
-            className={`p-1.5 rounded-full transition-colors ${showQuickReact || showEmojiPicker ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
-          >
-            <Smile size={18} />
-          </button>
-
-          {showQuickReact && (
-            <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} flex items-center gap-1 bg-card text-card-foreground shadow-[0_4px_15px_rgba(0,0,0,0.15)] border border-border/50 rounded-full px-2.5 py-1.5 w-max flex-nowrap z-9999 animate-in zoom-in-75 duration-200`}
-            >
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEmojiSelect(emoji);
-                  }}
-                  className="hover:scale-125 transition-transform text-xl px-1.5 shrink-0"
-                >
-                  {emoji}
-                </button>
-              ))}
-              <div className="w-px h-5 bg-border mx-1 shrink-0" />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (emojiPickerRef.current) {
-                    const rect = emojiPickerRef.current.getBoundingClientRect();
-                    setPickerPosition(rect.top < 400 ? "bottom" : "top");
-                  }
-                  setShowQuickReact(false);
-                  setShowEmojiPicker(true);
-                }}
-                className="p-1.5 hover:bg-accent rounded-full transition-colors text-muted-foreground shrink-0"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-          )}
-
-          {showEmojiPicker && (
-            <div
-              className={`absolute ${pickerPosition === "top" ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"} ${isGroupOwn ? `right-0 ${pickerPosition === "top" ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${pickerPosition === "top" ? "origin-bottom-left" : "origin-top-left"}`} z-9999 animate-in zoom-in-75 duration-200`}
-            >
-              <div
-                className={`scale-[0.85] ${pickerPosition === "top" ? "origin-bottom" : "origin-top"} shadow-2xl rounded-xl overflow-hidden border border-border/50`}
-              >
-                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
-              </div>
-            </div>
-          )}
-        </div>
+        <MediaGridReactBar onEmojiSelect={handleEmojiSelect} />
       </div>
     </div>
   );
