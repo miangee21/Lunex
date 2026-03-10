@@ -1,216 +1,18 @@
-//src/components/chat/media/MediaGridGroup.tsx
+// src/components/chat/media/MediaGridGroup.tsx
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from "@/store/authStore";
-import MediaPreview from "@/components/chat/media/MediaPreview";
 import MessageStatusTick from "@/components/chat/MessageStatusTick";
 import EmojiPicker from "@/components/chat/input/EmojiPicker";
 import DeletedMediaPlaceholder from "@/components/chat/media/DeletedMediaPlaceholder";
-import { type DecryptedMessage } from "@/types/chat";
-import { open } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
-import { toast } from "sonner";
-import {
-  decryptMediaFile,
-  getMimeTypeFromName,
-} from "@/crypto/mediaEncryption";
+import MediaGridItem from "@/components/chat/media/MediaGridItem";
+import MediaGridMenu from "@/components/chat/media/MediaGridMenu";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import { encryptMessage } from "@/crypto/encryption";
-import {
-  Play,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  Download,
-  ChevronDown,
-  CheckSquare,
-  Trash2,
-  Smile,
-  Plus,
-} from "lucide-react";
-
-function MediaGridItem({
-  msg,
-  className,
-  gallery = [],
-  galleryIndex = 0,
-  secretKey,
-  theirPublicKeyBase64,
-  forceDownload,
-  isStarred,
-  isPinned,
-  conversationId,
-}: {
-  msg: DecryptedMessage;
-  className?: string;
-  gallery?: Array<any>;
-  galleryIndex?: number;
-  secretKey: any;
-  theirPublicKeyBase64?: string;
-  otherUserId?: string;
-  forceDownload?: boolean;
-  isStarred?: boolean;
-  isPinned?: boolean;
-  conversationId?: string;
-}) {
-  const localMediaCache = useChatStore((s) => s.localMediaCache);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const instantUrl = msg.mediaStorageId
-    ? localMediaCache[msg.mediaStorageId]
-    : null;
-  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null);
-
-  const finalUrl = instantUrl || decryptedUrl;
-
-  const [isDownloaded, setIsDownloaded] = useState(
-    msg.isOwn || !!instantUrl || forceDownload,
-  );
-
-  useEffect(() => {
-    if (forceDownload) setIsDownloaded(true);
-  }, [forceDownload]);
-
-  useEffect(() => {
-    const handleReopen = (e: any) => {
-      if (e.detail.id === msg.id) {
-        setPreviewOpen(true);
-      }
-    };
-    window.addEventListener("reopen-preview", handleReopen);
-    return () => window.removeEventListener("reopen-preview", handleReopen);
-  }, [msg.id]);
-
-  const encryptedFileUrl = useQuery(
-    api.media.getFileUrl,
-    !instantUrl && msg.mediaStorageId
-      ? { storageId: msg.mediaStorageId as Id<"_storage"> }
-      : "skip",
-  );
-
-  useEffect(() => {
-    if (
-      instantUrl ||
-      !isDownloaded ||
-      !encryptedFileUrl ||
-      !msg.mediaIv ||
-      !secretKey ||
-      !theirPublicKeyBase64 ||
-      finalUrl
-    )
-      return;
-    let isMounted = true;
-    async function decrypt() {
-      try {
-        const mimeType = getMimeTypeFromName(msg.mediaOriginalName ?? "");
-        const url = await decryptMediaFile(
-          encryptedFileUrl!,
-          msg.mediaIv!,
-          secretKey,
-          base64ToKey(theirPublicKeyBase64!),
-          mimeType,
-        );
-        if (isMounted) {
-          setDecryptedUrl(url);
-          if (msg.mediaStorageId)
-            useChatStore.getState().addLocalMediaCache(msg.mediaStorageId, url);
-        }
-      } catch (err) {
-        if (isMounted) setIsDownloaded(false);
-      }
-    }
-    decrypt();
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    encryptedFileUrl,
-    msg.mediaIv,
-    secretKey,
-    theirPublicKeyBase64,
-    instantUrl,
-    isDownloaded,
-    finalUrl,
-    msg.mediaStorageId,
-  ]);
-
-  return (
-    <>
-      {previewOpen && msg.mediaStorageId && (
-        <MediaPreview
-          storageId={msg.mediaStorageId}
-          messageId={msg.id}
-          text={msg.text}
-          isOwn={msg.isOwn}
-          decryptedUrl={finalUrl}
-          type={
-            msg.type === "text"
-              ? "file"
-              : (msg.type as "image" | "video" | "file")
-          }
-          originalName={msg.mediaOriginalName}
-          mediaIv={msg.mediaIv}
-          secretKey={secretKey}
-          theirPublicKey={
-            theirPublicKeyBase64 ? base64ToKey(theirPublicKeyBase64) : undefined
-          }
-          onClose={() => setPreviewOpen(false)}
-          gallery={gallery}
-          galleryIndex={galleryIndex}
-          isStarred={isStarred}
-          isPinned={isPinned}
-          conversationId={conversationId}
-        />
-      )}
-      <div
-        className={`relative cursor-pointer overflow-hidden bg-black/10 dark:bg-white/10 ${className}`}
-        onClick={() => {
-          if (finalUrl) setPreviewOpen(true);
-        }}
-      >
-        {msg.type === "image" && finalUrl ? (
-          <img
-            src={finalUrl}
-            alt="image"
-            className="absolute inset-0 w-full h-full object-cover hover:opacity-90 transition-opacity"
-          />
-        ) : msg.type === "video" && finalUrl ? (
-          <div className="absolute inset-0 w-full h-full">
-            <video
-              src={finalUrl}
-              className="w-full h-full object-cover"
-              preload="metadata"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <Play size={14} className="text-white ml-0.5" fill="white" />
-              </div>
-            </div>
-          </div>
-        ) : msg.type === "file" && finalUrl ? (
-          <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black/5 p-2 transition-colors hover:bg-black/10">
-            <FileText size={24} className="opacity-70 mb-2" />
-            <p className="text-[10px] font-semibold truncate w-full text-center px-1">
-              {msg.text || "File"}
-            </p>
-          </div>
-        ) : (
-          <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/20 dark:bg-white/5">
-            {msg.type === "video" ? (
-              <Film size={32} className="text-white opacity-40" />
-            ) : msg.type === "file" ? (
-              <FileText size={32} className="text-white opacity-40" />
-            ) : (
-              <ImageIcon size={32} className="text-white opacity-40" />
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  );
-}
+import { Download, ChevronDown, Smile, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function MediaGridGroup({
   displayGroup,
@@ -249,7 +51,6 @@ export default function MediaGridGroup({
 
   const msg = group[group.length - 1];
   const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
-
   const isGridSelected = group.some((m: any) => selectedMessages.has(m.id));
 
   useEffect(() => {
@@ -274,7 +75,6 @@ export default function MediaGridGroup({
           );
         }, 1200);
       }
-
       setTimeout(() => {
         window.dispatchEvent(
           new CustomEvent("reopen-preview", {
@@ -485,151 +285,16 @@ export default function MediaGridGroup({
           </div>
 
           {gridMenuOpen === msg.id && (
-            <div className="absolute top-9 right-2 w-48 bg-popover text-popover-foreground border border-border rounded-xl shadow-xl z-50 overflow-hidden text-sm animate-in fade-in zoom-in-95">
-              {!msg.mediaDeletedAt && (
-                <>
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      setGridMenuOpen(null);
-
-                      let missingFiles = false;
-                      group.forEach((m: any) => {
-                        if (
-                          m.mediaStorageId &&
-                          !localMediaCache[m.mediaStorageId]
-                        )
-                          missingFiles = true;
-                      });
-
-                      if (missingFiles) {
-                        setForceDownload(true);
-                        toast.info(
-                          "Decrypting secure files... Please click Download All again in a moment.",
-                        );
-                        return;
-                      }
-
-                      const toastId = toast.loading(
-                        `Saving ${group.length} files...`,
-                      );
-
-                      try {
-                        const selectedDirPath = await open({
-                          directory: true,
-                          multiple: false,
-                          title: "Select folder to save media files",
-                        });
-
-                        if (!selectedDirPath) {
-                          toast.dismiss(toastId);
-                          return;
-                        }
-
-                        const separator = (selectedDirPath as string).includes(
-                          "\\",
-                        )
-                          ? "\\"
-                          : "/";
-
-                        for (let i = 0; i < group.length; i++) {
-                          const m = group[i];
-                          if (
-                            m.mediaStorageId &&
-                            localMediaCache[m.mediaStorageId]
-                          ) {
-                            const url = localMediaCache[m.mediaStorageId];
-
-                            const originalName = m.mediaOriginalName || "";
-                            const extMatch = originalName.match(/\.([^.]+)$/);
-                            const ext = extMatch
-                              ? extMatch[1]
-                              : m.type === "image"
-                                ? "jpg"
-                                : m.type === "video"
-                                  ? "mp4"
-                                  : "bin";
-
-                            const randomStr = Math.random()
-                              .toString(36)
-                              .substring(2, 8);
-                            const fileName = `lunex_${Date.now()}_${randomStr}.${ext}`;
-                            const filePath = `${selectedDirPath}${separator}${fileName}`;
-
-                            const response = await fetch(url);
-                            const arrayBuffer = await response.arrayBuffer();
-                            const uint8Array = new Uint8Array(arrayBuffer);
-
-                            await writeFile(filePath, uint8Array);
-                          }
-                        }
-
-                        toast.success("All files saved successfully!", {
-                          id: toastId,
-                        });
-                      } catch (error: any) {
-                        console.error("Native download failed:", error);
-
-                        toast.error(`Save Failed: ${error.message || error}`, {
-                          id: toastId,
-                          duration: 8000,
-                        });
-
-                        group.forEach((m: any, index: number) => {
-                          if (
-                            m.mediaStorageId &&
-                            localMediaCache[m.mediaStorageId]
-                          ) {
-                            setTimeout(() => {
-                              const a = document.createElement("a");
-                              a.href = localMediaCache[m.mediaStorageId];
-                              a.download =
-                                m.mediaOriginalName ||
-                                `lunex-media-${index + 1}`;
-                              a.style.display = "none";
-                              document.body.appendChild(a);
-                              a.click();
-                              document.body.removeChild(a);
-                            }, index * 500);
-                          }
-                        });
-                      }
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors"
-                  >
-                    <Download size={14} className="text-muted-foreground" />{" "}
-                    Download All
-                  </button>
-
-                  <div className="h-px bg-border w-full" />
-                </>
-              )}
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectGrid();
-                  setGridMenuOpen(null);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-accent transition-colors text-foreground"
-              >
-                <CheckSquare size={14} className="text-muted-foreground" />{" "}
-                Select Grid
-              </button>
-
-              <div className="h-px bg-border w-full" />
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setGridMenuOpen(null);
-                  if (onDeleteClick) onDeleteClick();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-destructive/10 transition-colors text-destructive"
-              >
-                <Trash2 size={14} /> Delete Grid
-              </button>
-            </div>
+            <MediaGridMenu
+              group={group}
+              msg={msg}
+              mediaDeletedAt={msg.mediaDeletedAt}
+              isGroupOwn={isGroupOwn}
+              onSelectGrid={handleSelectGrid}
+              onDeleteClick={onDeleteClick}
+              onClose={() => setGridMenuOpen(null)}
+              setForceDownload={setForceDownload}
+            />
           )}
 
           {msg.reactions && msg.reactions.length > 0 && (
