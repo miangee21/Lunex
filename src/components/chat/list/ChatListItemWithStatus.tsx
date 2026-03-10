@@ -1,8 +1,8 @@
-//src/components/chat/ChatListItemWithStatus.tsx
+//src/components/chat/list/ChatListItemWithStatus.tsx
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import ChatListItem from "@/components/chat/ChatListItem";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import ChatListItem from "@/components/chat/list/ChatListItem";
 import { useAuthStore } from "@/store/authStore";
 import { ReactNode } from "react";
 

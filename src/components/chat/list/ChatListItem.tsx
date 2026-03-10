@@ -1,12 +1,12 @@
-//src/components/chat/ChatListItem.tsx
+//src/components/chat/list/ChatListItem.tsx
 import { useChatStore } from "@/store/chatStore";
 import { useState } from "react";
 import UserAvatar from "@/components/shared/UserAvatar";
-import { Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../../convex/_generated/dataModel";
 import { MoreVertical, Trash2, Pin, Check } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 

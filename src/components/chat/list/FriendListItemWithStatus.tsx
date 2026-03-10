@@ -1,7 +1,7 @@
-//src/components/chat/FriendListItemWithStatus.tsx
+//src/components/chat/list/FriendListItemWithStatus.tsx
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { useAuthStore } from "@/store/authStore";
 

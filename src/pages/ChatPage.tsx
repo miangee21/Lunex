@@ -6,7 +6,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import SlimBar from "@/components/sidebar/SlimBar";
-import ChatList from "@/components/chat/ChatList";
+import ChatList from "@/components/chat/list/ChatList";
 import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/area/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
