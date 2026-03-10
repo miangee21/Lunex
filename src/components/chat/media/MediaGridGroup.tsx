@@ -412,8 +412,8 @@ export default function MediaGridGroup({
                       type: m.type as "image" | "video" | "file",
                       originalName: m.mediaOriginalName,
                       mediaIv: m.mediaIv,
-                      isStarred: m.isStarred,
-                      isPinned: pinnedMessages?.includes(m.id),
+                      isStarred: m.isStarred ?? false,
+                      isPinned: pinnedMessages?.includes(m.id) ?? false,
                     }))}
                     galleryIndex={gIdx}
                   />

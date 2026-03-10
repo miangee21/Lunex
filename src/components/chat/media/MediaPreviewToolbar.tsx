@@ -1,6 +1,6 @@
 // src/components/chat/media/MediaPreviewToolbar.tsx
 import { useMutation } from "convex/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useAuthStore } from "@/store/authStore";
@@ -66,6 +66,11 @@ export default function MediaPreviewToolbar({
   const togglePinMessage = useMutation(api.messages.togglePinMessage);
   const [isStarred, setIsStarred] = useState(initialIsStarred ?? false);
   const [isPinned, setIsPinned] = useState(initialIsPinned ?? false);
+
+  useEffect(() => {
+    setIsStarred(initialIsStarred ?? false);
+    setIsPinned(initialIsPinned ?? false);
+  }, [initialIsStarred, initialIsPinned]);
 
   const handleToggleStar = async () => {
     if (!userId || !messageId) return;
