@@ -1,5 +1,11 @@
 //src/hooks/useChatScroll.ts
-import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useState,
+} from "react";
 
 type Deps = {
   conversationId?: string;
@@ -39,6 +45,7 @@ export function useChatScroll({
   const allowPagination = useRef(false);
 
   const isUserAtBottom = useRef(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   useLayoutEffect(() => {
     isFirstLoad.current = true;
@@ -153,10 +160,16 @@ export function useChatScroll({
 
     const isManualTrigger = scrollToBottomTrigger !== prevScrollTrigger.current;
     const diff = totalCurrentBubbles - totalPrevBubbles;
+    const pendingDiff = currentPendingLength - prevPendingCount.current;
 
     const isNewLiveMessage = diff > 0 && diff < 20;
+    const isMyNewMessage = pendingDiff > 0;
 
-    if (isNewLiveMessage || isManualTrigger || isTyping) {
+    if (
+      isManualTrigger ||
+      isMyNewMessage ||
+      ((isNewLiveMessage || isTyping) && isUserAtBottom.current)
+    ) {
       isUserAtBottom.current = true;
 
       const forceScroll = () => {
@@ -216,6 +229,12 @@ export function useChatScroll({
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     isUserAtBottom.current = distanceToBottom < 100;
 
+    if (distanceToBottom > 250) {
+      setShowScrollButton(true);
+    } else {
+      setShowScrollButton(false);
+    }
+
     if (el.scrollTop < 80) {
       previousScrollData.current = {
         scrollHeight: el.scrollHeight,
@@ -232,5 +251,5 @@ export function useChatScroll({
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll]);
 
-  return { messagesEndRef, scrollContainerRef };
+  return { messagesEndRef, scrollContainerRef, showScrollButton };
 }

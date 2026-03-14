@@ -15,6 +15,7 @@ import ChatAreaPinnedBar from "@/components/chat/area/ChatAreaPinnedBar";
 import ChatAreaDeleteDialog from "@/components/chat/area/ChatAreaDeleteDialog";
 import ChatAreaContextMenu from "@/components/chat/area/ChatAreaContextMenu";
 import MessageList from "@/components/chat/area/MessageList";
+import { ChevronDown } from "lucide-react";
 
 export default function ChatArea() {
   const {
@@ -106,17 +107,18 @@ export default function ChatArea() {
     deleteMessageForEveryone,
   });
 
-  const { messagesEndRef, scrollContainerRef } = useChatScroll({
-    conversationId: activeChat?.conversationId ?? undefined,
-    decryptedMessagesLength: decryptedMessages.length,
-    currentPendingLength: currentPending.length,
-    jumpToMessageId,
-    setJumpToMessageId,
-    scrollToBottomTrigger,
-    isTyping,
-    onScrollToTop: loadMore,
-    isLoadingMore,
-  });
+  const { messagesEndRef, scrollContainerRef, showScrollButton } =
+    useChatScroll({
+      conversationId: activeChat?.conversationId ?? undefined,
+      decryptedMessagesLength: decryptedMessages.length,
+      currentPendingLength: currentPending.length,
+      jumpToMessageId,
+      setJumpToMessageId,
+      scrollToBottomTrigger,
+      isTyping,
+      onScrollToTop: loadMore,
+      isLoadingMore,
+    });
 
   if (!activeChat) return null;
 
@@ -236,6 +238,24 @@ export default function ChatArea() {
 
         <div ref={messagesEndRef} className="h-1" />
       </div>
+
+      {showScrollButton && (
+        <div className="absolute bottom-20 right-6 z-80">
+          <button
+            onClick={() => {
+              if (scrollContainerRef.current) {
+                scrollContainerRef.current.scrollTo({
+                  top: scrollContainerRef.current.scrollHeight,
+                  behavior: "smooth",
+                });
+              }
+            }}
+            className="w-10 h-10 bg-primary/90 hover:bg-primary text-primary-foreground rounded-full shadow-lg border border-border/10 flex items-center justify-center transition-all animate-in fade-in zoom-in duration-200 cursor-pointer hover:scale-105"
+          >
+            <ChevronDown size={24} />
+          </button>
+        </div>
+      )}
 
       <div className="relative z-70 shrink-0">
         <ChatInput
