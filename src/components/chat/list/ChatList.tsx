@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
+import { useAppLockStore } from "@/store/appLockStore";
 import ChatListHeader from "@/components/chat/list/ChatListHeader";
 import ChatListFriends from "@/components/chat/list/ChatListFriends";
 import ChatListConversationItem from "@/components/chat/list/ChatListConversationItem";
@@ -40,6 +41,9 @@ export default function ChatList() {
   const secretKey = useAuthStore((s) => s.secretKey);
   const [search, setSearch] = useState("");
   const [showFriends, setShowFriends] = useState(false);
+
+  const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
+  const setLocked = useAppLockStore((s) => s.setLocked);
 
   const friends = useQuery(
     api.friends.getFriends,
@@ -229,6 +233,9 @@ export default function ChatList() {
         onPin={handleMultiPin}
         onDelete={handleMultiDelete}
         onCancelSelect={clearSelection}
+        onLockClick={() => {
+          if (isAppLockEnabled) setLocked(true);
+        }}
       />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-16">

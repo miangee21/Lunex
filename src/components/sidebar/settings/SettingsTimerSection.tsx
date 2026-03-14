@@ -1,5 +1,5 @@
 // src/components/sidebar/settings/SettingsTimerSection.tsx
-import { Timer, CheckCheck, ChevronRight } from "lucide-react";
+import { Timer, CheckCheck, ChevronRight, Lock } from "lucide-react";
 
 const TIMER_LABELS: Record<string, string> = {
   off: "Off",
@@ -19,6 +19,8 @@ interface SettingsTimerSectionProps {
   savingTimer: boolean;
   onTogglePicker: () => void;
   onSelectTimer: (value: string) => void;
+  isAppLockEnabled: boolean;
+  onAppLockClick: () => void;
 }
 
 export default function SettingsTimerSection({
@@ -27,6 +29,8 @@ export default function SettingsTimerSection({
   savingTimer,
   onTogglePicker,
   onSelectTimer,
+  isAppLockEnabled,
+  onAppLockClick,
 }: SettingsTimerSectionProps) {
   return (
     <div>
@@ -106,6 +110,34 @@ export default function SettingsTimerSection({
             })}
           </div>
         </div>
+
+        <div className="h-px bg-border/40 ml-12" />
+        <button
+          onClick={onAppLockClick}
+          className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex items-center justify-center w-7 h-7 rounded-md ${isAppLockEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+            >
+              <Lock size={15} />
+            </div>
+            <span className="text-[14px] font-medium text-foreground">
+              App Lock
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[12px] font-medium ${isAppLockEnabled ? "text-primary" : "text-muted-foreground"}`}
+            >
+              {isAppLockEnabled ? "On" : "Off"}
+            </span>
+            <ChevronRight
+              size={16}
+              className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
+            />
+          </div>
+        </button>
       </div>
     </div>
   );

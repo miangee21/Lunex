@@ -17,7 +17,6 @@ import {
   CheckCheck,
   Bell,
   ChevronRight,
-  Lock,
 } from "lucide-react";
 
 interface SettingsPanelProps {
@@ -158,6 +157,8 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                   savingTimer={savingTimer}
                   onTogglePicker={() => setShowTimerPicker((v) => !v)}
                   onSelectTimer={handleDisappearingChange}
+                  isAppLockEnabled={isAppLockEnabled}
+                  onAppLockClick={() => setShowAppLock(true)}
                 />
                 <div className="pb-6">
                   <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
@@ -185,33 +186,6 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                               userSettings?.privacyNotifications ?? "everyone"
                             ]
                           }
-                        </span>
-                        <ChevronRight
-                          size={16}
-                          className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
-                        />
-                      </div>
-                    </button>
-                    <div className="h-px bg-border/40 ml-12" />
-                    <button
-                      onClick={() => setShowAppLock(true)}
-                      className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex items-center justify-center w-7 h-7 rounded-md ${isAppLockEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
-                        >
-                          <Lock size={15} />
-                        </div>
-                        <span className="text-[14px] font-medium text-foreground">
-                          App Lock
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[12px] font-medium ${isAppLockEnabled ? "text-primary" : "text-muted-foreground"}`}
-                        >
-                          {isAppLockEnabled ? "On" : "Off"}
                         </span>
                         <ChevronRight
                           size={16}

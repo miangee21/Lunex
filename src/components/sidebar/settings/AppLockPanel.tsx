@@ -1,107 +1,44 @@
 // src/components/sidebar/settings/AppLockPanel.tsx
-import { useState } from "react";
-import { ArrowLeft, Lock, ShieldCheck, Timer, Delete } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 import { useAppLockStore } from "@/store/appLockStore";
 import { useAuthStore } from "@/store/authStore";
+import AppLockPinPad from "./AppLockPinPad";
+import AppLockTimerSection from "./AppLockTimerSection";
+import { toast } from "sonner";
 import {
   encryptMnemonicWithPin,
   decryptMnemonicWithPin,
 } from "@/crypto/pinEncryption";
-import { toast } from "sonner";
 
 interface AppLockPanelProps {
   onBack: () => void;
 }
 
-const AUTO_LOCK_OPTIONS = [
-  { value: "1min", label: "1 Minute" },
-  { value: "5min", label: "5 Minutes" },
-  { value: "30min", label: "30 Minutes" },
-  { value: "1hr", label: "1 Hour" },
-] as const;
-
-const PAD = [
-  ["1", "2", "3"],
-  ["4", "5", "6"],
-  ["7", "8", "9"],
-  ["del", "0", ""],
-];
-
 type SetupStep = "idle" | "enter" | "confirm" | "disable_confirm";
-
-function PinPad({
-  pin,
-  onPad,
-  isLoading,
-  shake,
-}: {
-  pin: string[];
-  onPad: (val: string) => void;
-  isLoading: boolean;
-  shake: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-5 w-full">
-      <div
-        className={`flex items-center gap-3 ${shake ? "animate-[shake_0.5s_ease-in-out]" : ""}`}
-      >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className={`w-3 h-3 rounded-full transition-all duration-200 ${
-              i < pin.length
-                ? "bg-primary scale-110 shadow-sm shadow-primary/40"
-                : "bg-muted-foreground/25 border border-border"
-            }`}
-          />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 w-full">
-        {PAD.flat().map((key, idx) => {
-          if (key === "del") {
-            return (
-              <button
-                key={idx}
-                onClick={() => onPad("del")}
-                disabled={isLoading || pin.length === 0}
-                className="h-12 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent active:scale-95 transition-all disabled:opacity-30"
-              >
-                <Delete size={18} />
-              </button>
-            );
-          }
-          if (key === "") {
-            return <div key={idx} />;
-          }
-          return (
-            <button
-              key={idx}
-              onClick={() => onPad(key)}
-              disabled={isLoading}
-              className="h-12 rounded-xl text-lg font-semibold text-foreground bg-accent/50 hover:bg-accent active:scale-95 transition-all border border-border/40 disabled:opacity-50"
-            >
-              {key}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default function AppLockPanel({ onBack }: AppLockPanelProps) {
   const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
-  const autoLockTimer = useAppLockStore((s) => s.autoLockTimer);
   const setAppLockEnabled = useAppLockStore((s) => s.setAppLockEnabled);
-  const setAutoLockTimer = useAppLockStore((s) => s.setAutoLockTimer);
-  const setLocked = useAppLockStore((s) => s.setLocked);
 
   const [setupStep, setSetupStep] = useState<SetupStep>("idle");
   const [firstPin, setFirstPin] = useState<string>("");
   const [pin, setPin] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (setupStep === "idle") return;
+      if (e.key === "Backspace") {
+        handlePad("del");
+      } else if (/^[0-9]$/.test(e.key)) {
+        handlePad(e.key);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [setupStep, pin, isLoading]);
 
   function triggerShake() {
     setShake(true);
@@ -118,7 +55,6 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
     if (pin.length >= 6) return;
     const newPin = [...pin, val];
     setPin(newPin);
-
     if (newPin.length === 6) {
       setTimeout(() => handlePinComplete(newPin.join("")), 100);
     }
@@ -131,7 +67,6 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
       setSetupStep("confirm");
       return;
     }
-
     if (setupStep === "confirm") {
       if (enteredPin !== firstPin) {
         triggerShake();
@@ -143,7 +78,6 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
       await savePin(enteredPin);
       return;
     }
-
     if (setupStep === "disable_confirm") {
       await verifyAndDisable(enteredPin);
       return;
@@ -267,7 +201,7 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
                 {stepSubtitle}
               </p>
             </div>
-            <PinPad
+            <AppLockPinPad
               pin={pin}
               onPad={handlePad}
               isLoading={isLoading}
@@ -321,53 +255,8 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
 
             {isAppLockEnabled && (
               <>
-                <div>
-                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
-                    Auto-lock after
-                  </p>
-                  <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-                    {AUTO_LOCK_OPTIONS.map((opt, idx) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setAutoLockTimer(opt.value)}
-                        className={`w-full flex items-center justify-between px-3 py-3 hover:bg-accent/20 transition-colors ${
-                          idx !== AUTO_LOCK_OPTIONS.length - 1
-                            ? "border-b border-border/30"
-                            : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex items-center justify-center w-7 h-7 rounded-md ${autoLockTimer === opt.value ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
-                          >
-                            <Timer size={14} />
-                          </div>
-                          <span
-                            className={`text-[14px] font-medium ${autoLockTimer === opt.value ? "text-primary" : "text-foreground"}`}
-                          >
-                            {opt.label}
-                          </span>
-                        </div>
-                        {autoLockTimer === opt.value && (
-                          <div className="w-2 h-2 rounded-full bg-primary" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+                <AppLockTimerSection />
                 <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-                  <button
-                    onClick={() => setLocked(true)}
-                    className="w-full flex items-center gap-3 px-3 py-3 hover:bg-accent/20 transition-colors border-b border-border/30"
-                  >
-                    <div className="flex items-center justify-center w-7 h-7 rounded-md bg-muted text-muted-foreground">
-                      <Lock size={15} />
-                    </div>
-                    <span className="text-[14px] font-medium text-foreground">
-                      Lock Now
-                    </span>
-                  </button>
                   <button
                     onClick={() => {
                       setSetupStep("enter");

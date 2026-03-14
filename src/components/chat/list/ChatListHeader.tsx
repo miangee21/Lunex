@@ -1,5 +1,13 @@
 // src/components/chat/list/ChatListHeader.tsx
-import { Search, Plus, X, ArrowLeft, Trash2, Pin } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  ArrowLeft,
+  Trash2,
+  Pin,
+  LockOpen,
+} from "lucide-react";
 import DotsMenu from "@/components/sidebar/DotsMenu";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 
@@ -15,6 +23,7 @@ interface ChatListHeaderProps {
   onPin: () => void;
   onDelete: () => void;
   onCancelSelect: () => void;
+  onLockClick: () => void;
 }
 
 export default function ChatListHeader({
@@ -29,6 +38,7 @@ export default function ChatListHeader({
   onPin,
   onDelete,
   onCancelSelect,
+  onLockClick,
 }: ChatListHeaderProps) {
   return (
     <>
@@ -56,6 +66,13 @@ export default function ChatListHeader({
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <h2 className="text-foreground font-bold text-lg">Chats</h2>
           <div className="flex items-center gap-2">
+            <button
+              onClick={onLockClick}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+              title="Lock App"
+            >
+              <LockOpen size={16} />
+            </button>
             <button
               onClick={onNewChat}
               className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground hover:opacity-90 transition-opacity"
