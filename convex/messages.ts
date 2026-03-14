@@ -501,6 +501,90 @@ export const togglePinMessage = mutation({
   },
 });
 
+export const getMessagesBefore = query({
+  args: {
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    beforeSentAt: v.number(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const deletion = await ctx.db
+      .query("chatDeletions")
+      .withIndex("by_user_conversation", (q) =>
+        q.eq("userId", args.userId).eq("conversationId", args.conversationId),
+      )
+      .unique();
+
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) =>
+        q
+          .eq("conversationId", args.conversationId)
+          .lt("sentAt", args.beforeSentAt),
+      )
+      .order("desc")
+      .take(args.limit);
+
+    const ordered = [...messages].reverse();
+
+    const filteredMessages = deletion
+      ? ordered.filter((m) => m.sentAt > deletion.deletedAt)
+      : ordered;
+
+    const now = Date.now();
+
+    return filteredMessages
+      .filter((m) => {
+        if (m.deletedForEveryone) return false;
+        if (m.deletedForSender && m.senderId === args.userId) return false;
+        if (m.deletedForReceiver && m.senderId !== args.userId) return false;
+        if (
+          m.disappearsAt !== undefined &&
+          m.disappearsAt !== null &&
+          m.disappearsAt !== 0 &&
+          m.disappearsAt <= now
+        )
+          return false;
+        return true;
+      })
+      .map((m) => {
+        const isMediaExpired =
+          m.mediaExpiresAt !== undefined &&
+          m.mediaExpiresAt !== null &&
+          m.mediaExpiresAt !== 0 &&
+          m.mediaExpiresAt <= now;
+        return {
+          id: m._id,
+          conversationId: m.conversationId,
+          senderId: m.senderId,
+          encryptedContent: m.encryptedContent,
+          iv: m.iv,
+          type: m.type,
+          mediaStorageId: isMediaExpired ? null : (m.mediaStorageId ?? null),
+          mediaIv: isMediaExpired ? null : (m.mediaIv ?? null),
+          mediaOriginalName: isMediaExpired
+            ? null
+            : (m.mediaOriginalName ?? null),
+          mediaDeletedAt: isMediaExpired ? now : (m.mediaDeletedAt ?? null),
+          uploadBatchId: m.uploadBatchId ?? null,
+          replyToMessageId: m.replyToMessageId ?? null,
+          reactions: m.reactions ?? [],
+          editedAt: m.editedAt ?? null,
+          disappearsAt: m.disappearsAt ?? null,
+          sentAt: m.sentAt,
+          readBy: (m.readBy ?? []).filter(
+            (r: any) => r.userId === args.userId || r.time !== -1,
+          ),
+          deliveredTo: m.deliveredTo ?? [],
+          isOwn: m.senderId === args.userId,
+          starredBy: m.starredBy ?? [],
+          isStarred: (m.starredBy ?? []).includes(args.userId),
+        };
+      });
+  },
+});
+
 export const getStarredMessages = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

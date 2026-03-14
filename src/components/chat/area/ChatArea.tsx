@@ -58,6 +58,9 @@ export default function ChatArea() {
     isTyping,
     deleteMessageForMe,
     deleteMessageForEveryone,
+    loadMore,
+    hasMore,
+    isLoadingMore,
   } = useChatData({ activeChat, userId });
 
   const currentPending = activeChat?.conversationId
@@ -104,13 +107,15 @@ export default function ChatArea() {
     deleteMessageForEveryone,
   });
 
-  const { messagesEndRef } = useChatScroll({
+  const { messagesEndRef, scrollContainerRef } = useChatScroll({
     decryptedMessagesLength: decryptedMessages.length,
     currentPendingLength: currentPending.length,
     jumpToMessageId,
     setJumpToMessageId,
     scrollToBottomTrigger,
     isTyping,
+    onScrollToTop: loadMore,
+    isLoadingMore,
   });
 
   if (!activeChat) return null;
@@ -155,6 +160,7 @@ export default function ChatArea() {
       />
 
       <div
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2 relative z-50"
         onContextMenu={(e) => {
           e.preventDefault();
@@ -172,11 +178,21 @@ export default function ChatArea() {
           setContextMenu({ x, y });
         }}
       >
+        {isLoadingMore && (
+          <div className="flex justify-center py-3">
+            <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
-        ) : decryptedMessages.length === 0 && currentPending.length === 0 ? (
+        ) : rawMessages === undefined ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          </div>
+        ) : rawMessages === undefined ? null : decryptedMessages.length === 0 && currentPending.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-5 opacity-90 animate-in fade-in duration-500">
             <LunexLogo className="w-24 h-24 rounded-full shadow-lg border-2 border-primary/20" />
             <div className="text-center space-y-1">

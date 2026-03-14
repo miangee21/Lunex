@@ -1,5 +1,5 @@
 //src/hooks/useChatScroll.ts
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 type Deps = {
   decryptedMessagesLength: number;
@@ -8,6 +8,8 @@ type Deps = {
   setJumpToMessageId: (id: string | null) => void;
   scrollToBottomTrigger: number;
   isTyping: boolean | undefined;
+  onScrollToTop?: () => void;
+  isLoadingMore?: boolean;
 };
 
 export function useChatScroll({
@@ -17,10 +19,25 @@ export function useChatScroll({
   setJumpToMessageId,
   scrollToBottomTrigger,
   isTyping,
+  onScrollToTop,
+  isLoadingMore,
 }: Deps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevMsgCount = useRef(0);
   const prevScrollTrigger = useRef(scrollToBottomTrigger);
+  const previousScrollData = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+
+  // Scroll to bottom on first load
+  useEffect(() => {
+    if (decryptedMessagesLength > 0 && prevMsgCount.current === 0) {
+      const el = scrollContainerRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+      prevMsgCount.current = decryptedMessagesLength;
+    }
+  }, [decryptedMessagesLength]);
 
   useEffect(() => {
     if (jumpToMessageId && decryptedMessagesLength > 0) {
@@ -73,5 +90,35 @@ export function useChatScroll({
     isTyping,
   ]);
 
-  return { messagesEndRef };
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || isLoadingMore) return;
+    if (el.scrollTop < 80) {
+      previousScrollData.current = {
+        scrollHeight: el.scrollHeight,
+        scrollTop: el.scrollTop,
+      };
+      onScrollToTop?.();
+    }
+  }, [onScrollToTop, isLoadingMore]);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [handleScroll]);
+
+  useEffect(() => {
+    if (!isLoadingMore && previousScrollData.current) {
+      const el = scrollContainerRef.current;
+      if (!el) return;
+      const { scrollHeight, scrollTop } = previousScrollData.current;
+      const heightDiff = el.scrollHeight - scrollHeight;
+      el.scrollTop = scrollTop + heightDiff;
+      previousScrollData.current = null;
+    }
+  }, [decryptedMessagesLength, isLoadingMore]);
+
+  return { messagesEndRef, scrollContainerRef };
 }

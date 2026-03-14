@@ -1,6 +1,6 @@
 //src/hooks/useChatData.ts
-import { useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useChatStore } from "@/store/chatStore";
@@ -16,6 +16,12 @@ type Deps = {
 export function useChatData({ activeChat, userId }: Deps) {
   const { syncChatTheme, syncDisappearing, markReactionAsSeen } =
     useChatStore();
+
+  const convex = useConvex();
+  const [olderMessages, setOlderMessages] = useState<any[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const oldestSentAtRef = useRef<number | null>(null);
 
   const cloudTheme = useQuery(
     api.chatThemes.getChatTheme,
@@ -43,6 +49,62 @@ export function useChatData({ activeChat, userId }: Deps) {
         }
       : "skip",
   );
+
+  // Reset pagination when conversation changes
+  useEffect(() => {
+    setOlderMessages([]);
+    setHasMore(true);
+    setIsLoadingMore(false);
+    oldestSentAtRef.current = null;
+  }, [activeChat?.conversationId]);
+
+  // Set initial cursor once rawMessages first arrives
+  useEffect(() => {
+    if (rawMessages && rawMessages.length > 0 && oldestSentAtRef.current === null) {
+      oldestSentAtRef.current = rawMessages[0].sentAt;
+    }
+  }, [rawMessages]);
+
+  // Load older messages — one-shot fetch, not reactive
+  const loadMore = useCallback(async () => {
+    if (!activeChat?.conversationId || !userId) return;
+    if (isLoadingMore || !hasMore) return;
+    if (oldestSentAtRef.current === null) return;
+
+    setIsLoadingMore(true);
+    try {
+      const result = await convex.query(api.messages.getMessagesBefore, {
+        conversationId: activeChat.conversationId as Id<"conversations">,
+        userId: userId as Id<"users">,
+        beforeSentAt: oldestSentAtRef.current,
+        limit: 30,
+      });
+
+      if (result.length === 0) {
+        setHasMore(false);
+      } else {
+        oldestSentAtRef.current = result[0].sentAt;
+        setOlderMessages((prev) => {
+          const existingIds = new Set(prev.map((m) => m.id));
+          const newOnes = result.filter((m: any) => !existingIds.has(m.id));
+          return [...newOnes, ...prev];
+        });
+        if (result.length < 30) setHasMore(false);
+      }
+    } catch (err) {
+      console.error("loadMore failed:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeChat?.conversationId, userId, isLoadingMore, hasMore, convex]);
+
+  // Merge older history + live messages
+  const mergedRawMessages = useMemo(() => {
+    if (!rawMessages) return olderMessages;
+    const liveIds = new Set(rawMessages.map((m) => m.id));
+    const uniqueOlder = olderMessages.filter((m) => !liveIds.has(m.id));
+    return [...uniqueOlder, ...rawMessages];
+  }, [olderMessages, rawMessages]);
 
   const otherUser = useQuery(
     api.users.getUserById,
@@ -148,10 +210,13 @@ export function useChatData({ activeChat, userId }: Deps) {
 
   return {
     conversationData,
-    rawMessages,
+    rawMessages: mergedRawMessages,
     otherUser,
     isTyping: typingUsers && typingUsers.length > 0,
     deleteMessageForMe,
     deleteMessageForEveryone,
+    loadMore,
+    hasMore,
+    isLoadingMore,
   };
 }
