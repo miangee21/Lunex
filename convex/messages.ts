@@ -16,13 +16,15 @@ export const getMessages = query({
       )
       .unique();
 
-    const messages = await ctx.db
+    const messagesQuery = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
         q.eq("conversationId", args.conversationId),
       )
-      .order("asc")
-      .collect();
+      .order("desc")
+      .take(30);
+
+    const messages = messagesQuery.reverse();
 
     const filteredMessages = deletion
       ? messages.filter((m) => m.sentAt > deletion.deletedAt)

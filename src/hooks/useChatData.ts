@@ -50,7 +50,6 @@ export function useChatData({ activeChat, userId }: Deps) {
       : "skip",
   );
 
-  // Reset pagination when conversation changes
   useEffect(() => {
     setOlderMessages([]);
     setHasMore(true);
@@ -58,14 +57,16 @@ export function useChatData({ activeChat, userId }: Deps) {
     oldestSentAtRef.current = null;
   }, [activeChat?.conversationId]);
 
-  // Set initial cursor once rawMessages first arrives
   useEffect(() => {
-    if (rawMessages && rawMessages.length > 0 && oldestSentAtRef.current === null) {
+    if (
+      rawMessages &&
+      rawMessages.length > 0 &&
+      oldestSentAtRef.current === null
+    ) {
       oldestSentAtRef.current = rawMessages[0].sentAt;
     }
   }, [rawMessages]);
 
-  // Load older messages — one-shot fetch, not reactive
   const loadMore = useCallback(async () => {
     if (!activeChat?.conversationId || !userId) return;
     if (isLoadingMore || !hasMore) return;
@@ -98,8 +99,8 @@ export function useChatData({ activeChat, userId }: Deps) {
     }
   }, [activeChat?.conversationId, userId, isLoadingMore, hasMore, convex]);
 
-  // Merge older history + live messages
   const mergedRawMessages = useMemo(() => {
+    if (rawMessages === undefined) return undefined;
     if (!rawMessages) return olderMessages;
     const liveIds = new Set(rawMessages.map((m) => m.id));
     const uniqueOlder = olderMessages.filter((m) => !liveIds.has(m.id));
@@ -206,7 +207,11 @@ export function useChatData({ activeChat, userId }: Deps) {
       });
       markReactionAsSeen(activeChat.conversationId, Date.now());
     }
-  }, [activeChat?.conversationId, rawMessages?.length, markReactionAsSeen]);
+  }, [
+    activeChat?.conversationId,
+    rawMessages?.[rawMessages.length - 1]?.id,
+    markReactionAsSeen,
+  ]);
 
   return {
     conversationData,
