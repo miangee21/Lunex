@@ -4,6 +4,39 @@ import MessageBubble from "@/components/chat/bubble/ChatBubble";
 import MediaGridGroup from "@/components/chat/media/MediaGridGroup";
 import { DecryptedMessage } from "@/types/chat";
 
+function getDateLabel(timestamp: number): string {
+  const msgDate = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (isSameDay(msgDate, today)) return "Today";
+  if (isSameDay(msgDate, yesterday)) return "Yesterday";
+
+  return msgDate.toLocaleDateString([], {
+    month: "long",
+    day: "numeric",
+    year: msgDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  });
+}
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center my-3 gap-3">
+      <div className="h-px flex-1 bg-border/50" />
+      <span className="text-[11px] font-semibold text-muted-foreground bg-accent/60 px-3 py-1 rounded-full select-none">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border/50" />
+    </div>
+  );
+}
+
 type ActiveChat = {
   conversationId?: string | null;
   userId?: string;
@@ -92,6 +125,7 @@ export default function MessageList({
     const elements: React.ReactNode[] = [];
 
     let i = 0;
+    let lastDateLabel: string | null = null;
 
     while (i < visibleMessages.length) {
       const msg = visibleMessages[i];
@@ -115,6 +149,17 @@ export default function MessageList({
         if (group.length > 1) {
           const displayGroup = group.slice(0, 4);
           const extraCount = group.length > 4 ? group.length - 4 : 0;
+
+          const currentDateLabel = getDateLabel(msg.timestamp);
+          if (currentDateLabel !== lastDateLabel) {
+            elements.push(
+              <DateSeparator
+                key={`date-sep-${msg.id}`}
+                label={currentDateLabel}
+              />,
+            );
+            lastDateLabel = currentDateLabel;
+          }
 
           elements.push(
             <div
@@ -156,6 +201,14 @@ export default function MessageList({
           i = j;
           continue;
         }
+      }
+
+      const currentDateLabel = getDateLabel(msg.timestamp);
+      if (currentDateLabel !== lastDateLabel) {
+        elements.push(
+          <DateSeparator key={`date-sep-${msg.id}`} label={currentDateLabel} />,
+        );
+        lastDateLabel = currentDateLabel;
       }
 
       elements.push(
