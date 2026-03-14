@@ -1,6 +1,7 @@
 //src/components/sidebar/AvatarMenu.tsx
 import { useAuthStore } from "@/store/authStore";
 import { useChatStore } from "@/store/chatStore";
+import { useAppLockStore } from "@/store/appLockStore";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -35,12 +36,19 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
       if (userId) {
         const typedUserId = userId as Id<"users">;
         await setOnlineStatus({ userId: typedUserId, isOnline: false });
-
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
     } catch (error) {
       console.error("Failed to set offline status:", error);
     } finally {
+      try {
+        const { load } = await import("@tauri-apps/plugin-store");
+        const store = await load("lunex-applock.json");
+        await store.clear();
+        await store.save();
+      } catch {}
+      useAppLockStore.getState().setAppLockEnabled(false);
+      useAppLockStore.getState().setLocked(false);
       logout();
       toast.success("Logged out successfully!");
       navigate("/login");

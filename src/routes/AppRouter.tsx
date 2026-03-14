@@ -4,19 +4,71 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
 import { useChatStore } from "@/store/chatStore";
+import { useAppLockStore } from "@/store/appLockStore";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-
 import SignupPage from "@/pages/SignupPage";
 import LoginPage from "@/pages/LoginPage";
 import ChatPage from "@/pages/ChatPage";
 import SplashPage from "@/pages/SplashPage";
+import PinLockScreen from "@/components/auth/PinLockScreen";
 
 export default function AppRouter() {
   const [showSplash, setShowSplash] = useState(true);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.userId);
+
+  const isLocked = useAppLockStore((s) => s.isLocked);
+  const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
+  const autoLockTimer = useAppLockStore((s) => s.autoLockTimer);
+  const setLocked = useAppLockStore((s) => s.setLocked);
+
+  useEffect(() => {
+    async function checkLock() {
+      try {
+        const { load } = await import("@tauri-apps/plugin-store");
+        const store = await load("lunex-applock.json");
+        const lockData = await store.get("lockData");
+        if (lockData) {
+          useAppLockStore.getState().setAppLockEnabled(true);
+          useAppLockStore.getState().setLocked(true);
+        }
+      } catch {}
+    }
+    checkLock();
+  }, []);
+
+  useEffect(() => {
+    if (!isAppLockEnabled || !isAuthenticated) return;
+    const timerMs = {
+      "1min": 60000,
+      "5min": 300000,
+      "30min": 1800000,
+      "1hr": 3600000,
+    };
+    const delay = timerMs[autoLockTimer];
+    let timer: ReturnType<typeof setTimeout>;
+
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setLocked(true), delay);
+    };
+
+    window.addEventListener("mousemove", reset);
+    window.addEventListener("keydown", reset);
+    window.addEventListener("click", reset);
+    window.addEventListener("touchstart", reset);
+    reset();
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("mousemove", reset);
+      window.removeEventListener("keydown", reset);
+      window.removeEventListener("click", reset);
+      window.removeEventListener("touchstart", reset);
+    };
+  }, [isAppLockEnabled, isAuthenticated, autoLockTimer, setLocked]);
 
   const userRecord = useQuery(
     api.users.getUserById,
@@ -61,6 +113,8 @@ export default function AppRouter() {
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
   }, []);
+
+  if (isAppLockEnabled && isLocked) return <PinLockScreen />;
 
   if (showSplash) return <SplashPage onComplete={handleSplashComplete} />;
 

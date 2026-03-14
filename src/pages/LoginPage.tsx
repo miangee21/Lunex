@@ -50,6 +50,7 @@ export default function LoginPage() {
         username: user.username,
         publicKey: keyPair.publicKey,
         secretKey: keyPair.secretKey,
+        mnemonic: enteredMnemonic,
       });
       await setOnlineStatus({ userId: user._id, isOnline: true });
 

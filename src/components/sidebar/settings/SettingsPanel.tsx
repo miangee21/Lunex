@@ -7,6 +7,8 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import PrivacySelectorModal from "./PrivacySelectorModal";
 import SettingsPrivacySection from "./SettingsPrivacySection";
 import SettingsTimerSection from "./SettingsTimerSection";
+import AppLockPanel from "./AppLockPanel";
+import { useAppLockStore } from "@/store/appLockStore";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -15,6 +17,7 @@ import {
   CheckCheck,
   Bell,
   ChevronRight,
+  Lock,
 } from "lucide-react";
 
 interface SettingsPanelProps {
@@ -56,6 +59,9 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const [savingTimer, setSavingTimer] = useState(false);
   const [activePrivacyField, setActivePrivacyField] =
     useState<PrivacyField | null>(null);
+  const [showAppLock, setShowAppLock] = useState(false);
+
+  const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
 
   async function handleDisappearingChange(value: string) {
     if (!userId) return;
@@ -117,78 +123,109 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
 
   return (
     <>
-      <div
-        className={`flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200 ${themeMode} ${themeClass}`}
-      >
-        <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
-          <button
-            onClick={onBack}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h2 className="text-foreground font-semibold text-[15px]">
-            Settings
-          </h2>
-        </div>
+      {showAppLock ? (
+        <AppLockPanel onBack={() => setShowAppLock(false)} />
+      ) : (
+        <div
+          className={`flex flex-col h-full bg-sidebar animate-in slide-in-from-left-4 duration-200 ${themeMode} ${themeClass}`}
+        >
+          <div className="flex items-center gap-3 px-4 h-14 border-b border-border/40 shrink-0">
+            <button
+              onClick={onBack}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h2 className="text-foreground font-semibold text-[15px]">
+              Settings
+            </h2>
+          </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 custom-scrollbar">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-20">
-              <div className="w-5 h-5 rounded-full border-[1.5px] border-primary border-t-transparent animate-spin" />
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <SettingsPrivacySection
-                privacySettingsList={privacySettingsList}
-                onOpenPrivacy={setActivePrivacyField}
-              />
-              <SettingsTimerSection
-                currentDisappearing={currentDisappearing}
-                showTimerPicker={showTimerPicker}
-                savingTimer={savingTimer}
-                onTogglePicker={() => setShowTimerPicker((v) => !v)}
-                onSelectTimer={handleDisappearingChange}
-              />
-              <div className="pb-6">
-                <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
-                  App
-                </p>
-                <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
-                  <button
-                    onClick={() =>
-                      setActivePrivacyField("privacyNotifications")
-                    }
-                    className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary">
-                        <Bell size={15} />
+          <div className="flex-1 overflow-y-auto px-4 py-5 custom-scrollbar">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-20">
+                <div className="w-5 h-5 rounded-full border-[1.5px] border-primary border-t-transparent animate-spin" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <SettingsPrivacySection
+                  privacySettingsList={privacySettingsList}
+                  onOpenPrivacy={setActivePrivacyField}
+                />
+                <SettingsTimerSection
+                  currentDisappearing={currentDisappearing}
+                  showTimerPicker={showTimerPicker}
+                  savingTimer={savingTimer}
+                  onTogglePicker={() => setShowTimerPicker((v) => !v)}
+                  onSelectTimer={handleDisappearingChange}
+                />
+                <div className="pb-6">
+                  <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
+                    App
+                  </p>
+                  <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+                    <button
+                      onClick={() =>
+                        setActivePrivacyField("privacyNotifications")
+                      }
+                      className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary">
+                          <Bell size={15} />
+                        </div>
+                        <span className="text-[14px] font-medium text-foreground">
+                          Notifications
+                        </span>
                       </div>
-                      <span className="text-[14px] font-medium text-foreground">
-                        Notifications
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
-                        {
-                          PRIVACY_LABELS[
-                            userSettings?.privacyNotifications ?? "everyone"
-                          ]
-                        }
-                      </span>
-                      <ChevronRight
-                        size={16}
-                        className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
-                      />
-                    </div>
-                  </button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] text-muted-foreground font-medium truncate max-w-30">
+                          {
+                            PRIVACY_LABELS[
+                              userSettings?.privacyNotifications ?? "everyone"
+                            ]
+                          }
+                        </span>
+                        <ChevronRight
+                          size={16}
+                          className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
+                        />
+                      </div>
+                    </button>
+                    <div className="h-px bg-border/40 ml-12" />
+                    <button
+                      onClick={() => setShowAppLock(true)}
+                      className="w-full flex items-center justify-between px-3 py-3 bg-transparent hover:bg-accent/20 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex items-center justify-center w-7 h-7 rounded-md ${isAppLockEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+                        >
+                          <Lock size={15} />
+                        </div>
+                        <span className="text-[14px] font-medium text-foreground">
+                          App Lock
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[12px] font-medium ${isAppLockEnabled ? "text-primary" : "text-muted-foreground"}`}
+                        >
+                          {isAppLockEnabled ? "On" : "Off"}
+                        </span>
+                        <ChevronRight
+                          size={16}
+                          className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors"
+                        />
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {activePrivacyField && userSettings && (
         <PrivacySelectorModal
