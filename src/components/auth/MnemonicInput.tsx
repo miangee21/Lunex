@@ -5,9 +5,14 @@ import { Eye, EyeOff } from "lucide-react";
 interface MnemonicInputProps {
   words: string[];
   setWords: React.Dispatch<React.SetStateAction<string[]>>;
+  hideHeading?: boolean;
 }
 
-export default function MnemonicInput({ words, setWords }: MnemonicInputProps) {
+export default function MnemonicInput({
+  words,
+  setWords,
+  hideHeading,
+}: MnemonicInputProps) {
   const [showWords, setShowWords] = useState(false);
 
   function handleWordChange(index: number, value: string) {
@@ -48,11 +53,13 @@ export default function MnemonicInput({ words, setWords }: MnemonicInputProps) {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <div className="flex items-center justify-center px-1">
-        <span className="text-sm font-semibold text-muted-foreground">
-          Enter Recovery Phrase
-        </span>
-      </div>
+      {!hideHeading && (
+        <div className="flex items-center justify-center px-1">
+          <span className="text-sm font-semibold text-muted-foreground">
+            Enter Recovery Phrase
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
         {words.map((word, index) => (

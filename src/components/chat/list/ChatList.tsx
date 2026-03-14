@@ -236,6 +236,7 @@ export default function ChatList() {
         onLockClick={() => {
           if (isAppLockEnabled) setLocked(true);
         }}
+        isAppLockEnabled={isAppLockEnabled}
       />
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pb-16">
