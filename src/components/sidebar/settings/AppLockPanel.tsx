@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import AppLockPinPad from "./AppLockPinPad";
 import AppLockTimerSection from "./AppLockTimerSection";
 import { toast } from "sonner";
+import { load } from "@tauri-apps/plugin-store";
 import {
   encryptMnemonicWithPin,
   decryptMnemonicWithPin,
@@ -98,7 +99,6 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
         mnemonic,
         enteredPin,
       );
-      const { load } = await import("@tauri-apps/plugin-store");
       const store = await load("lunex-applock.json");
       await store.set("lockData", { ciphertext, iv, createdAt: Date.now() });
       await store.save();
@@ -119,7 +119,6 @@ export default function AppLockPanel({ onBack }: AppLockPanelProps) {
   async function verifyAndDisable(enteredPin: string) {
     setIsLoading(true);
     try {
-      const { load } = await import("@tauri-apps/plugin-store");
       const store = await load("lunex-applock.json");
       const lockData = await store.get<{ ciphertext: string; iv: string }>(
         "lockData",

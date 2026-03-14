@@ -8,6 +8,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { User, LogOut } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { load } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 
 interface AvatarMenuProps {
@@ -42,11 +43,12 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
       console.error("Failed to set offline status:", error);
     } finally {
       try {
-        const { load } = await import("@tauri-apps/plugin-store");
         const store = await load("lunex-applock.json");
         await store.clear();
         await store.save();
-      } catch {}
+      } catch (err) {
+        console.error("Failed to clear store on logout:", err);
+      }
       useAppLockStore.getState().setAppLockEnabled(false);
       useAppLockStore.getState().setLocked(false);
       logout();

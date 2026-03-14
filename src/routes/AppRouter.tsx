@@ -13,6 +13,7 @@ import LoginPage from "@/pages/LoginPage";
 import ChatPage from "@/pages/ChatPage";
 import SplashPage from "@/pages/SplashPage";
 import PinLockScreen from "@/components/auth/PinLockScreen";
+import { load } from "@tauri-apps/plugin-store";
 
 export default function AppRouter() {
   const [showSplash, setShowSplash] = useState(true);
@@ -27,14 +28,15 @@ export default function AppRouter() {
   useEffect(() => {
     async function checkLock() {
       try {
-        const { load } = await import("@tauri-apps/plugin-store");
         const store = await load("lunex-applock.json");
         const lockData = await store.get("lockData");
         if (lockData) {
           useAppLockStore.getState().setAppLockEnabled(true);
           useAppLockStore.getState().setLocked(true);
         }
-      } catch {}
+      } catch (err) {
+        console.error("Startup lock check failed:", err);
+      }
     }
     checkLock();
   }, []);
