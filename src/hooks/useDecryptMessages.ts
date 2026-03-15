@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { decryptMessage } from "@/crypto/encryption";
 import { base64ToKey } from "@/crypto/keyDerivation";
 import { DecryptedMessage } from "@/types/chat";
+import { useChatStore } from "@/store/chatStore";
 
 type RawMessage = {
   id: string;
@@ -170,6 +171,10 @@ export function useDecryptMessages({
     }, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    useChatStore.getState().setCurrentDecryptedMessages(decryptedMessages);
+  }, [decryptedMessages]);
 
   return { decryptedMessages, setDecryptedMessages };
 }

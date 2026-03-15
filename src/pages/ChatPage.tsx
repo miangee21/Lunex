@@ -11,6 +11,7 @@ import MyProfilePanel from "@/components/profile/MyProfilePanel";
 import ChatArea from "@/components/chat/area/ChatArea";
 import OtherUserPanel from "@/components/profile/OtherUserPanel";
 import MessageInfoPanel from "@/components/chat/misc/MessageInfoPanel";
+import ChatSearchPanel from "@/components/chat/misc/ChatSearchPanel";
 import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel";
 import { useAppNotifications } from "@/hooks/useAppNotifications";
 import { MessageSquare } from "lucide-react";
@@ -26,6 +27,7 @@ export default function ChatPage() {
     sidebarView,
     activeChat,
     profilePanelOpen,
+    searchPanelOpen,
     selectedMessageForInfo,
   } = useChatStore();
 
@@ -97,11 +99,11 @@ export default function ChatPage() {
       if (width >= 1100 && prevWidth < 1100) {
         state.setSidebarOpen(true);
       } else if (width >= 900 && prevWidth < 900) {
-        if (!state.profilePanelOpen) {
+        if (!state.profilePanelOpen && !state.searchPanelOpen) {
           state.setSidebarOpen(true);
         }
       } else if (width < 1100 && prevWidth >= 1100) {
-        if (state.profilePanelOpen) {
+        if (state.profilePanelOpen || state.searchPanelOpen) {
           state.setSidebarOpen(false);
         }
       } else if (width < 900 && prevWidth >= 900) {
@@ -183,9 +185,11 @@ export default function ChatPage() {
           </div>
         )}
 
-        {activeChat && profilePanelOpen && (
+        {activeChat && (profilePanelOpen || searchPanelOpen) && (
           <div className="relative z-90 w-72 shrink-0 border-l border-border bg-sidebar overflow-hidden">
-            {selectedMessageForInfo ? (
+            {searchPanelOpen ? (
+              <ChatSearchPanel />
+            ) : selectedMessageForInfo ? (
               <MessageInfoPanel
                 messageId={selectedMessageForInfo.id}
                 messageText={selectedMessageForInfo.text}

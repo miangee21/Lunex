@@ -2,13 +2,19 @@
 import { useChatStore } from "@/store/chatStore";
 import UserAvatar from "@/components/shared/UserAvatar";
 import { Id } from "../../../../convex/_generated/dataModel";
-import { MoreVertical, Timer } from "lucide-react";
+import { MoreVertical, Timer, Search } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useAuthStore } from "@/store/authStore";
 
 export default function ChatHeader() {
-  const { activeChat, toggleProfilePanel, profilePanelOpen } = useChatStore();
+  const {
+    activeChat,
+    toggleProfilePanel,
+    profilePanelOpen,
+    searchPanelOpen,
+    setSearchPanelOpen,
+  } = useChatStore();
   const currentUserId = useAuthStore((s) => s.userId);
 
   const typingUsers = useQuery(
@@ -92,6 +98,16 @@ export default function ChatHeader() {
       </div>
 
       <div className="flex items-center gap-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setSearchPanelOpen(!searchPanelOpen);
+          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          title={searchPanelOpen ? "Close search" : "Search messages"}
+        >
+          <Search size={18} />
+        </button>
         <button
           className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors"
           title="View profile options"

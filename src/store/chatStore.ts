@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useAuthStore } from "@/store/authStore";
 import { type AllowedFileType } from "@/lib/fileValidation";
+import { type DecryptedMessage } from "@/types/chat";
 
 type SidebarView =
   | "chats"
@@ -161,6 +162,12 @@ interface ChatState {
   toggleProfilePanel: () => void;
   setProfilePanelOpen: (open: boolean) => void;
 
+  searchPanelOpen: boolean;
+  setSearchPanelOpen: (open: boolean) => void;
+
+  currentDecryptedMessages: DecryptedMessage[];
+  setCurrentDecryptedMessages: (msgs: DecryptedMessage[]) => void;
+
   localMediaCache: Record<string, string>;
   addLocalMediaCache: (storageId: string, url: string) => void;
 
@@ -233,10 +240,16 @@ export const useChatStore = create<ChatState>()(
               ...(myThemes[chat.userId] || {}),
             },
             profilePanelOpen: false,
+            searchPanelOpen: false,
           };
         }),
 
-      clearActiveChat: () => set({ activeChat: null, profilePanelOpen: false }),
+      clearActiveChat: () =>
+        set({
+          activeChat: null,
+          profilePanelOpen: false,
+          searchPanelOpen: false,
+        }),
 
       updateActiveChatTheme: (themeData) =>
         set((s) => {
@@ -359,6 +372,7 @@ export const useChatStore = create<ChatState>()(
             return {
               selectedMessageForInfo: null,
               profilePanelOpen: true,
+              searchPanelOpen: false,
             };
           }
           const willOpen = !s.profilePanelOpen;
@@ -368,6 +382,7 @@ export const useChatStore = create<ChatState>()(
           else if (!willOpen && width >= 900) newSidebarState = true;
           return {
             profilePanelOpen: willOpen,
+            searchPanelOpen: false,
             sidebarOpen: newSidebarState,
           };
         }),
@@ -383,6 +398,24 @@ export const useChatStore = create<ChatState>()(
             sidebarOpen: newSidebarState,
           };
         }),
+
+      searchPanelOpen: false,
+      setSearchPanelOpen: (open) =>
+        set((s) => {
+          const width = window.innerWidth;
+          let newSidebarState = s.sidebarOpen;
+          if (open && width < 1100) newSidebarState = false;
+          else if (!open && width >= 900) newSidebarState = true;
+          return {
+            searchPanelOpen: open,
+            profilePanelOpen: open ? false : s.profilePanelOpen,
+            sidebarOpen: newSidebarState,
+          };
+        }),
+
+      currentDecryptedMessages: [],
+      setCurrentDecryptedMessages: (msgs) =>
+        set({ currentDecryptedMessages: msgs }),
 
       pendingUploads: {},
       addPendingUploads: (conversationId, uploads) =>

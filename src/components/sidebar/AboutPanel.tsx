@@ -1,5 +1,5 @@
 // src/components/sidebar/AboutPanel.tsx
-import { ArrowLeft, Github, MessageCircle, Heart } from "lucide-react";
+import { ArrowLeft, Github, MessageCircle, Heart, Globe } from "lucide-react";
 import LunexLogo from "@/components/shared/LunexLogo";
 import { open } from "@tauri-apps/plugin-shell";
 
@@ -87,6 +87,23 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
                 </div>
                 <span className="text-[14px] font-medium text-foreground">
                   Discord Community
+                </span>
+              </div>
+            </button>
+
+            <div className="h-px bg-border/40 ml-14" />
+
+            {/* Website Link */}
+            <button
+              onClick={() => handleOpenLink("https://lunex-app.vercel.app")}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-transparent hover:bg-accent/20 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
+                  <Globe size={16} />
+                </div>
+                <span className="text-[14px] font-medium text-foreground">
+                  Official Website
                 </span>
               </div>
             </button>
