@@ -1,0 +1,11 @@
+{
+  "version": "0.1.1",
+  "notes": "Bug fixes and performance improvements.",
+  "pub_date": "2026-03-15T12:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dummy_signature",
+      "url": "dummy_url"
+    }
+  }
+}

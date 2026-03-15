@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Lunex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.lunex.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,9 +12,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/lunex-releases/main/updater.json"
+        "https://raw.githubusercontent.com/miangee21/Lunex/master/updater.json"
       ],
-      "pubkey": "YOUR_GENERATED_PUBLIC_KEY"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQxRjk4RjQxNkJEOUI1NUQKUldSZHRkbHJRWS81UVhKOFdVYno2citkdzhrSkprSGdQNHFBK1o0WlQ3NlYwY0xEbE9DRzdTblMK"
     }
   },
   "app": {
