@@ -9,6 +9,14 @@
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/lunex-releases/main/updater.json"
+      ],
+      "pubkey": "YOUR_GENERATED_PUBLIC_KEY"
+    }
+  },
   "app": {
     "windows": [
       {

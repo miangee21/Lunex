@@ -246,3 +246,10 @@ export const togglePinChat = mutation({
     return { success: true, isPinned: !isPinned };
   },
 });
+
+export const getMinRequiredVersion = query({
+  args: {},
+  handler: async () => {
+    return process.env.MIN_REQUIRED_VERSION ?? "0.1.0";
+  },
+});

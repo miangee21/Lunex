@@ -1,6 +1,9 @@
 // src/components/sidebar/DotsMenu.tsx
 import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { toast } from "sonner";
 import {
   MoreVertical,
   Settings,
@@ -19,6 +22,35 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   const { setSidebarView, setIsSelectionMode } = useChatStore();
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+  async function handleCheckUpdate() {
+    if (isCheckingUpdate) return;
+    setIsCheckingUpdate(true);
+    const toastId = toast.loading("Checking for updates...");
+
+    try {
+      const update = await check();
+
+      if (update) {
+        toast.loading(`Downloading update v${update.version}...`, {
+          id: toastId,
+        });
+        await update.downloadAndInstall();
+        toast.success("Update installed! Restarting app...", { id: toastId });
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await relaunch();
+      } else {
+        toast.success("You are on the latest version!", { id: toastId });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to check for updates.", { id: toastId });
+    } finally {
+      setIsCheckingUpdate(false);
+      setOpen(false);
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -60,9 +92,9 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
     },
     {
       icon: RefreshCw,
-      label: "Check Updates",
-      onClick: () => setOpen(false),
-      active: false,
+      label: isCheckingUpdate ? "Checking..." : "Check Updates",
+      onClick: handleCheckUpdate,
+      active: !isCheckingUpdate,
     },
     {
       icon: Info,

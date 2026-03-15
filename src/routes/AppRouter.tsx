@@ -14,6 +14,11 @@ import ChatPage from "@/pages/ChatPage";
 import SplashPage from "@/pages/SplashPage";
 import PinLockScreen from "@/components/auth/PinLockScreen";
 import { load } from "@tauri-apps/plugin-store";
+import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { AlertTriangle, DownloadCloud } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AppRouter() {
   const [showSplash, setShowSplash] = useState(true);
@@ -112,13 +117,103 @@ export default function AppRouter() {
     setSidebarView,
   ]);
 
+  const minRequiredVersion = useQuery(api.users.getMinRequiredVersion);
+  const [isOutdated, setIsOutdated] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    async function checkVersion() {
+      if (!minRequiredVersion) return;
+      try {
+        const currentVersion = await getVersion();
+        const cParts = currentVersion.split(".").map(Number);
+        const rParts = minRequiredVersion.split(".").map(Number);
+        let outdated = false;
+
+        for (let i = 0; i < 3; i++) {
+          if (cParts[i] < rParts[i]) {
+            outdated = true;
+            break;
+          }
+          if (cParts[i] > rParts[i]) {
+            break;
+          }
+        }
+
+        setIsOutdated(outdated);
+      } catch (err) {
+        console.error("Failed to check local version:", err);
+      }
+    }
+    checkVersion();
+  }, [minRequiredVersion]);
+
+  async function handleForceUpdate() {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    const toastId = toast.loading("Downloading critical update...");
+
+    try {
+      const update = await check();
+      if (update) {
+        await update.downloadAndInstall();
+        toast.success("Update installed! Restarting...", { id: toastId });
+        setTimeout(relaunch, 1500);
+      } else {
+        toast.error("Update not found on server yet.", { id: toastId });
+        setIsUpdating(false);
+      }
+    } catch (err) {
+      toast.error("Failed to download update.", { id: toastId });
+      setIsUpdating(false);
+    }
+  }
+
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
   }, []);
 
-  if (isAppLockEnabled && isLocked) return <PinLockScreen />;
-
   if (showSplash) return <SplashPage onComplete={handleSplashComplete} />;
+
+  if (isOutdated) {
+    return (
+      <div className="fixed inset-0 z-9999 flex items-center justify-center bg-background overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[70vw] h-[70vw] bg-destructive/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center max-w-sm p-8 text-center bg-background/40 backdrop-blur-xl border border-border/60 rounded-3xl shadow-2xl mx-4 animate-in zoom-in-95 duration-300">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6 shadow-sm">
+            <AlertTriangle className="text-destructive" size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-foreground mb-2">
+            Update Required
+          </h1>
+          <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
+            You are currently using an older version of Lunex.
+            <br /> A critical update is required to continue using <br />
+            the app securely.
+          </p>
+          <button
+            onClick={handleForceUpdate}
+            disabled={isUpdating}
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isUpdating ? (
+              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <>
+                <DownloadCloud size={18} />
+                Update Now
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAppLockEnabled && isLocked) return <PinLockScreen />;
 
   return (
     <BrowserRouter>
