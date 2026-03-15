@@ -1,11 +1,15 @@
 {
   "version": "0.1.1",
-  "notes": "Bug fixes and performance improvements.",
-  "pub_date": "2026-03-15T12:00:00Z",
+  "notes": "Lunex v0.1.1 is here! Added Auto-Updater infrastructure, multi-platform signed binaries, and system tray support.",
+  "pub_date": "2026-03-15T16:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dummy_signature",
-      "url": "dummy_url"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZHRkbHJRWS81UVlBQkdLcHhUZ29tdEZ5MDRVRjgxbkFJWk1MUkdLNWJobUN0Qlhqb3haZis4Q2gzbFY3Z0R0S3NsLzRzQjAwcUV3ZTVKblFuZDFzRXFyYWpEbWw3b3dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNTc4MDY0CWZpbGU6THVuZXhfMC4xLjFfeDY0LXNldHVwLmV4ZQp1L3FiRzltWDR6UzJqbFNLSXF1V2tvTFBnelRVdjZwMkdwUUpyN1F6ZFR2a2puMnlUelh5L3oxV1VRYWdhWGdESW5zNWYwTGZxNDNIQWoyK0pHT0JEQT09Cg==",
+      "url": "https://github.com/miangee21/Lunex/releases/download/v0.1.1/Lunex_0.1.1_x64-setup.exe"
+    },
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZHRkbHJRWS81UVlHenI1Tk10MjgvMnZuWFJEVXhHNXBSMXRLL2tqVFFmOHBVdGcrd0tlTHJrWU4yL05QRUJZL3d6Titsc3l3dHliR3l6bS8wSFlrVDhWWHpFZlpPQUE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNTg4MjM2CWZpbGU6THVuZXhfMC4xLjFfYW1kNjQuQXBwSW1hZ2UKSE9qZk9ZQnBEWmJpQTlKZXJXWEJLY1l5dW5zZHh1M0pOblhWM0s5WDE3RTE5RFI1WVlPOFRvTTFtdTU1S2szOTY4c3lxVzh2ZEUwTjYrMkZqZFN6QkE9PQo=",
+      "url": "https://github.com/miangee21/Lunex/releases/download/v0.1.1/Lunex_0.1.1_amd64.AppImage"
     }
   }
 }
