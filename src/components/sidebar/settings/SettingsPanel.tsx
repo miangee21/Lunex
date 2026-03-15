@@ -7,8 +7,9 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import PrivacySelectorModal from "./PrivacySelectorModal";
 import SettingsPrivacySection from "./SettingsPrivacySection";
 import SettingsTimerSection from "./SettingsTimerSection";
-import AppLockPanel from "./AppLockPanel";
 import { useAppLockStore } from "@/store/appLockStore";
+import { useSettingsStore } from "@/store/settingsStore";
+import AppLockPanel from "./AppLockPanel";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -17,6 +18,7 @@ import {
   CheckCheck,
   Bell,
   ChevronRight,
+  AppWindow,
 } from "lucide-react";
 
 interface SettingsPanelProps {
@@ -61,6 +63,7 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
   const [showAppLock, setShowAppLock] = useState(false);
 
   const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
+  const { isTrayEnabled, setTrayEnabled } = useSettingsStore();
 
   async function handleDisappearingChange(value: string) {
     if (!userId) return;
@@ -164,7 +167,7 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                   <p className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider mb-2 pl-1">
                     App
                   </p>
-                  <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-card/50 border border-border/40 rounded-xl overflow-hidden shadow-sm flex flex-col">
                     <button
                       onClick={() =>
                         setActivePrivacyField("privacyNotifications")
@@ -193,6 +196,41 @@ export default function SettingsPanel({ onBack }: SettingsPanelProps) {
                         />
                       </div>
                     </button>
+
+                    <div className="h-1px bg-border/40 w-full" />
+                    <div className="w-full flex items-center justify-between px-3 py-3 bg-transparent">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-7 h-7 rounded-md bg-primary/10 text-primary">
+                          <AppWindow size={15} />
+                        </div>
+                        <span className="text-[14px] font-medium text-foreground">
+                          System Tray Icon
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => {
+                            const newState = !isTrayEnabled;
+                            setTrayEnabled(newState);
+                            toast.success(
+                              `System Tray Icon ${newState ? "Enabled" : "Disabled"}`,
+                            );
+                          }}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            isTrayEnabled ? "bg-primary" : "bg-muted"
+                          }`}
+                          role="switch"
+                          aria-checked={isTrayEnabled}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              isTrayEnabled ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

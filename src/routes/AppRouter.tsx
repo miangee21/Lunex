@@ -18,6 +18,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { AlertTriangle, DownloadCloud } from "lucide-react";
+import { useSettingsStore } from "@/store/settingsStore";
+import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 
 export default function AppRouter() {
@@ -29,6 +31,18 @@ export default function AppRouter() {
   const isAppLockEnabled = useAppLockStore((s) => s.isAppLockEnabled);
   const autoLockTimer = useAppLockStore((s) => s.autoLockTimer);
   const setLocked = useAppLockStore((s) => s.setLocked);
+  const isTrayEnabled = useSettingsStore((s) => s.isTrayEnabled);
+
+  useEffect(() => {
+    async function syncTray() {
+      try {
+        await invoke("toggle_tray", { show: isTrayEnabled });
+      } catch (err) {
+        console.error("Failed to sync system tray:", err);
+      }
+    }
+    syncTray();
+  }, [isTrayEnabled]);
 
   useEffect(() => {
     async function checkLock() {
