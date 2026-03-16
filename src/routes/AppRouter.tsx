@@ -1,5 +1,5 @@
 //src/routes/AppRouter.tsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { useThemeStore } from "@/store/themeStore";
@@ -34,10 +34,17 @@ export default function AppRouter() {
   const setLocked = useAppLockStore((s) => s.setLocked);
   const isTrayEnabled = useSettingsStore((s) => s.isTrayEnabled);
 
+  const lastTrayState = useRef<boolean | null>(null);
+
   useEffect(() => {
+    if (lastTrayState.current === isTrayEnabled) return;
+    lastTrayState.current = isTrayEnabled;
+
     async function syncTray() {
       try {
-        await invoke("toggle_tray", { show: isTrayEnabled });
+        setTimeout(async () => {
+          await invoke("toggle_tray", { show: isTrayEnabled });
+        }, 500);
       } catch (err) {
         console.error("Failed to sync system tray:", err);
       }
