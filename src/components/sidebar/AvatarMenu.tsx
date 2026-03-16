@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 import { User, LogOut } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { load } from "@tauri-apps/plugin-store";
@@ -25,6 +26,14 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        const target = e.target as Element;
+        if (
+          target.closest('[role="dialog"]') ||
+          target.closest('[role="alertdialog"]') ||
+          target.closest("[data-radix-portal]")
+        ) {
+          return;
+        }
         onClose();
       }
     }
@@ -78,13 +87,20 @@ export default function AvatarMenu({ onClose }: AvatarMenuProps) {
 
       <div className="h-px bg-border mx-2" />
 
-      <button
-        onClick={handleLogout}
-        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-      >
-        <LogOut size={16} />
-        Logout
-      </button>
+      <div onClick={(e) => e.stopPropagation()}>
+        <ConfirmModal
+          title="Logout from Lunex?"
+          description="Logging out will remove your App Lock PIN and clear your local data from this device. You will need your 12-word recovery phrase to login again. Are you sure you want to continue?"
+          isDestructive={true}
+          confirmText="Logout"
+          onConfirm={handleLogout}
+        >
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors">
+            <LogOut size={16} />
+            Logout
+          </button>
+        </ConfirmModal>
+      </div>
     </div>
   );
 }

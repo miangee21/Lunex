@@ -51,7 +51,7 @@ export default function ConfirmModal({
             onClick={onConfirm}
             className={`rounded-xl font-semibold transition-colors ${
               isDestructive
-                ? "bg-destructive text-white hover:bg-destructive/90"
+                ? "bg-red-500 text-white hover:bg-red-600 border border-red-600"
                 : "bg-primary text-primary-foreground hover:bg-primary/90"
             }`}
           >

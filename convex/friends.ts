@@ -63,13 +63,16 @@ export const getFriends = query({
         const user = await ctx.db.get(r.toUserId);
         if (!user) return null;
         const { iBlockedThem, hasBlockedMe } = await getBlockFlags(user._id);
+        const isBlocked = iBlockedThem || hasBlockedMe;
         return {
           friendshipId: r._id,
           userId: user._id,
           username: user.username,
-          profilePicStorageId: user.profilePicStorageId ?? null,
-          isOnline: user.isOnline,
-          lastSeen: user.lastSeen,
+          profilePicStorageId: isBlocked
+            ? null
+            : (user.profilePicStorageId ?? null),
+          isOnline: isBlocked ? false : user.isOnline,
+          lastSeen: isBlocked ? undefined : user.lastSeen,
           hasBlockedMe,
           iBlockedThem,
         };
@@ -81,13 +84,16 @@ export const getFriends = query({
         const user = await ctx.db.get(r.fromUserId);
         if (!user) return null;
         const { iBlockedThem, hasBlockedMe } = await getBlockFlags(user._id);
+        const isBlocked = iBlockedThem || hasBlockedMe;
         return {
           friendshipId: r._id,
           userId: user._id,
           username: user.username,
-          profilePicStorageId: user.profilePicStorageId ?? null,
-          isOnline: user.isOnline,
-          lastSeen: user.lastSeen,
+          profilePicStorageId: isBlocked
+            ? null
+            : (user.profilePicStorageId ?? null),
+          isOnline: isBlocked ? false : user.isOnline,
+          lastSeen: isBlocked ? undefined : user.lastSeen,
           hasBlockedMe,
           iBlockedThem,
         };

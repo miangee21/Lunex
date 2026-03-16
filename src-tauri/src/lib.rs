@@ -1,7 +1,7 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    Emitter, Manager, WindowEvent,
 };
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -17,6 +17,11 @@ fn toggle_tray(app: tauri::AppHandle, show: bool) {
     }
 }
 
+#[tauri::command]
+fn quit_app(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -30,7 +35,7 @@ pub fn run() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
-                        app.exit(0);
+                        let _ = app.emit("system-shutdown", ());
                     }
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
@@ -73,7 +78,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![greet, toggle_tray])
+        .invoke_handler(tauri::generate_handler![greet, toggle_tray, quit_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

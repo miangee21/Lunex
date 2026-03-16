@@ -16,7 +16,7 @@ export default function ChatAreaContextMenu({
 
   return (
     <div
-      className="fixed z-50 w-48 bg-card border border-border shadow-xl rounded-xl overflow-hidden animate-in fade-in-80 zoom-in-95"
+      className="fixed z-100 w-48 bg-card border border-border shadow-xl rounded-xl overflow-hidden animate-in fade-in-80 zoom-in-95"
       style={{ top: contextMenu.y, left: contextMenu.x }}
       onClick={(e) => e.stopPropagation()}
     >

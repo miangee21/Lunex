@@ -40,7 +40,14 @@ export default function ChatHeader() {
 
   if (!activeChat) return null;
 
-  const isOnlineRealtime = otherUser?.isOnline ?? activeChat.isOnline;
+  const isOnlineRealtime =
+    otherUser !== undefined
+      ? (otherUser?.isOnline ?? false)
+      : activeChat.isOnline;
+  const realtimeProfilePic =
+    otherUser !== undefined
+      ? (otherUser?.profilePicStorageId ?? null)
+      : activeChat.profilePicStorageId;
 
   return (
     <div
@@ -50,9 +57,7 @@ export default function ChatHeader() {
     >
       <UserAvatar
         username={activeChat.username}
-        profilePicStorageId={
-          activeChat.profilePicStorageId as Id<"_storage"> | null
-        }
+        profilePicStorageId={realtimeProfilePic as Id<"_storage"> | null}
         isOnline={isOnlineRealtime}
         size="md"
       />

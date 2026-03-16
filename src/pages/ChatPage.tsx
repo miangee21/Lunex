@@ -14,6 +14,8 @@ import MessageInfoPanel from "@/components/chat/misc/MessageInfoPanel";
 import ChatSearchPanel from "@/components/chat/misc/ChatSearchPanel";
 import StarredMessagesPanel from "@/components/sidebar/StarredMessagesPanel";
 import { useAppNotifications } from "@/hooks/useAppNotifications";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { MessageSquare } from "lucide-react";
 import icon from "@/assets/icon.png";
 
@@ -70,9 +72,27 @@ export default function ChatPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("pagehide", handlePageHide);
 
+    let unlistenShutdown: (() => void) | undefined;
+
+    listen("system-shutdown", async () => {
+      try {
+        await setOnlineStatus({
+          userId: userId as Id<"users">,
+          isOnline: false,
+        });
+      } catch (error) {
+        console.error("Failed to set offline on shutdown:", error);
+      } finally {
+        await invoke("quit_app");
+      }
+    }).then((unlisten) => {
+      unlistenShutdown = unlisten;
+    });
+
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("pagehide", handlePageHide);
+      if (unlistenShutdown) unlistenShutdown();
       clearTimeout(timeoutId!);
 
       if (pendingStatus !== null) {

@@ -169,14 +169,18 @@ export default function ChatArea() {
           e.stopPropagation();
           const menuWidth = 192;
           const menuHeight = 100;
+          const bottomSafeZone = 90;
+
           const x =
             e.clientX + menuWidth > window.innerWidth
               ? window.innerWidth - menuWidth - 8
               : e.clientX;
+
           const y =
-            e.clientY + menuHeight > window.innerHeight
-              ? window.innerHeight - menuHeight - 8
+            e.clientY + menuHeight > window.innerHeight - bottomSafeZone
+              ? e.clientY - menuHeight
               : e.clientY;
+
           setContextMenu({ x, y });
         }}
       >

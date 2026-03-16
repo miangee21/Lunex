@@ -125,6 +125,36 @@ export const getUserById = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
+    if (args.viewerId && args.viewerId !== args.userId) {
+      const iBlockedThem = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q
+            .eq("blockerId", args.viewerId as any)
+            .eq("blockedId", args.userId as any),
+        )
+        .unique();
+
+      const theyBlockedMe = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q
+            .eq("blockerId", args.userId as any)
+            .eq("blockedId", args.viewerId as any),
+        )
+        .unique();
+
+      if (iBlockedThem || theyBlockedMe) {
+        return {
+          ...user,
+          profilePicStorageId: undefined,
+          bio: undefined,
+          isOnline: false,
+          lastSeen: undefined,
+        };
+      }
+    }
+
     let canSee = true;
     const privacy = user.privacyOnline ?? "everyone";
     const exceptions = user.onlineExceptions ?? [];
@@ -153,6 +183,34 @@ export const getUserOnlineStatus = query({
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
+
+    if (args.viewerId && args.viewerId !== args.userId) {
+      const iBlockedThem = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q
+            .eq("blockerId", args.viewerId as any)
+            .eq("blockedId", args.userId as any),
+        )
+        .unique();
+
+      const theyBlockedMe = await ctx.db
+        .query("blockedUsers")
+        .withIndex("by_pair", (q) =>
+          q
+            .eq("blockerId", args.userId as any)
+            .eq("blockedId", args.viewerId as any),
+        )
+        .unique();
+
+      if (iBlockedThem || theyBlockedMe) {
+        return {
+          userId: user._id,
+          isOnline: false,
+          lastSeen: undefined,
+        };
+      }
+    }
 
     let canSee = true;
     const privacy = user.privacyOnline ?? "everyone";

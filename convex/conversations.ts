@@ -51,6 +51,22 @@ export const getConversationsList = query({
         const otherUser = await ctx.db.get(otherUserId);
         if (!otherUser) return null;
 
+        const iBlockedThem = await ctx.db
+          .query("blockedUsers")
+          .withIndex("by_pair", (q) =>
+            q.eq("blockerId", args.userId).eq("blockedId", otherUserId),
+          )
+          .unique();
+
+        const theyBlockedMe = await ctx.db
+          .query("blockedUsers")
+          .withIndex("by_pair", (q) =>
+            q.eq("blockerId", otherUserId).eq("blockedId", args.userId),
+          )
+          .unique();
+
+        const isBlocked = iBlockedThem || theyBlockedMe;
+
         const lastMessage = await ctx.db
           .query("messages")
           .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
@@ -87,11 +103,13 @@ export const getConversationsList = query({
           conversationId: conv._id,
           otherUserId: otherUser._id,
           username: otherUser.username,
-          profilePicStorageId: otherUser.profilePicStorageId ?? null,
+          profilePicStorageId: isBlocked
+            ? null
+            : (otherUser.profilePicStorageId ?? null),
           publicKey: otherUser.publicKey,
           lastReaction: conv.lastReaction,
-          isOnline: otherUser.isOnline,
-          lastSeen: otherUser.lastSeen,
+          isOnline: isBlocked ? false : otherUser.isOnline,
+          lastSeen: isBlocked ? undefined : otherUser.lastSeen,
           lastMessage: lastMessage
             ? {
                 text: lastMessage.encryptedContent,
