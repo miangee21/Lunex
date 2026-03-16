@@ -2,12 +2,32 @@
 import { ArrowLeft, Github, MessageCircle, Heart, Globe } from "lucide-react";
 import LunexLogo from "@/components/shared/LunexLogo";
 import { open } from "@tauri-apps/plugin-shell";
+import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 
 interface AboutPanelProps {
   onBack: () => void;
 }
 
 export default function AboutPanel({ onBack }: AboutPanelProps) {
+  const [appVersion, setAppVersion] = useState<string>("");
+
+  useEffect(() => {
+    const fetchVersion = async () => {
+      try {
+        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+          const version = await getVersion();
+          setAppVersion(version);
+        } else {
+          setAppVersion("Web View");
+        }
+      } catch (error) {
+        console.error("Failed to fetch version:", error);
+      }
+    };
+    fetchVersion();
+  }, []);
+
   const handleOpenLink = async (url: string) => {
     try {
       if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
@@ -41,7 +61,7 @@ export default function AboutPanel({ onBack }: AboutPanelProps) {
             Lunex
           </h1>
           <p className="text-[13px] text-muted-foreground font-medium mt-1 bg-accent/50 px-3 py-1 rounded-full">
-            Version 1.0.0
+            Version {appVersion || "..."}
           </p>
         </div>
 

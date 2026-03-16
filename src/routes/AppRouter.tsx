@@ -17,6 +17,7 @@ import { load } from "@tauri-apps/plugin-store";
 import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import UpdateProgressToast from "@/components/shared/UpdateProgressToast";
 import { AlertTriangle, DownloadCloud } from "lucide-react";
 import { useSettingsStore } from "@/store/settingsStore";
 import { invoke } from "@tauri-apps/api/core";
@@ -170,8 +171,37 @@ export default function AppRouter() {
     try {
       const update = await check();
       if (update) {
-        await update.downloadAndInstall();
-        toast.success("Update installed! Restarting...", { id: toastId });
+        let downloaded = 0;
+        let contentLength = 0;
+
+        await update.downloadAndInstall((event) => {
+          if (event.event === "Started") {
+            contentLength = event.data.contentLength || 0;
+            toast(
+              <UpdateProgressToast progress={0} version={update.version} />,
+              { id: toastId, duration: Infinity },
+            );
+          } else if (event.event === "Progress") {
+            downloaded += event.data.chunkLength;
+            if (contentLength > 0) {
+              const percent = Math.round((downloaded / contentLength) * 100);
+              toast(
+                <UpdateProgressToast
+                  progress={percent}
+                  version={update.version}
+                />,
+                { id: toastId, duration: Infinity },
+              );
+            }
+          } else if (event.event === "Finished") {
+            toast.loading("Extracting and installing...", { id: toastId });
+          }
+        });
+
+        toast.success("Update installed! Restarting...", {
+          id: toastId,
+          duration: 4000,
+        });
         setTimeout(relaunch, 1500);
       } else {
         toast.error("Update not found on server yet.", { id: toastId });

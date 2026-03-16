@@ -1,6 +1,7 @@
 // src/components/sidebar/DotsMenu.tsx
 import { useState, useRef, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
+import UpdateProgressToast from "@/components/shared/UpdateProgressToast";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { toast } from "sonner";
@@ -31,13 +32,38 @@ export default function DotsMenu({ onSettingsClick }: DotsMenuProps) {
 
     try {
       const update = await check();
-
       if (update) {
-        toast.loading(`Downloading update v${update.version}...`, {
-          id: toastId,
+        let downloaded = 0;
+        let contentLength = 0;
+
+        await update.downloadAndInstall((event) => {
+          if (event.event === "Started") {
+            contentLength = event.data.contentLength || 0;
+            toast(
+              <UpdateProgressToast progress={0} version={update.version} />,
+              { id: toastId, duration: Infinity },
+            );
+          } else if (event.event === "Progress") {
+            downloaded += event.data.chunkLength;
+            if (contentLength > 0) {
+              const percent = Math.round((downloaded / contentLength) * 100);
+              toast(
+                <UpdateProgressToast
+                  progress={percent}
+                  version={update.version}
+                />,
+                { id: toastId, duration: Infinity },
+              );
+            }
+          } else if (event.event === "Finished") {
+            toast.loading("Extracting and installing...", { id: toastId });
+          }
         });
-        await update.downloadAndInstall();
-        toast.success("Update installed! Restarting app...", { id: toastId });
+
+        toast.success("Update installed! Restarting app...", {
+          id: toastId,
+          duration: 4000,
+        });
         await new Promise((resolve) => setTimeout(resolve, 1500));
         await relaunch();
       } else {
