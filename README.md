@@ -10,7 +10,7 @@
     <a href="https://github.com/miangee21/Lunex/releases">
       <img src="https://img.shields.io/github/downloads/miangee21/Lunex/total?style=flat-square&color=6366f1&label=total%20downloads" alt="Total Downloads" />
     </a>
-    <a href="https://github.com/miangee21/Lunex/blob/main/LICENSE">
+    <a href="https://github.com/miangee21/Lunex/blob/master/LICENSE">
       <img src="https://img.shields.io/github/license/miangee21/Lunex?style=flat-square&color=6366f1" alt="License" />
     </a>
     <a href="https://github.com/miangee21/Lunex/stargazers">
@@ -21,11 +21,13 @@
   </p>
 
   <p>
-    <a href="#-installation">Install</a> ·
-    <a href="#-features">Features</a> ·
-    <a href="#-self-hosting">Self Host</a> ·
-    <a href="#-building-from-source">Build</a> ·
-    <a href="#-project-structure">Structure</a>
+    <a href="#-installation">📦 Install</a> ·
+    <a href="#-features">✨ Features</a> ·
+    <a href="#-self-hosting">🚀 Self Host</a> ·
+    <a href="#-building-from-source">🔨 Build</a> ·
+    <a href="#-project-structure">🗂️ Structure</a> ·
+    <a href="https://lunex-app.vercel.app" target="_blank" rel="noopener noreferrer">🌐 Website</a> ·
+    <a href="https://discord.gg/Av8CPpQXkB" target="_blank" rel="noopener noreferrer">💬 Discord</a>
   </p>
 </div>
 
@@ -45,6 +47,7 @@
   - [Media Sharing](#-media-sharing)
   - [Message Management](#-message-management)
   - [Privacy Controls](#-privacy-controls)
+  - [Privacy by Default — Zero-Knowledge Session Model](#-privacy-by-default--zero-knowledge-session-model)
   - [App Lock](#-app-lock)
   - [Disappearing Messages](#-disappearing-messages)
   - [Chat Themes](#-chat-themes)
@@ -65,6 +68,7 @@
 - [Convex Schema](#-convex-schema)
 - [Cryptography](#-cryptography)
 - [Contributing](#-contributing)
+- [Roadmap](#-roadmap)
 - [License](#-license)
 
 ---
@@ -221,6 +225,68 @@ Each user has granular privacy settings for four attributes, each independently 
 
 ---
 
+
+### Privacy by Default — Zero-Knowledge Session Model
+
+Lunex is designed so that **no sensitive data ever touches persistent storage by default.** The privacy model has two distinct tiers, and you choose which one fits your needs.
+
+#### Tier 1 — Full Session Privacy (Default)
+
+This is the default behaviour when App Lock is **disabled**.
+
+Every time you open Lunex and log in with your 12-word mnemonic phrase, your private key is derived and held **exclusively in RAM** for that session. The moment you close the app, every trace of your identity your private key, your decrypted messages, your session state is gone. Nothing is written to disk. Nothing persists.
+```
+App opens → mnemonic entered → secretKey derived in RAM → session active
+App closes → RAM cleared → secretKey gone → no trace left on device
+```
+
+**What this means in practice:**
+- Every new session requires your 12-word phrase no shortcuts, no remembered state
+- A forensic examination of your device's storage after closing the app finds nothing belonging to Lunex
+- If someone steals your laptop while the app is closed, there is nothing to extract
+- The system tray toggle interacts with this model: if you **enable system tray**, closing the window keeps the app running in the background (RAM still holds your session, app stays usable). If you **disable system tray**, closing the window terminates the process and wipes RAM full privacy on every close
+
+#### Tier 2 — Persistent Session with App Lock (Opt-in)
+
+If re-entering 12 words on every launch is inconvenient, you can opt into **App Lock** in Settings. This enables a 6-digit PIN that persists your session across app restarts without compromising your private key security.
+
+Here is exactly what happens when you enable App Lock:
+```
+User enables App Lock → sets 6-digit PIN
+  └→ secretKey (from RAM) is encrypted with AES-GCM using PIN as key source
+        └→ encrypted key blob stored in Tauri plugin-store (OS-level secure storage)
+              └→ RAM cleared of raw secretKey
+
+App restarts → PIN lock screen shown
+  └→ user enters 6-digit PIN
+        └→ AES-GCM decrypt → secretKey recovered → loaded into RAM
+              └→ session resumes — no mnemonic needed
+```
+
+**What this means in practice:**
+- Your raw private key is **never stored in plaintext** — only as an AES-GCM encrypted blob
+- The PIN itself is never stored anywhere — it is only used transiently as key material during decrypt
+- Without the correct PIN, the encrypted blob is cryptographically useless
+- App Lock also hides your profile picture and bio on the lock screen — the lock screen itself reveals nothing about whose app this is
+- Auto-lock timers (1 min · 5 min · 30 min · 1 hr) re-engage the PIN screen after inactivity
+- Upon logout, the user’s PIN is permanently cleared and the encrypted key material stored on the system is securely deleted.
+
+#### Choosing between the two
+
+| | Tier 1 (Default) | Tier 2 (App Lock) |
+|--|--|--|
+| Login required every launch | Yes — 12-word phrase | No — 6-digit PIN |
+| Private key on disk | Never | AES-GCM encrypted only |
+| Data after app close | Zero | Encrypted key blob only |
+| Best for | Maximum privacy | Daily convenience |
+
+**Key files:**
+- `src/store/authStore.ts` — secretKey lives here in RAM only (never persisted without App Lock)
+- `src/crypto/pinEncryption.ts` — AES-GCM encrypt/decrypt of secretKey with PIN
+- `src/store/appLockStore.ts` — App Lock enable state and auto-lock timer
+- `src-tauri/src/lib.rs` — system tray toggle that controls whether close = exit or close = minimize
+
+---
 ### App Lock
 
 Protect your Lunex session with a **6-digit PIN**. When App Lock is enabled:
@@ -815,7 +881,53 @@ Contributions are welcome. To contribute:
 - All user data passed to Convex must be encrypted client-side first
 
 ---
+## Roadmap
+
+These features are actively planned and will be added in upcoming releases.
+
+| | Feature | Status |
+|--|---------|--------|
+| ⬜ | Local Database — Offline Message Storage | 🔄 In Development |
+| ⬜ | Mobile App | 📋 Planned |
+
+### Local Database — Offline Message Storage
+
+> **Status:** In development
+
+Lunex currently requires an active connection to Convex to load messages. The local database layer will change this fundamentally — bringing Lunex closer to the offline-first experience of WhatsApp and Signal.
+
+**What it will enable:**
+- Open any conversation and read your full message history with **no internet connection**
+- Instant chat load from local cache — Convex sync happens in the background
+- Full-history **in-chat search** across every message ever received, not just the current session's loaded batch
+- **Offline send queue** — messages composed while offline are saved locally and automatically delivered the moment connectivity is restored
+- **Media persistence** — media files deleted from Convex after 6 hours remain accessible locally as long as you choose to keep them
+- **Sync period control** — choose to download the last 7, 15, or 30 days of history from Convex into local storage on first enable
+- **Storage management UI** — see a breakdown of how much local space each conversation, image, video, and document is using, with per-category clear controls
+
+**Technical approach:**
+- SQLite via `tauri-plugin-sql` — embedded, zero-config, runs entirely on-device
+- The SQLite file itself is encrypted at rest using **SQLCipher** (AES-256), keyed from your existing `secretKey` — no separate password required
+- Messages are stored decrypted inside the encrypted file, enabling fast full-text search with a simple SQL `LIKE` or FTS5 index
+- Local DB is only available when **App Lock is enabled** — this ensures the SQLCipher key is always PIN-protected and the database cannot be opened without your credentials
+- An outbox table handles offline-sent messages with automatic retry and a sync status indicator in the UI
+
+---
+
+### Mobile App
+
+> **Status:** Planned
+
+A native mobile version of Lunex for Android and iOS, built on the same Tauri + React codebase.
+
+**Planned scope:**
+- Full feature parity with the desktop app — end-to-end encryption, disappearing messages, media sharing, app lock, and all privacy controls
+- Same Convex backend — your account, contacts, and message history carry over seamlessly between desktop and mobile
+- Native push notifications
+- Biometric unlock (fingerprint / Face ID) as an alternative to PIN
+
+---
 
 ## License
 
-[MIT](./LICENSE) © 2025 Mian Gee
+[MIT](./LICENSE) © 2026 Muhammad Hassan
