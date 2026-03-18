@@ -1,8 +1,10 @@
 <div align="center">
 
-  <h1>🛡️Lunex</h1>
+  <h1>
+    <img src=".github/assets/icon.png" alt="Lunex Logo" height="36" align="absmiddle" />
+    Lunex
+  </h1>
   <p><strong>A private, encrypted, real-time desktop chat — built on Tauri, React, and Convex.</strong></p>
-
   <p>
     <a href="https://github.com/miangee21/Lunex/releases/latest">
       <img src="https://img.shields.io/github/v/release/miangee21/Lunex?style=flat-square&logo=github&label=latest%20release&color=6366f1" alt="Latest Release" />
@@ -18,6 +20,9 @@
     </a>
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-6366f1?style=flat-square" alt="Platform" />
     <img src="https://img.shields.io/badge/built%20with-Tauri%20v2-6366f1?style=flat-square&logo=tauri" alt="Tauri" />
+    <a href="https://www.patreon.com/posts/buy-me-virtual-153341450" target="_blank" rel="noopener noreferrer">
+      <img src="https://img.shields.io/badge/Support-Buy%20me%20a%20Coffee-FF424D?style=flat-square&logo=patreon" alt="Support on Patreon" />
+    </a>
   </p>
 
   <p>
@@ -28,14 +33,11 @@
     <a href="#-project-structure">🗂️ Structure</a> ·
     <a href="https://lunex-app.vercel.app" target="_blank" rel="noopener noreferrer">🌐 Website</a> ·
     <a href="https://discord.gg/Av8CPpQXkB" target="_blank" rel="noopener noreferrer">💬 Discord</a>
+    <a href="https://www.patreon.com/posts/buy-me-virtual-153341450" target="_blank" rel="noopener noreferrer">❤️ Support</a>
   </p>
 </div>
 
-
-
  <img src=".github/assets/app.png" alt="Lunex" width="1280" height="700" />
-
-
 
 ## Table of Contents
 
@@ -86,6 +88,7 @@ Lunex is built on [Tauri v2](https://tauri.app) (Rust + WebView), meaning it shi
 ### Windows
 
 **Via winget (recommended):**
+
 ```powershell
 winget install lunex
 ```
@@ -97,24 +100,27 @@ Download the latest `.msi` or `.exe` from the [Releases page](https://github.com
 
 Download the package that matches your distribution from the [Releases page](https://github.com/miangee21/Lunex/releases/latest):
 
-| Package | Distro |
-|---------|--------|
+| Package     | Distro                                |
+| ----------- | ------------------------------------- |
 | `.AppImage` | Universal — works on any Linux distro |
-| `.deb` | Ubuntu, Debian, Linux Mint |
-| `.rpm` | Fedora, openSUSE, RHEL |
+| `.deb`      | Ubuntu, Debian, Linux Mint            |
+| `.rpm`      | Fedora, openSUSE, RHEL                |
 
 **AppImage (universal):**
+
 ```bash
 chmod +x Lunex_*.AppImage
 ./Lunex_*.AppImage
 ```
 
 **Debian / Ubuntu:**
+
 ```bash
 sudo dpkg -i lunex_*.deb
 ```
 
 **Fedora / openSUSE:**
+
 ```bash
 sudo rpm -i lunex_*.rpm
 ```
@@ -128,6 +134,7 @@ sudo rpm -i lunex_*.rpm
 Every piece of data that leaves your device is encrypted before transmission. Lunex uses **NaCl box** (TweetNaCl) — the same cryptographic primitive used by Signal and WhatsApp for all message encryption.
 
 **How it works:**
+
 - On signup, each user generates an **asymmetric key pair** (public key + private key) derived from a BIP-39 mnemonic phrase (12 words)
 - The private key (`secretKey`) never leaves your device and is never sent to Convex
 - Messages are encrypted using **NaCl box** with the sender's private key and the recipient's public key this is Diffie-Hellman key exchange baked in
@@ -136,6 +143,7 @@ Every piece of data that leaves your device is encrypted before transmission. Lu
 - Even the last message preview in the chat list is encrypted the server only ever stores ciphertext
 
 **Key files:**
+
 - `src/crypto/encryption.ts` — NaCl box encrypt/decrypt + AES-GCM symmetric encrypt/decrypt
 - `src/crypto/keyDerivation.ts` — base64 encode/decode for key material
 - `src/crypto/mediaEncryption.ts` — media file AES-GCM encryption/decryption
@@ -170,6 +178,7 @@ Send images, videos, and documents all encrypted before upload.
 - Media is decrypted in memory only when displayed never written to disk as plaintext
 
 **Key files:**
+
 - `src/hooks/useMediaUpload.ts` — file selection, encryption, upload, progress tracking
 - `src/components/chat/media/PendingUploadsList.tsx` — in-progress upload display
 - `convex/media.ts` — Convex storage URL generation
@@ -189,6 +198,7 @@ Send images, videos, and documents all encrypted before upload.
 - **Context menu** — right-click anywhere in the chat area for quick actions (select messages, close chat)
 
 **Key files:**
+
 - `src/components/chat/area/ChatAreaDeleteDialog.tsx` — delete confirmation dialog (for me / for everyone)
 - `src/components/chat/area/ChatAreaContextMenu.tsx` — right-click context menu
 - `src/components/chat/misc/MessageInfoPanel.tsx` — delivery/read info panel
@@ -207,16 +217,19 @@ Each user has granular privacy settings for four attributes, each independently 
 - **All except** — blocklist of specific contacts
 
 **Controllable attributes:**
+
 - **Online status** — whether others see you as online or offline
 - **Typing indicator** — whether others see "typing..."
 - **Read receipts** — whether others see filled circle with one tick
 - **Message notifications** — whether you appear as a notification sender
 
 **Block list:**
+
 - Block any user — they can no longer send you friend requests or messages
 - Blocked users are listed in your profile panel and can be unblocked at any time
 
 **Key files:**
+
 - `src/components/sidebar/settings/SettingsPrivacySection.tsx` — privacy settings UI
 - `src/components/sidebar/settings/PrivacySelectorModal.tsx` — everyone/nobody/only-these/all-except picker
 - `src/components/sidebar/settings/ContactPicker.tsx` — contact picker for exception lists
@@ -224,7 +237,6 @@ Each user has granular privacy settings for four attributes, each independently 
 - `convex/friends.ts` — block/unblock, friend request mutations
 
 ---
-
 
 ### Privacy by Default — Zero-Knowledge Session Model
 
@@ -235,12 +247,14 @@ Lunex is designed so that **no sensitive data ever touches persistent storage by
 This is the default behaviour when App Lock is **disabled**.
 
 Every time you open Lunex and log in with your 12-word mnemonic phrase, your private key is derived and held **exclusively in RAM** for that session. The moment you close the app, every trace of your identity your private key, your decrypted messages, your session state is gone. Nothing is written to disk. Nothing persists.
+
 ```
 App opens → mnemonic entered → secretKey derived in RAM → session active
 App closes → RAM cleared → secretKey gone → no trace left on device
 ```
 
 **What this means in practice:**
+
 - Every new session requires your 12-word phrase no shortcuts, no remembered state
 - A forensic examination of your device's storage after closing the app finds nothing belonging to Lunex
 - If someone steals your laptop while the app is closed, there is nothing to extract
@@ -251,6 +265,7 @@ App closes → RAM cleared → secretKey gone → no trace left on device
 If re-entering 12 words on every launch is inconvenient, you can opt into **App Lock** in Settings. This enables a 6-digit PIN that persists your session across app restarts without compromising your private key security.
 
 Here is exactly what happens when you enable App Lock:
+
 ```
 User enables App Lock → sets 6-digit PIN
   └→ secretKey (from RAM) is encrypted with AES-GCM using PIN as key source
@@ -264,6 +279,7 @@ App restarts → PIN lock screen shown
 ```
 
 **What this means in practice:**
+
 - Your raw private key is **never stored in plaintext** — only as an AES-GCM encrypted blob
 - The PIN itself is never stored anywhere — it is only used transiently as key material during decrypt
 - Without the correct PIN, the encrypted blob is cryptographically useless
@@ -273,20 +289,22 @@ App restarts → PIN lock screen shown
 
 #### Choosing between the two
 
-| | Tier 1 (Default) | Tier 2 (App Lock) |
-|--|--|--|
-| Login required every launch | Yes — 12-word phrase | No — 6-digit PIN |
-| Private key on disk | Never | AES-GCM encrypted only |
-| Data after app close | Zero | Encrypted key blob only |
-| Best for | Maximum privacy | Daily convenience |
+|                             | Tier 1 (Default)     | Tier 2 (App Lock)       |
+| --------------------------- | -------------------- | ----------------------- |
+| Login required every launch | Yes — 12-word phrase | No — 6-digit PIN        |
+| Private key on disk         | Never                | AES-GCM encrypted only  |
+| Data after app close        | Zero                 | Encrypted key blob only |
+| Best for                    | Maximum privacy      | Daily convenience       |
 
 **Key files:**
+
 - `src/store/authStore.ts` — secretKey lives here in RAM only (never persisted without App Lock)
 - `src/crypto/pinEncryption.ts` — AES-GCM encrypt/decrypt of secretKey with PIN
 - `src/store/appLockStore.ts` — App Lock enable state and auto-lock timer
 - `src-tauri/src/lib.rs` — system tray toggle that controls whether close = exit or close = minimize
 
 ---
+
 ### App Lock
 
 Protect your Lunex session with a **6-digit PIN**. When App Lock is enabled:
@@ -298,6 +316,7 @@ Protect your Lunex session with a **6-digit PIN**. When App Lock is enabled:
 - Incorrect PIN entries show a shake animation with attempt feedback
 
 **Key files:**
+
 - `src/components/sidebar/settings/AppLockPanel.tsx` — App Lock settings (enable/disable, change PIN, timer)
 - `src/components/sidebar/settings/AppLockPinPad.tsx` — 6-digit PIN pad component
 - `src/components/sidebar/settings/AppLockTimerSection.tsx` — auto-lock timer radio selector
@@ -314,6 +333,7 @@ Both participants in a conversation can enable disappearing messages.
 **Available timers:** 1 hour · 6 hours · 12 hours · 1 day · 3 days · 7 days
 
 When a timer is active:
+
 - New messages sent after enabling automatically have a `disappearsAt` timestamp
 - A Convex cron job runs periodically to hard-delete expired messages from the database
 - The chat header shows a timer indicator when disappearing mode is active
@@ -322,6 +342,7 @@ When a timer is active:
 **Global default** — users can set a default disappearing timer in Settings that applies to all new conversations automatically.
 
 **Key files:**
+
 - `src/components/chat/misc/DisappearingPicker.tsx` — timer picker panel
 - `src/components/sidebar/settings/SettingsTimerSection.tsx` — global default timer setting
 - `convex/conversations.ts` — `setDisappearingMode` mutation
@@ -335,6 +356,7 @@ When a timer is active:
 Per-conversation color customization. Each chat can have its own visual theme, independent of the global app theme.
 
 **Customizable elements:**
+
 - My message bubble color
 - Other person's bubble color
 - My message text color
@@ -345,6 +367,7 @@ Per-conversation color customization. Each chat can have its own visual theme, i
 Themes are stored in Convex and sync across sessions automatically.
 
 **Key files:**
+
 - `src/components/chat/misc/ChatThemeCustomizer.tsx` — full theme editor (color pickers, preset grid)
 - `src/hooks/useChatTheme.ts` — applies per-chat theme CSS variables to the chat area
 - `src/store/themeStore.ts` — global app theme state (light/dark/system) + chat presets
@@ -362,6 +385,7 @@ Native desktop notifications via Tauri's notification plugin.
 - Clicking a notification brings the app window to focus
 
 **Key files:**
+
 - `src/hooks/useAppNotifications.ts` — subscribes to incoming messages and fires native OS notifications
 
 ---
@@ -377,6 +401,7 @@ Lunex minimizes to the system tray instead of closing — your chats stay connec
 - The `toggle_tray` Tauri command controls tray icon visibility from the frontend
 
 **Key files:**
+
 - `src-tauri/src/lib.rs` — tray setup, menu items, click handlers, close-to-tray window event
 - `src/pages/ChatPage.tsx` — listens for `system-shutdown` to set offline before quit
 
@@ -392,6 +417,7 @@ Lunex checks for updates automatically using Tauri's updater plugin.
 - Three versions have been released and the update chain is live and tested
 
 **Key files:**
+
 - `updater.json` — update manifest (version, platforms, download URLs, signatures)
 - `src-tauri/src/lib.rs` — `tauri_plugin_updater` registration
 - `src-tauri/Cargo.toml` — `tauri-plugin-updater = "2"` dependency
@@ -411,6 +437,7 @@ Search through messages within any open conversation directly from the chat head
 > **Note:** Search currently covers messages loaded in the current session. Full-history search across all messages is planned for a future release.
 
 **Key files:**
+
 - `src/components/chat/misc/ChatSearchPanel.tsx` — search UI, real-time filtering, jump-to-message
 - `src/components/chat/misc/ChatHeader.tsx` — Search icon button that opens the panel
 - `src/store/chatStore.ts` — `searchPanelOpen` state, `currentDecryptedMessages` for search
@@ -427,6 +454,7 @@ Star any message to save it for later reference. All starred messages are access
 - Starring state is stored in Convex on the `starredBy` array of the message document
 
 **Key files:**
+
 - `src/components/sidebar/StarredMessagesPanel.tsx` — starred messages list with jump-to-chat
 - `convex/messages.ts` — `starMessage` / `unstarMessage` mutations
 
@@ -444,6 +472,7 @@ Lunex uses a friend-request model — you must be friends with someone before yo
 - Blocked users cannot send friend requests to you and cannot message you
 
 **Key files:**
+
 - `src/components/friends/` — friend request UI cards
 - `src/components/chat/list/ChatList.tsx` — tabs: Chats / Requests / Search
 - `convex/friends.ts` — `sendFriendRequest`, `acceptFriendRequest`, `rejectFriendRequest`, `blockUser`, `unblockUser`
@@ -463,6 +492,7 @@ Pin important messages in a conversation for quick reference.
 - Pinned message IDs are stored in the `conversations.pinnedMessages` array on Convex
 
 **Key files:**
+
 - `src/components/chat/area/ChatAreaPinnedBar.tsx` — pinned message bar with cycle navigation
 - `convex/messages.ts` — `pinMessage` / `unpinMessage` mutations
 
@@ -479,6 +509,7 @@ React to any message with any emoji.
 - The last reaction in a conversation is stored on the conversation document for quick display in the chat list
 
 **Key files:**
+
 - `src/components/chat/bubble/` — message bubble with reaction display and picker trigger
 - `convex/messages.ts` — `addReaction` / `removeReaction` mutations with encrypted emoji storage
 
@@ -486,30 +517,31 @@ React to any message with any emoji.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Desktop runtime | [Tauri v2](https://tauri.app) (Rust) |
-| Frontend framework | [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org) |
-| Build tool | [Vite 7](https://vitejs.dev) |
-| Backend / real-time DB | [Convex](https://convex.dev) |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com) |
-| UI components | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://radix-ui.com) |
-| State management | [Zustand v5](https://zustand-demo.pmnd.rs) |
-| Routing | [React Router v7](https://reactrouter.com) |
-| Cryptography | [TweetNaCl](https://tweetnacl.js.org) + Web Crypto API (AES-GCM) |
-| Mnemonic / key gen | [@scure/bip39](https://github.com/paulmillr/scure-bip39) + [@noble/hashes](https://github.com/paulmillr/noble-hashes) |
-| Icons | [Lucide React](https://lucide.dev) |
-| Toasts | [Sonner](https://sonner.emilkowal.ski) |
-| Emoji picker | [emoji-picker-react](https://github.com/ealush/emoji-picker-react) |
-| PIN input | [input-otp](https://github.com/guilhermerodz/input-otp) |
-| Date utilities | [date-fns](https://date-fns.org) |
-| Tauri plugins | shell, notification, updater, process, fs, dialog, opener, store |
+| Layer                  | Technology                                                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Desktop runtime        | [Tauri v2](https://tauri.app) (Rust)                                                                                  |
+| Frontend framework     | [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org)                                          |
+| Build tool             | [Vite 7](https://vitejs.dev)                                                                                          |
+| Backend / real-time DB | [Convex](https://convex.dev)                                                                                          |
+| Styling                | [Tailwind CSS v4](https://tailwindcss.com)                                                                            |
+| UI components          | [shadcn/ui](https://ui.shadcn.com) + [Radix UI](https://radix-ui.com)                                                 |
+| State management       | [Zustand v5](https://zustand-demo.pmnd.rs)                                                                            |
+| Routing                | [React Router v7](https://reactrouter.com)                                                                            |
+| Cryptography           | [TweetNaCl](https://tweetnacl.js.org) + Web Crypto API (AES-GCM)                                                      |
+| Mnemonic / key gen     | [@scure/bip39](https://github.com/paulmillr/scure-bip39) + [@noble/hashes](https://github.com/paulmillr/noble-hashes) |
+| Icons                  | [Lucide React](https://lucide.dev)                                                                                    |
+| Toasts                 | [Sonner](https://sonner.emilkowal.ski)                                                                                |
+| Emoji picker           | [emoji-picker-react](https://github.com/ealush/emoji-picker-react)                                                    |
+| PIN input              | [input-otp](https://github.com/guilhermerodz/input-otp)                                                               |
+| Date utilities         | [date-fns](https://date-fns.org)                                                                                      |
+| Tauri plugins          | shell, notification, updater, process, fs, dialog, opener, store                                                      |
 
 ---
 
 ## Self Hosting
 
 You will need:
+
 - [Node.js](https://nodejs.org) v20+
 - [Rust](https://www.rust-lang.org/tools/install) stable toolchain
 - A free [Convex](https://convex.dev) account
@@ -585,11 +617,11 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD="your_password_here"
 
 After completing setup you will have exactly **3 env files** in your project root:
 
-| File | Purpose | Created by |
-|------|---------|-----------|
-| `.env.local` | Dev Convex deployment URL | Convex CLI (auto-generated in Step 2) |
-| `.env.production` | Production Convex URLs | You (Step 4) |
-| `.env` | Tauri signing keys | You (Step 5) |
+| File              | Purpose                   | Created by                            |
+| ----------------- | ------------------------- | ------------------------------------- |
+| `.env.local`      | Dev Convex deployment URL | Convex CLI (auto-generated in Step 2) |
+| `.env.production` | Production Convex URLs    | You (Step 4)                          |
+| `.env`            | Tauri signing keys        | You (Step 5)                          |
 
 ---
 
@@ -630,9 +662,9 @@ npx tauri build
 
 **Output files** (inside `src-tauri/target/release/bundle/`):
 
-| File | Description |
-|------|-------------|
-| `msi/Lunex_x.x.x_x64_en-US.msi` | Windows Installer package |
+| File                             | Description               |
+| -------------------------------- | ------------------------- |
+| `msi/Lunex_x.x.x_x64_en-US.msi`  | Windows Installer package |
 | `nsis/Lunex_x.x.x_x64-setup.exe` | NSIS installer executable |
 
 ---
@@ -660,11 +692,11 @@ NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 npm run tauri build
 
 **Output files** (inside `src-tauri/target/release/bundle/`):
 
-| File | Description |
-|------|-------------|
-| `appimage/lunex_x.x.x_amd64.AppImage` | Universal Linux portable app |
-| `deb/lunex_x.x.x_amd64.deb` | Debian / Ubuntu package |
-| `rpm/lunex-x.x.x-1.x86_64.rpm` | Fedora / openSUSE / RHEL package |
+| File                                  | Description                      |
+| ------------------------------------- | -------------------------------- |
+| `appimage/lunex_x.x.x_amd64.AppImage` | Universal Linux portable app     |
+| `deb/lunex_x.x.x_amd64.deb`           | Debian / Ubuntu package          |
+| `rpm/lunex-x.x.x-1.x86_64.rpm`        | Fedora / openSUSE / RHEL package |
 
 ---
 
@@ -795,18 +827,19 @@ Lunex/
 
 All sensitive fields (message content, IVs, reactions) are stored as ciphertext — Convex never receives or stores plaintext.
 
-| Table | Purpose | Key fields |
-|-------|---------|-----------|
-| `users` | User accounts and settings | `username`, `publicKey`, `isOnline`, `lastSeen`, privacy settings |
-| `conversations` | Chat sessions between two users | `participantIds`, `disappearingMode`, `pinnedMessages`, `lastMessageAt` |
-| `messages` | All messages | `encryptedContent`, `iv`, `type`, `sentAt`, `readBy`, `deliveredTo`, `reactions`, `starredBy` |
-| `friendRequests` | Pending/accepted/rejected requests | `fromUserId`, `toUserId`, `status` |
-| `blockedUsers` | Blocked user pairs | `blockerId`, `blockedId` |
-| `typingIndicators` | Real-time typing state | `conversationId`, `userId`, `isTyping`, `updatedAt` |
-| `chatDeletions` | "Delete for me" history | `conversationId`, `userId`, `deletedAt` |
-| `chatThemes` | Per-chat color themes | `userId`, `otherUserId`, bubble colors, text colors, preset name |
+| Table              | Purpose                            | Key fields                                                                                    |
+| ------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `users`            | User accounts and settings         | `username`, `publicKey`, `isOnline`, `lastSeen`, privacy settings                             |
+| `conversations`    | Chat sessions between two users    | `participantIds`, `disappearingMode`, `pinnedMessages`, `lastMessageAt`                       |
+| `messages`         | All messages                       | `encryptedContent`, `iv`, `type`, `sentAt`, `readBy`, `deliveredTo`, `reactions`, `starredBy` |
+| `friendRequests`   | Pending/accepted/rejected requests | `fromUserId`, `toUserId`, `status`                                                            |
+| `blockedUsers`     | Blocked user pairs                 | `blockerId`, `blockedId`                                                                      |
+| `typingIndicators` | Real-time typing state             | `conversationId`, `userId`, `isTyping`, `updatedAt`                                           |
+| `chatDeletions`    | "Delete for me" history            | `conversationId`, `userId`, `deletedAt`                                                       |
+| `chatThemes`       | Per-chat color themes              | `userId`, `otherUserId`, bubble colors, text colors, preset name                              |
 
 **Key indexes:**
+
 - `messages.by_conversation` on `[conversationId, sentAt]` — efficient paginated message loading
 - `messages.by_expires` on `[mediaExpiresAt]` — media cleanup cron target
 - `messages.by_disappears` on `[disappearsAt]` — disappearing message cleanup
@@ -874,6 +907,7 @@ Contributions are welcome. To contribute:
 6. Push and open a Pull Request
 
 **Code conventions:**
+
 - TypeScript strict mode — avoid `any`
 - Components go in the appropriate subdirectory under `src/components/`
 - New Convex queries and mutations go in the relevant file in `convex/`
@@ -881,14 +915,15 @@ Contributions are welcome. To contribute:
 - All user data passed to Convex must be encrypted client-side first
 
 ---
+
 ## Roadmap
 
 These features are actively planned and will be added in upcoming releases.
 
-| | Feature | Status |
-|--|---------|--------|
-| ⬜ | Local Database — Offline Message Storage | 🔄 In Development |
-| ⬜ | Mobile App | 📋 Planned |
+|     | Feature                                  | Status            |
+| --- | ---------------------------------------- | ----------------- |
+| ⬜  | Local Database — Offline Message Storage | 🔄 In Development |
+| ⬜  | Mobile App                               | 📋 Planned        |
 
 ### Local Database — Offline Message Storage
 
@@ -897,6 +932,7 @@ These features are actively planned and will be added in upcoming releases.
 Lunex currently requires an active connection to Convex to load messages. The local database layer will change this fundamentally — bringing Lunex closer to the offline-first experience of WhatsApp and Signal.
 
 **What it will enable:**
+
 - Open any conversation and read your full message history with **no internet connection**
 - Instant chat load from local cache — Convex sync happens in the background
 - Full-history **in-chat search** across every message ever received, not just the current session's loaded batch
@@ -906,6 +942,7 @@ Lunex currently requires an active connection to Convex to load messages. The lo
 - **Storage management UI** — see a breakdown of how much local space each conversation, image, video, and document is using, with per-category clear controls
 
 **Technical approach:**
+
 - SQLite via `tauri-plugin-sql` — embedded, zero-config, runs entirely on-device
 - The SQLite file itself is encrypted at rest using **SQLCipher** (AES-256), keyed from your existing `secretKey` — no separate password required
 - Messages are stored decrypted inside the encrypted file, enabling fast full-text search with a simple SQL `LIKE` or FTS5 index
@@ -921,6 +958,7 @@ Lunex currently requires an active connection to Convex to load messages. The lo
 A native mobile version of Lunex for Android and iOS, built on the same Tauri + React codebase.
 
 **Planned scope:**
+
 - Full feature parity with the desktop app — end-to-end encryption, disappearing messages, media sharing, app lock, and all privacy controls
 - Same Convex backend — your account, contacts, and message history carry over seamlessly between desktop and mobile
 - Native push notifications
