@@ -9,9 +9,6 @@
     <a href="https://github.com/miangee21/Lunex/releases/latest">
       <img src="https://img.shields.io/github/v/release/miangee21/Lunex?style=flat-square&logo=github&label=latest%20release&color=6366f1" alt="Latest Release" />
     </a>
-    <a href="https://github.com/miangee21/Lunex/releases">
-      <img src="https://img.shields.io/github/downloads/miangee21/Lunex/total?style=flat-square&color=6366f1&label=total%20downloads" alt="Total Downloads" />
-    </a>
     <a href="https://github.com/miangee21/Lunex/blob/master/LICENSE">
       <img src="https://img.shields.io/github/license/miangee21/Lunex?style=flat-square&color=6366f1" alt="License" />
     </a>
