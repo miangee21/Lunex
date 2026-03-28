@@ -87,7 +87,7 @@ Lunex is built on [Tauri v2](https://tauri.app) (Rust + WebView), meaning it shi
 **Via winget (recommended):**
 
 ```powershell
-winget install lunex
+winget install Lunex.Lunex
 ```
 
 **Via installer:**  
@@ -919,34 +919,8 @@ These features are actively planned and will be added in upcoming releases.
 
 |     | Feature                                  | Status            |
 | --- | ---------------------------------------- | ----------------- |
-| ⬜  | Local Database — Offline Message Storage | 🔄 In Development |
 | ⬜  | Mobile App                               | 📋 Planned        |
 
-### Local Database — Offline Message Storage
-
-> **Status:** In development
-
-Lunex currently requires an active connection to Convex to load messages. The local database layer will change this fundamentally — bringing Lunex closer to the offline-first experience of WhatsApp and Signal.
-
-**What it will enable:**
-
-- Open any conversation and read your full message history with **no internet connection**
-- Instant chat load from local cache — Convex sync happens in the background
-- Full-history **in-chat search** across every message ever received, not just the current session's loaded batch
-- **Offline send queue** — messages composed while offline are saved locally and automatically delivered the moment connectivity is restored
-- **Media persistence** — media files deleted from Convex after 6 hours remain accessible locally as long as you choose to keep them
-- **Sync period control** — choose to download the last 7, 15, or 30 days of history from Convex into local storage on first enable
-- **Storage management UI** — see a breakdown of how much local space each conversation, image, video, and document is using, with per-category clear controls
-
-**Technical approach:**
-
-- SQLite via `tauri-plugin-sql` — embedded, zero-config, runs entirely on-device
-- The SQLite file itself is encrypted at rest using **SQLCipher** (AES-256), keyed from your existing `secretKey` — no separate password required
-- Messages are stored decrypted inside the encrypted file, enabling fast full-text search with a simple SQL `LIKE` or FTS5 index
-- Local DB is only available when **App Lock is enabled** — this ensures the SQLCipher key is always PIN-protected and the database cannot be opened without your credentials
-- An outbox table handles offline-sent messages with automatic retry and a sync status indicator in the UI
-
----
 
 ### Mobile App
 
